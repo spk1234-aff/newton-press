@@ -1,0 +1,27 @@
+name: Import site from URL
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Base URL ของไฟล์แอป"
+        default: "https://newton-press.netlify.app"
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download site files
+        run: |
+          for f in index.html manifest.webmanifest apple-touch-icon.png favicon.png icon-192.png icon-512.png maskable-192.png maskable-512.png; do
+            curl -fsSL "${{ inputs.base }}/$f" -o "$f"
+          done
+          touch .nojekyll
+      - name: Commit
+        run: |
+          git config user.name "newton-press-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import site from ${{ inputs.base }}" || echo "no changes"
+          git push
