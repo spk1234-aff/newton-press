@@ -675,6 +675,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
       <div class="row"><label style="width:120px">ป้ายบรรทัด</label><input type="text" id="asN1" style="width:120px"><input type="text" id="asN2" style="width:70px"><input type="text" id="asN3" style="width:80px"></div>
       <div class="row"><label style="width:120px">บรรทัดรอง</label><input type="text" id="asSub" style="flex:1" placeholder="เช่น คณิตศาสตร์ประยุกต์ 1 ชุดที่ 1"></div>
       <div class="row"><label style="width:120px">ตัวเลือกเขียนเป็น</label><select id="asLab"><option value="(1)">1 2 3 4 5</option><option value="ก.">ก ข ค ง จ</option><option value="A.">A B C D E</option></select><label>เลขประจำตัว</label><input type="number" id="asId" min="0" max="10" style="width:60px"><label>หลัก (0 = ไม่มี)</label></div>
+      <div class="row"><label><input type="checkbox" id="asOmr"> ตรวจด้วยสมุดคะแนนออนไลน์ (เพิ่มจุดดำ 4 มุม · พิมพ์เป็นกระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ)</label></div>
       <div class="row"><label><input type="checkbox" id="asLogoC"> โลโก้มุมซ้าย</label><label>ช่องคะแนนเต็ม</label><input type="text" id="asScore" style="width:70px" placeholder="เช่น 100"><label>สี</label><input type="color" id="asColor"><label>ข้อความท้าย</label><input type="text" id="asBrand" style="width:200px"></div>
       <div class="hd2">ส่วนของข้อ (กำหนดเองได้)</div>
       <div id="asSecs"></div>
@@ -683,7 +684,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
     </div>
     <div id="asPrev" style="flex:1 1 420px"></div>
   </div>
-  <div class="actions"><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
+  <div class="actions"><button class="tb" id="asCode" title="คัดลอกรูปแบบกระดาษและเฉลย ไปวางในสมุดคะแนนออนไลน์ (แท็บลงคะแนน → ตรวจข้อสอบ)" style="margin-right:auto">📋 รหัสสำหรับตรวจในสมุดคะแนน</button><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
 </div></div>
 
 <!-- หน้าต่างสร้างชุดข้อสอบ -->
@@ -4498,7 +4499,8 @@ function sheetFromParts(parts, lab) { let k = 1; const secs = parts.map(q => { c
 function choiceLabels(n, lab) { if (lab === 'ก.') return 'กขคงจ'.slice(0, n).split(''); if (lab === 'A.') return 'ABCDE'.slice(0, n).split(''); return Array.from({ length: n }, (_, i) => String(i + 1)); }
 function answerSheetSVG(cfg) {
   const W = 658, ink = CL.dark, br = cfg.color || (typeof themeOf === 'function' ? themeOf(doc.settings).brown : CL.brown); let s = '', y = 0;
-  const keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean); const keyOf = q => keys[q - 1];
+  const lay = { v: 1, W: W, id: [], q: {} }, R1 = v => Math.round(v * 10) / 10; // ตำแหน่งวงระบายทั้งหมด (ใช้ตรวจด้วยเครื่อง)
+  /* โหมดตรวจด้วยเครื่อง: พิมพ์กระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ */ const keys = cfg.omr ? [] : String(cfg.key || '').split(/[,\s]+/).filter(Boolean); const keyOf = q => keys[q - 1];
   const txt = (x, yy, t, o = {}) => `<text x="${x}" y="${yy}" font-family="${o.f || 'THS'}" font-size="${o.fs || 15}" text-anchor="${o.a || 'middle'}" fill="${o.c || ink}"${o.b ? ' font-weight="700"' : ''}>${esc(String(t))}</text>`;
   const bub = (x, yy, t, on, r = 8.2) => `<circle cx="${x}" cy="${yy}" r="${r}" fill="${on ? '#222' : '#fff'}" stroke="${br}" stroke-width="1.1"/>` + (on ? '' : txt(x, yy + 3.6, t, { fs: t.length > 1 ? 9 : 10.5, c: '#9b6b4a', f: /[ก-ฮ]/.test(t) ? 'THS' : 'KaTeX_Main' }));
   // หัว
@@ -4525,7 +4527,7 @@ function answerSheetSVG(cfg) {
   const wx = ex + 140; s += cfg.noex ? '' : `<circle cx="${wx}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><path d="M${wx - 5} ${iy - 10}l10 10M${wx + 5} ${iy - 10}l-10 10" stroke="#222" stroke-width="1.6"/><circle cx="${wx + 22}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><path d="M${wx + 18} ${iy - 5}l3 4 6 -8" stroke="#222" stroke-width="1.6" fill="none"/><circle cx="${wx + 44}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><circle cx="${wx + 44}" cy="${iy - 5}" r="3.5" fill="#222"/>`;
   if (cfg.id) { // เลขประจำตัวผู้สอบ
     const x0 = W - idW - 6; s += txt(x0 + idW / 2, y + 22, 'เลขประจำตัว', { fs: 14, b: 1, c: br });
-    for (let j = 0; j < cfg.id; j++) { const x = x0 + 12 + j * 22 + 11; s += `<rect x="${x - 9}" y="${y + 30}" width="18" height="20" fill="#fff" stroke="${br}"/>`; for (let d = 0; d <= 9; d++) s += bub(x, y + 64 + d * 20, String(d), false, 7.5); }
+    for (let j = 0; j < cfg.id; j++) { const x = x0 + 12 + j * 22 + 11; s += `<rect x="${x - 9}" y="${y + 30}" width="18" height="20" fill="#fff" stroke="${br}"/>`; lay.id[j] = []; for (let d = 0; d <= 9; d++) { s += bub(x, y + 64 + d * 20, String(d), false, 7.5); lay.id[j].push([R1(x), R1(y + 64 + d * 20)]); } } lay.idr = 7.5;
   }
   y += hH + 22;
   // ส่วนต่าง ๆ
@@ -4538,7 +4540,7 @@ function answerSheetSVG(cfg) {
       const n = sec.t === 'mc4' ? 4 : 5; const labs = choiceLabels(n, cfg.lab);
       const colW = 32 + n * 22 + 18; const cols = Math.max(1, Math.min(Math.floor((W + 10) / colW), Math.ceil(items.length / 5))); const rows = Math.ceil(items.length / cols); const gx = (W - cols * colW) / Math.max(1, cols);
       s += txt(4, y, `ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.t]}`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
-      items.forEach((q, i) => { const c = Math.floor(i / rows), r = i % rows; const x = 4 + c * (colW + gx), yy = y + 14 + r * 23; if (r % 5 === 0 && r) s += ''; s += `<rect x="${x}" y="${yy - 11}" width="${colW - 6}" height="22" fill="${r % 2 ? '#fcf6f0' : '#fff'}"/>` + txt(x + 24, yy + 5, q, { a: 'end', fs: 14, b: 1, f: 'KaTeX_Main' }); const k = keyOf(q); labs.forEach((t, j) => s += bub(x + 42 + j * 22, yy, t, k && (k === t || k === String(j + 1)))); });
+      items.forEach((q, i) => { const c = Math.floor(i / rows), r = i % rows; const x = 4 + c * (colW + gx), yy = y + 14 + r * 23; if (r % 5 === 0 && r) s += ''; s += `<rect x="${x}" y="${yy - 11}" width="${colW - 6}" height="22" fill="${r % 2 ? '#fcf6f0' : '#fff'}"/>` + txt(x + 24, yy + 5, q, { a: 'end', fs: 14, b: 1, f: 'KaTeX_Main' }); const k = keyOf(q); labs.forEach((t, j) => s += bub(x + 42 + j * 22, yy, t, k && (k === t || k === String(j + 1)))); lay.q[q] = { t: 'mc', n: n, r: 8.2, l: labs, o: labs.map((t, j) => [R1(x + 42 + j * 22), R1(yy)]) }; });
       y += rows * 23 + 22;
     } else if (sec.t === 'int' || sec.t === 'dec') {
       const d = +sec.d || 4, f = sec.t === 'dec' ? (+sec.f || 2) : 0, nd = d + f; const compact = numTotal > 10; const bw = compact ? 16.5 : 22, vs = compact ? 15.5 : 20, rr = compact ? 6.3 : 7.5, BH = 60 + 9 * vs + 14; const boxW = nd * bw + (f ? 10 : 0) + 18; const per = Math.max(1, Math.floor((W + 4) / (boxW + 10))); const gx = per > 1 ? (W - 8 - per * boxW) / (per - 1) : 0;
@@ -4549,16 +4551,38 @@ function answerSheetSVG(cfg) {
         const c = i % per, r = Math.floor(i / per); const x = 4 + c * (boxW + gx), y0 = y + r * (BH + 10);
         s += `<rect x="${x}" y="${y0}" width="${boxW}" height="${BH}" rx="6" fill="#fff" stroke="${br}" stroke-width="1"/>` + txt(x + boxW / 2, y0 + 18, `ข้อ ${q}`, { fs: 14, b: 1 });
         let k = keyOf(q); let digs = null; if (k !== undefined) { const v = Math.abs(parseFloat(k)); if (isFinite(v)) { const str = f ? v.toFixed(f) : String(Math.round(v)); const [a, bpart = ''] = str.split('.'); digs = (a.padStart(d, '0').slice(-d) + bpart).split(''); } }
-        for (let j = 0; j < nd; j++) { const xx = x + 9 + j * bw + (f && j >= d ? 10 : 0) + bw / 2; s += `<rect x="${xx - bw / 2 + 1}" y="${y0 + 26}" width="${bw - 2}" height="20" fill="#fff" stroke="${br}"/>` + (digs ? txt(xx, y0 + 41, digs[j], { fs: 14, f: 'KaTeX_Main' }) : ''); for (let v = 0; v <= 9; v++) s += bub(xx, y0 + 60 + v * vs, String(v), digs && digs[j] === String(v), rr); }
+        const LQ = lay.q[q] = { t: sec.t, d: d, f: f, r: rr, c: [] };
+        for (let j = 0; j < nd; j++) { const xx = x + 9 + j * bw + (f && j >= d ? 10 : 0) + bw / 2; LQ.c[j] = []; for (let v = 0; v <= 9; v++) LQ.c[j].push([R1(xx), R1(y0 + 60 + v * vs)]); s += `<rect x="${xx - bw / 2 + 1}" y="${y0 + 26}" width="${bw - 2}" height="20" fill="#fff" stroke="${br}"/>` + (digs ? txt(xx, y0 + 41, digs[j], { fs: 14, f: 'KaTeX_Main' }) : ''); for (let v = 0; v <= 9; v++) s += bub(xx, y0 + 60 + v * vs, String(v), digs && digs[j] === String(v), rr); }
         if (f) { const xp = x + 9 + d * bw + 5; s += `<circle cx="${xp}" cy="${y0 + 43}" r="2.2" fill="${ink}"/>`; }
       });
       y += Math.ceil(items.length / per) * (BH + 10) + 16;
+    } else if (sec.t === 'write') { // ข้อเขียน: ช่องให้ครูระบายคะแนน
+      const p = Math.max(1, +sec.p || 10), tens = Math.floor(p / 10), units = p >= 10 ? 9 : Math.floor(p), rr = 7.2, gap = 19;
+      s += txt(4, y, `ข้อ ${sec.from}–${sec.to} ${QTYPES.write} · สำหรับครูระบายคะแนน (เต็ม ${p})`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
+      const rowW = 70 + (tens ? (tens + 1) * gap + 14 : 0) + (units + 1) * gap + 14 + gap + 6, per = Math.max(1, Math.floor((W + 6) / (rowW + 6)));
+      items.forEach((q, i) => {
+        const c = i % per, r = Math.floor(i / per), x = 4 + c * (rowW + 6), yy = y + 14 + r * 26;
+        s += `<rect x="${x}" y="${yy - 12}" width="${rowW}" height="24" rx="5" fill="#fff" stroke="${br}" stroke-width=".8"/>` + txt(x + 8, yy + 5, `ข้อ ${q}`, { a: 'start', fs: 14, b: 1 });
+        const LQ = lay.q[q] = { t: 'w', p: p, r: rr, tens: [], units: [] }; let xx = x + 62;
+        if (tens) { if (!r) s += txt(xx + 2, yy - 13.5, 'สิบ', { a: 'start', fs: 9, c: '#9b6b4a' }); for (let v = 0; v <= tens; v++) { xx += gap; s += bub(xx - gap / 2, yy, String(v), false, rr); LQ.tens.push([R1(xx - gap / 2), R1(yy)]); } xx += 14; }
+        if (!r) s += txt(xx + 2, yy - 13.5, 'หน่วย', { a: 'start', fs: 9, c: '#9b6b4a' });
+        for (let v = 0; v <= units; v++) { xx += gap; s += bub(xx - gap / 2, yy, String(v), false, rr); LQ.units.push([R1(xx - gap / 2), R1(yy)]); }
+        xx += 14 + gap; s += bub(xx - gap / 2, yy, '½', false, rr); LQ.half = [R1(xx - gap / 2), R1(yy)];
+      });
+      y += Math.ceil(items.length / per) * 26 + 22;
     }
   });
   s += `<text x="${W - 4}" y="${y + 4}" font-family="THS" font-size="12" text-anchor="end" fill="#9b8b80">${esc(cfg.brand ?? 'Earth & Newton Education')}</text>`;
   const H = y + 10;
-  const maxH = 935; const scale = Math.min(1, maxH / H);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * scale)}" height="${Math.round(H * scale)}" viewBox="0 0 ${W} ${Math.round(H)}">${s}</svg>`;
+  if (cfg.omr) { // จุดสี่เหลี่ยม 4 มุม ให้สมุดคะแนนออนไลน์จัดภาพสแกนและหาหน้ากระดาษคำตอบ
+    const M = 26, F = 18, cs = [[-M + F / 2, -M + F / 2], [W + M - F / 2, -M + F / 2], [-M + F / 2, H + M - F / 2], [W + M - F / 2, H + M - F / 2]];
+    cs.forEach(c => s += `<rect x="${c[0] - F / 2}" y="${c[1] - F / 2}" width="${F}" height="${F}" fill="#000"/>`);
+    s += `<text x="${W / 2}" y="${H + M - 6}" font-family="THS" font-size="11" text-anchor="middle" fill="#9b8b80">ตรวจด้วยสมุดคะแนนออนไลน์ · ห้ามเขียนหรือขีดทับจุดดำทั้ง 4 มุม</text>`;
+    lay.fid = cs; lay.fs = F; lay.vb = [-M, -M, W + 2 * M, Math.round(H) + 2 * M];
+  } else lay.vb = [0, 0, W, Math.round(H)];
+  lay.H = Math.round(H); window.__asLay = lay;
+  const vb = lay.vb, maxH = 935; const scale = Math.min(1, maxH / vb[3], W / vb[2]);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(vb[2] * scale)}" height="${Math.round(vb[3] * scale)}" viewBox="${vb.join(' ')}">${s}</svg>`;
 }
 function ashtHTML(b) { return `<div class="b-asheet">${answerSheetSVG(b.cfg || ASHEET_DEF)}</div>`; }
 /* ---------- ตารางสรุปคำตอบ ---------- */
@@ -4579,7 +4603,7 @@ const AS_PRESETS = {
 function openAnswerSheet(id, cfg) {
   asTarget = id || null; const c = id ? byId(id).cfg : (cfg || AS_PRESETS.alevel());
   $('#asIns').value = c.ins ?? 'ใช้ดินสอดำ 2B ระบายให้เต็มวง'; $('#asN1').value = c.n1 ?? 'ชื่อ–นามสกุล'; $('#asN2').value = c.n2 ?? 'ชั้น'; $('#asN3').value = c.n3 ?? 'เลขที่';
-  $('#asTitle').value = c.title || ''; $('#asSub').value = c.sub || ''; $('#asLogoC').checked = !!c.logo; $('#asScore').value = c.score || ''; $('#asColor').value = c.color || themeOf(doc.settings).brown; $('#asBrand').value = c.brand ?? (doc.settings.ft ?? 'Earth & Newton Education'); $('#asId').value = c.id || 0; $('#asLab').value = c.lab || '(1)'; $('#asKey').value = c.key || '';
+  $('#asTitle').value = c.title || ''; $('#asSub').value = c.sub || ''; $('#asLogoC').checked = !!c.logo; $('#asScore').value = c.score || ''; $('#asColor').value = c.color || themeOf(doc.settings).brown; $('#asBrand').value = c.brand ?? (doc.settings.ft ?? 'Earth & Newton Education'); $('#asId').value = c.id || 0; $('#asLab').value = c.lab || '(1)'; $('#asKey').value = c.key || ''; $('#asOmr').checked = !!c.omr;
   asSecs(c.secs || []); asPrev(); openDlg('#dAsht');
 }
 function asSecs(secs) {
@@ -4587,21 +4611,34 @@ function asSecs(secs) {
 }
 function asRow(q, i) {
   return `<div class="row asr" data-i="${i}"><label>ข้อ</label><input type="number" data-k="from" value="${q.from}" min="1" style="width:64px"><label>ถึง</label><input type="number" data-k="to" value="${q.to}" min="1" style="width:64px">
-    <select data-k="t">${['mc4', 'mc5', 'int', 'dec'].map(t => `<option value="${t}"${q.t === t ? ' selected' : ''}>${QTYPES[t]}</option>`).join('')}</select>
-    <label class="dg">หลักจำนวนเต็ม</label><input class="dg" type="number" data-k="d" value="${q.d || 4}" min="1" max="6" style="width:52px"><label class="dc">ทศนิยม</label><input class="dc" type="number" data-k="f" value="${q.f || 2}" min="1" max="3" style="width:52px">
+    <select data-k="t">${['mc4', 'mc5', 'int', 'dec', 'write'].map(t => `<option value="${t}"${q.t === t ? ' selected' : ''}>${QTYPES[t]}</option>`).join('')}</select>
+    <label class="dg">หลักจำนวนเต็ม</label><input class="dg" type="number" data-k="d" value="${q.d || 4}" min="1" max="6" style="width:52px"><label class="dc">ทศนิยม</label><input class="dc" type="number" data-k="f" value="${q.f || 2}" min="1" max="3" style="width:52px"><label class="dw">คะแนนเต็ม/ข้อ</label><input class="dw" type="number" data-k="p" value="${q.p || 10}" min="1" max="30" step="0.5" style="width:60px">
     <button class="tb" data-del="${i}" title="ลบส่วนนี้">✕</button></div>`;
 }
 function asRead() {
-  const secs = $$('#asSecs .asr').map(r => { const g = k => $(`[data-k="${k}"]`, r).value; return { t: g('t'), from: +g('from'), to: +g('to'), d: +g('d'), f: +g('f') }; });
-  return { ins: $('#asIns').value, n1: $('#asN1').value, n2: $('#asN2').value, n3: $('#asN3').value, title: $('#asTitle').value, sub: $('#asSub').value, id: +$('#asId').value || 0, lab: $('#asLab').value, key: $('#asKey').value.trim(), secs, logo: $('#asLogoC').checked || undefined, score: $('#asScore').value.trim() || undefined, color: $('#asColor').value, brand: $('#asBrand').value };
+  const secs = $$('#asSecs .asr').map(r => { const g = k => $(`[data-k="${k}"]`, r).value; const o = { t: g('t'), from: +g('from'), to: +g('to'), d: +g('d'), f: +g('f') }; if (o.t === 'write') o.p = +g('p') || 10; return o; });
+  return { ins: $('#asIns').value, n1: $('#asN1').value, n2: $('#asN2').value, n3: $('#asN3').value, title: $('#asTitle').value, sub: $('#asSub').value, id: +$('#asId').value || 0, lab: $('#asLab').value, key: $('#asKey').value.trim(), secs, logo: $('#asLogoC').checked || undefined, score: $('#asScore').value.trim() || undefined, color: $('#asColor').value, brand: $('#asBrand').value, omr: $('#asOmr').checked || undefined };
 }
-function asPrev() { $$('#asSecs .asr').forEach(r => { const t = $('[data-k="t"]', r).value; $$('.dg', r).forEach(e => e.style.display = t === 'int' || t === 'dec' ? '' : 'none'); $$('.dc', r).forEach(e => e.style.display = t === 'dec' ? '' : 'none'); }); $('#asPrev').innerHTML = answerSheetSVG(asRead()); }
+function asPrev() { $$('#asSecs .asr').forEach(r => { const t = $('[data-k="t"]', r).value; $$('.dg', r).forEach(e => e.style.display = t === 'int' || t === 'dec' ? '' : 'none'); $$('.dc', r).forEach(e => e.style.display = t === 'dec' ? '' : 'none'); $$('.dw', r).forEach(e => e.style.display = t === 'write' ? '' : 'none'); }); $('#asPrev').innerHTML = answerSheetSVG(asRead()); }
 $('#asSecs').addEventListener('input', asPrev); $('#asSecs').addEventListener('change', asPrev);
 ['asIns', 'asN1', 'asN2', 'asN3', 'asTitle', 'asSub', 'asId', 'asLab', 'asKey', 'asScore', 'asColor', 'asBrand'].forEach(i => $('#' + i).addEventListener('input', asPrev)); $('#asLogoC').addEventListener('change', asPrev); $('#asLab').addEventListener('change', asPrev);
 $('#asSecs').addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (!d) return; const c = asRead(); c.secs.splice(+d.dataset.del, 1); asSecs(c.secs); asPrev(); });
 $('#asAdd').onclick = () => { const c = asRead(); const last = c.secs[c.secs.length - 1]; const st = last ? last.to + 1 : 1; c.secs.push({ t: 'mc5', from: st, to: st + 9, d: 4, f: 2 }); asSecs(c.secs); asPrev(); };
 $('#asPreset').onchange = e => { const f = AS_PRESETS[e.target.value]; if (!f) return; const c = f(); c.title = $('#asTitle').value || c.title; c.sub = $('#asSub').value; asSecs(c.secs); $('#asId').value = c.id || 0; $('#asLab').value = c.lab; asPrev(); e.target.value = ''; };
 $('#asCancel').onclick = () => closeDlg('#dAsht');
+/* รหัสสำหรับตรวจด้วยเครื่องในสมุดคะแนนออนไลน์: รูปแบบกระดาษ + ตำแหน่งวงระบาย + เฉลย */
+function omrCode(cfg) {
+  const c = Object.assign({}, cfg, { omr: true }); answerSheetSVG(c); const lay = window.__asLay;
+  const o = { v: 1, app: 'newton-press', title: [c.title, c.sub].filter(Boolean).join(' · '), lab: c.lab, key: c.key || '', secs: c.secs, lay: lay };
+  return 'NPOMR1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+}
+$('#asCode').onclick = () => {
+  const cfg = asRead();
+  if (!cfg.omr) { $('#asOmr').checked = true; asPrev(); }
+  const code = omrCode(asRead()), keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean).length;
+  const done = () => alert('คัดลอกรหัสแล้ว ✓' + (keys ? '' : '\n(ยังไม่ได้ใส่คำตอบที่ถูก — ใส่เฉลยในสมุดคะแนนได้ หรือใส่ที่ช่อง "คำตอบที่ถูก" ก่อนคัดลอก)') + '\n\nไปที่สมุดคะแนน → แท็บลงคะแนน → เลือกรายการ → 📝 ตรวจข้อสอบ → วางรหัส\n* อย่าลืมกด "ใส่ลงเอกสาร" แล้วพิมพ์กระดาษคำตอบแบบมีจุดดำ 4 มุม');
+  if (navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => prompt('คัดลอกรหัสนี้:', code)); else prompt('คัดลอกรหัสนี้:', code);
+};
 $('#asOk').onclick = () => {
   const cfg = asRead(); closeDlg('#dAsht');
   if (asTarget) { const b = byId(asTarget); b.cfg = cfg; rerender(b.id); changed(true); }
@@ -7258,4 +7295,3 @@ init();
 </script>
 </body>
 </html>
-<script async src="/.netlify/scripts/hud?variant=public" data-nf-variant="public" data-netlify-site-id="fa1c84bf-7f60-4e1d-b287-f6db643e6728" data-app-host="app.netlify.com" data-account-tier="free"></script>
