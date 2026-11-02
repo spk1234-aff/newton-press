@@ -544,6 +544,18 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
 .cwgrid{display:flex;flex-direction:column;gap:3px;margin:4px 0}.cwc{display:flex;align-items:center;gap:4px}.cwc span{width:34px;color:var(--ui-mute)}.cwc input{width:56px}.cwc .tb{min-width:28px;padding:0 6px}
 @media (pointer:coarse){.tzc,.tzw{width:22px;margin-left:-7px;background:linear-gradient(90deg,transparent 9px,rgba(31,60,230,.35) 9px,rgba(31,60,230,.35) 12px,transparent 12px)}.tzr{height:18px;margin-top:-6px;background:linear-gradient(180deg,transparent 7px,rgba(31,60,230,.35) 7px,rgba(31,60,230,.35) 10px,transparent 10px)}.tzct{height:16px;margin-top:-4px}.tzrt{width:16px;margin-left:-4px}.tzplus{width:30px;height:30px;font-size:20px}.tzcorner{width:18px;height:18px}}
 .tzc,.tzw,.tzr,.tzcorner{touch-action:none}
+.b-anstab{margin:8px 3px 4px 29px}.b-anstab.side{display:flex;align-items:flex-start;gap:0}.b-anstab .atl{flex:none}.b-anstab .atr{flex:1}.b-anstab .atr i{display:block;height:9mm;border-bottom:1px solid #cdb9ad}
+.b-anstab table.at{border-collapse:separate;border-spacing:0;table-layout:fixed;border:1.5px solid var(--brown);border-radius:8px;overflow:hidden}
+.b-anstab table.at th{background:var(--bar);color:var(--brown);font-weight:700;text-align:center;height:1.9em;padding:1px 10px;border-bottom:1.5px solid var(--brown)}
+.b-anstab table.at th:first-child,.b-anstab table.at td.atn{width:13%;border-right:1px solid var(--brown)}
+.b-anstab table.at td{padding:2px 12px;border-top:1px dashed #cdb9ad;vertical-align:middle}.b-anstab table.at tr:nth-child(2) td{border-top:0}
+.b-anstab td.atn{text-align:center;font-weight:700;color:var(--brown);background:color-mix(in srgb,var(--bar) 45%,#fff)}
+.sbx{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px;font-weight:700;color:var(--brown)}.sbx i{display:inline-block;width:52px;height:1.6em;border:1.5px solid var(--brown);border-radius:6px;background:#fff}
+.b-scorebox{margin:4px 3px 2px 29px}
+.b-anstab th.atsh{width:17%}.b-anstab td.atsc{border-left:1px solid var(--brown);text-align:center;color:var(--brown);white-space:nowrap;font-size:.92em}.b-anstab td.atsc i{display:inline-block;width:2.6em;border-bottom:1px dotted var(--brown);margin-right:3px;height:1em;vertical-align:-2px}
+.b-scoresum{display:flex;justify-content:center;margin:8px 0}.b-scoresum table.ss{border-collapse:separate;border-spacing:0;border:1.5px solid var(--brown);border-radius:8px;overflow:hidden;min-width:62%}
+.b-scoresum th{background:var(--bar);color:var(--brown);font-weight:700;padding:2px 12px;border-bottom:1.5px solid var(--brown)}.b-scoresum th+th,.b-scoresum td+td{border-left:1px solid var(--brown);width:15%}
+.b-scoresum td{padding:2px 12px;border-top:1px dashed #cdb9ad;height:1.9em}.b-scoresum tr:nth-child(2) td{border-top:0}.b-scoresum td+td{text-align:center}.b-scoresum tr.tot td{border-top:1.5px solid var(--brown);font-weight:700;background:color-mix(in srgb,var(--bar) 45%,#fff)}
 </style>
 </head>
 <body>
@@ -675,7 +687,6 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
       <div class="row"><label style="width:120px">ป้ายบรรทัด</label><input type="text" id="asN1" style="width:120px"><input type="text" id="asN2" style="width:70px"><input type="text" id="asN3" style="width:80px"></div>
       <div class="row"><label style="width:120px">บรรทัดรอง</label><input type="text" id="asSub" style="flex:1" placeholder="เช่น คณิตศาสตร์ประยุกต์ 1 ชุดที่ 1"></div>
       <div class="row"><label style="width:120px">ตัวเลือกเขียนเป็น</label><select id="asLab"><option value="(1)">1 2 3 4 5</option><option value="ก.">ก ข ค ง จ</option><option value="A.">A B C D E</option></select><label>เลขประจำตัว</label><input type="number" id="asId" min="0" max="10" style="width:60px"><label>หลัก (0 = ไม่มี)</label></div>
-      <div class="row"><label><input type="checkbox" id="asOmr"> ตรวจด้วยSir’Earth Class (เพิ่มจุดดำ 4 มุม · พิมพ์เป็นกระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ)</label></div>
       <div class="row"><label><input type="checkbox" id="asLogoC"> โลโก้มุมซ้าย</label><label>ช่องคะแนนเต็ม</label><input type="text" id="asScore" style="width:70px" placeholder="เช่น 100"><label>สี</label><input type="color" id="asColor"><label>ข้อความท้าย</label><input type="text" id="asBrand" style="width:200px"></div>
       <div class="hd2">ส่วนของข้อ (กำหนดเองได้)</div>
       <div id="asSecs"></div>
@@ -684,7 +695,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
     </div>
     <div id="asPrev" style="flex:1 1 420px"></div>
   </div>
-  <div class="actions"><button class="tb" id="asCode" title="คัดลอกรูปแบบกระดาษและเฉลย ไปวางในSir’Earth Class (แท็บลงคะแนน → ตรวจข้อสอบ)" style="margin-right:auto">📋 รหัสสำหรับตรวจใน Sir’Earth Class</button><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
+  <div class="actions"><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
 </div></div>
 
 <!-- หน้าต่างสร้างชุดข้อสอบ -->
@@ -1062,7 +1073,7 @@ function units() {
     const t = el.dataset.t, prevT = i ? els[i - 1].dataset.t : null;
     if (cur && t !== 'problem' && cur.kind === 'problem' && GROUP_MEMBERS.has(t)) cur.els.push(el);
     else if (cur && HEADINGS.has(prevT) && t !== 'pagebreak') { cur.els.push(el); if (t === 'problem') cur.kind = 'problem'; }
-    else { const pb = i ? byId(els[i - 1].dataset.id) : null; cur = { els: [el], kind: t, forced: !!(byId(el.dataset.id) || {}).npg || prevT === 'pagebreak' || FULLPAGE.has(prevT) || (prevT === 'work' && pb && pb.full) || ((t === 'chapter' || (t === 'pjch' && prevT !== 'pjinfo') || t === 'memohead' || FULLPAGE.has(t) || t === 'solhead' || t === 'asheet') && i > 0 && prevT !== 'pagebreak') }; out.push(cur); }
+    else { const pb = i ? byId(els[i - 1].dataset.id) : null; cur = { els: [el], kind: t, forced: !!(byId(el.dataset.id) || {}).npg || prevT === 'pagebreak' || FULLPAGE.has(prevT) || (prevT === 'work' && pb && pb.full && t !== 'anstab') || (prevT === 'anstab' && i > 1 && !!(byId(els[i - 2].dataset.id) || {}).full) || ((t === 'chapter' || (t === 'pjch' && prevT !== 'pjinfo') || t === 'memohead' || FULLPAGE.has(t) || t === 'solhead' || t === 'asheet') && i > 0 && prevT !== 'pagebreak') }; out.push(cur); }
   });
   return out;
 }
@@ -1116,6 +1127,7 @@ function paginate() {
   }
   // กรอบทดแบบเต็มหน้าของข้อสุดท้าย
   if (prev) { const pl = prev.els[prev.els.length - 1]; const pbk = byId(pl.dataset.id); const w = $('.b-work', pl); if (w && pbk && pbk.full) { const p = Math.floor(pl.offsetTop / P); const re = p * P + PAGE_H - BOT; const add = re - (pl.offsetTop + pl.offsetHeight) - 4; if (add > 6) w.style.height = (w.offsetHeight + add) + 'px'; } }
+  if (typeof atFill === 'function') atFill();
   const lastEl = flow.lastElementChild;
   const end = lastEl ? lastEl.offsetTop + lastEl.offsetHeight : TOP;
   const pages = Math.max(1, Math.floor((end - 1) / P) + 1);
@@ -1547,12 +1559,12 @@ function buildInsertMenu() {
   const btns = ts => ts.map(t => `<button data-ins="${t}">${TYPES[t].replace(/ \(.*\)$/, '')}</button>`).join('');
   let h = `<div class="g wide"><button data-ins="quick" class="big">▦ ชุดสำเร็จรูป… <small>ข้อแบบฝึก เฉลย ข้อสอบ ส่วนประกอบแบบฝึก</small></button></div>`;
   h += grp('ข้อความและหัวข้อ', btns(['chapter', 'section', 'subsection', 'para', 'activity', 'actend', 'pagebreak'].concat(TYPES.divider ? ['divider'] : [])));
-  h += grp('ส่วนของข้อ', btns(['problem', 'given', 'question', 'choices', 'idea', 'solution', 'check', 'caution', 'answer', 'work', 'lines']));
+  h += grp('ส่วนของข้อ', btns(['problem', 'given', 'question', 'choices', 'idea', 'solution', 'check', 'caution', 'answer', 'work', 'lines'].concat(['anstab', 'scorebox'].filter(t => TYPES[t]))));
   const bx = ks => ks.map(k => `<button data-box="${k}"><span class="dot" style="background:${BOXCOL[k]}"></span>${BOXES[k]}</button>`).join('');
   h += grp('กล่องคณิตศาสตร์', bx(['def', 'thmf', 'lem', 'cor', 'prop', 'axm', 'formula', 'rule', 'crit', 'notat', 'conv', 'proof', 'cex', 'conj', 'algo']));
   h += grp('กล่องการเรียนรู้', bx(['thm', 'key', 'obj', 'prior', 'tip', 'note', 'remark', 'warn', 'caution2', 'try', 'exam', 'app', 'hist', 'link', 'write', 'inst', 'recap', 'plain']));
   h += grp('รูป ตาราง และสื่อ', `<button data-ins="lib">วาดรูป…</button><button data-ins="image">รูปภาพจากเครื่อง</button>` + btns(['table', 'divide', 'timeline', 'people']));
-  h += grp('หน้าพิเศษ', btns(['cover', 'examcover', 'part', 'asheet']));
+  h += grp('หน้าพิเศษ', btns(['cover', 'examcover', 'part', 'asheet'].concat(TYPES.scoresum ? ['scoresum'] : [])));
   h += grp('เฉลยข้อสอบ', btns(['soltitle', 'keytable', 'solhead', 'h3']));
   if (typeof QTYPES === 'object') h += grp('ข้อสอบ (แทรกทั้งข้อ)', Object.entries(QTYPES).map(([k, v]) => `<button data-qins="${k}">${v}</button>`).join(''));
   if (TYPES.pjch) h += grp('งานเอกสาร (โครงงาน · บันทึกข้อความ · ใบปะหน้า)', btns(['logohead', 'pjcover', 'pjch', 'pjsec', 'pjtext', 'pjinfo', 'toc', 'memohead', 'memocmt', 'cshead', 'signln'].filter(t => TYPES[t])));
@@ -4499,8 +4511,7 @@ function sheetFromParts(parts, lab) { let k = 1; const secs = parts.map(q => { c
 function choiceLabels(n, lab) { if (lab === 'ก.') return 'กขคงจ'.slice(0, n).split(''); if (lab === 'A.') return 'ABCDE'.slice(0, n).split(''); return Array.from({ length: n }, (_, i) => String(i + 1)); }
 function answerSheetSVG(cfg) {
   const W = 658, ink = CL.dark, br = cfg.color || (typeof themeOf === 'function' ? themeOf(doc.settings).brown : CL.brown); let s = '', y = 0;
-  const lay = { v: 1, W: W, id: [], q: {} }, R1 = v => Math.round(v * 10) / 10; // ตำแหน่งวงระบายทั้งหมด (ใช้ตรวจด้วยเครื่อง)
-  /* โหมดตรวจด้วยเครื่อง: พิมพ์กระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ */ const keys = cfg.omr ? [] : String(cfg.key || '').split(/[,\s]+/).filter(Boolean); const keyOf = q => keys[q - 1];
+  const keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean); const keyOf = q => keys[q - 1];
   const txt = (x, yy, t, o = {}) => `<text x="${x}" y="${yy}" font-family="${o.f || 'THS'}" font-size="${o.fs || 15}" text-anchor="${o.a || 'middle'}" fill="${o.c || ink}"${o.b ? ' font-weight="700"' : ''}>${esc(String(t))}</text>`;
   const bub = (x, yy, t, on, r = 8.2) => `<circle cx="${x}" cy="${yy}" r="${r}" fill="${on ? '#222' : '#fff'}" stroke="${br}" stroke-width="1.1"/>` + (on ? '' : txt(x, yy + 3.6, t, { fs: t.length > 1 ? 9 : 10.5, c: '#9b6b4a', f: /[ก-ฮ]/.test(t) ? 'THS' : 'KaTeX_Main' }));
   // หัว
@@ -4527,7 +4538,7 @@ function answerSheetSVG(cfg) {
   const wx = ex + 140; s += cfg.noex ? '' : `<circle cx="${wx}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><path d="M${wx - 5} ${iy - 10}l10 10M${wx + 5} ${iy - 10}l-10 10" stroke="#222" stroke-width="1.6"/><circle cx="${wx + 22}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><path d="M${wx + 18} ${iy - 5}l3 4 6 -8" stroke="#222" stroke-width="1.6" fill="none"/><circle cx="${wx + 44}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><circle cx="${wx + 44}" cy="${iy - 5}" r="3.5" fill="#222"/>`;
   if (cfg.id) { // เลขประจำตัวผู้สอบ
     const x0 = W - idW - 6; s += txt(x0 + idW / 2, y + 22, 'เลขประจำตัว', { fs: 14, b: 1, c: br });
-    for (let j = 0; j < cfg.id; j++) { const x = x0 + 12 + j * 22 + 11; s += `<rect x="${x - 9}" y="${y + 30}" width="18" height="20" fill="#fff" stroke="${br}"/>`; lay.id[j] = []; for (let d = 0; d <= 9; d++) { s += bub(x, y + 64 + d * 20, String(d), false, 7.5); lay.id[j].push([R1(x), R1(y + 64 + d * 20)]); } } lay.idr = 7.5;
+    for (let j = 0; j < cfg.id; j++) { const x = x0 + 12 + j * 22 + 11; s += `<rect x="${x - 9}" y="${y + 30}" width="18" height="20" fill="#fff" stroke="${br}"/>`; for (let d = 0; d <= 9; d++) s += bub(x, y + 64 + d * 20, String(d), false, 7.5); }
   }
   y += hH + 22;
   // ส่วนต่าง ๆ
@@ -4540,7 +4551,7 @@ function answerSheetSVG(cfg) {
       const n = sec.t === 'mc4' ? 4 : 5; const labs = choiceLabels(n, cfg.lab);
       const colW = 32 + n * 22 + 18; const cols = Math.max(1, Math.min(Math.floor((W + 10) / colW), Math.ceil(items.length / 5))); const rows = Math.ceil(items.length / cols); const gx = (W - cols * colW) / Math.max(1, cols);
       s += txt(4, y, `ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.t]}`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
-      items.forEach((q, i) => { const c = Math.floor(i / rows), r = i % rows; const x = 4 + c * (colW + gx), yy = y + 14 + r * 23; if (r % 5 === 0 && r) s += ''; s += `<rect x="${x}" y="${yy - 11}" width="${colW - 6}" height="22" fill="${r % 2 ? '#fcf6f0' : '#fff'}"/>` + txt(x + 24, yy + 5, q, { a: 'end', fs: 14, b: 1, f: 'KaTeX_Main' }); const k = keyOf(q); labs.forEach((t, j) => s += bub(x + 42 + j * 22, yy, t, k && (k === t || k === String(j + 1)))); lay.q[q] = { t: 'mc', n: n, r: 8.2, l: labs, o: labs.map((t, j) => [R1(x + 42 + j * 22), R1(yy)]) }; });
+      items.forEach((q, i) => { const c = Math.floor(i / rows), r = i % rows; const x = 4 + c * (colW + gx), yy = y + 14 + r * 23; if (r % 5 === 0 && r) s += ''; s += `<rect x="${x}" y="${yy - 11}" width="${colW - 6}" height="22" fill="${r % 2 ? '#fcf6f0' : '#fff'}"/>` + txt(x + 24, yy + 5, q, { a: 'end', fs: 14, b: 1, f: 'KaTeX_Main' }); const k = keyOf(q); labs.forEach((t, j) => s += bub(x + 42 + j * 22, yy, t, k && (k === t || k === String(j + 1)))); });
       y += rows * 23 + 22;
     } else if (sec.t === 'int' || sec.t === 'dec') {
       const d = +sec.d || 4, f = sec.t === 'dec' ? (+sec.f || 2) : 0, nd = d + f; const compact = numTotal > 10; const bw = compact ? 16.5 : 22, vs = compact ? 15.5 : 20, rr = compact ? 6.3 : 7.5, BH = 60 + 9 * vs + 14; const boxW = nd * bw + (f ? 10 : 0) + 18; const per = Math.max(1, Math.floor((W + 4) / (boxW + 10))); const gx = per > 1 ? (W - 8 - per * boxW) / (per - 1) : 0;
@@ -4551,38 +4562,16 @@ function answerSheetSVG(cfg) {
         const c = i % per, r = Math.floor(i / per); const x = 4 + c * (boxW + gx), y0 = y + r * (BH + 10);
         s += `<rect x="${x}" y="${y0}" width="${boxW}" height="${BH}" rx="6" fill="#fff" stroke="${br}" stroke-width="1"/>` + txt(x + boxW / 2, y0 + 18, `ข้อ ${q}`, { fs: 14, b: 1 });
         let k = keyOf(q); let digs = null; if (k !== undefined) { const v = Math.abs(parseFloat(k)); if (isFinite(v)) { const str = f ? v.toFixed(f) : String(Math.round(v)); const [a, bpart = ''] = str.split('.'); digs = (a.padStart(d, '0').slice(-d) + bpart).split(''); } }
-        const LQ = lay.q[q] = { t: sec.t, d: d, f: f, r: rr, c: [] };
-        for (let j = 0; j < nd; j++) { const xx = x + 9 + j * bw + (f && j >= d ? 10 : 0) + bw / 2; LQ.c[j] = []; for (let v = 0; v <= 9; v++) LQ.c[j].push([R1(xx), R1(y0 + 60 + v * vs)]); s += `<rect x="${xx - bw / 2 + 1}" y="${y0 + 26}" width="${bw - 2}" height="20" fill="#fff" stroke="${br}"/>` + (digs ? txt(xx, y0 + 41, digs[j], { fs: 14, f: 'KaTeX_Main' }) : ''); for (let v = 0; v <= 9; v++) s += bub(xx, y0 + 60 + v * vs, String(v), digs && digs[j] === String(v), rr); }
+        for (let j = 0; j < nd; j++) { const xx = x + 9 + j * bw + (f && j >= d ? 10 : 0) + bw / 2; s += `<rect x="${xx - bw / 2 + 1}" y="${y0 + 26}" width="${bw - 2}" height="20" fill="#fff" stroke="${br}"/>` + (digs ? txt(xx, y0 + 41, digs[j], { fs: 14, f: 'KaTeX_Main' }) : ''); for (let v = 0; v <= 9; v++) s += bub(xx, y0 + 60 + v * vs, String(v), digs && digs[j] === String(v), rr); }
         if (f) { const xp = x + 9 + d * bw + 5; s += `<circle cx="${xp}" cy="${y0 + 43}" r="2.2" fill="${ink}"/>`; }
       });
       y += Math.ceil(items.length / per) * (BH + 10) + 16;
-    } else if (sec.t === 'write') { // ข้อเขียน: ช่องให้ครูระบายคะแนน
-      const p = Math.max(1, +sec.p || 10), tens = Math.floor(p / 10), units = p >= 10 ? 9 : Math.floor(p), rr = 7.2, gap = 19;
-      s += txt(4, y, `ข้อ ${sec.from}–${sec.to} ${QTYPES.write} · สำหรับครูระบายคะแนน (เต็ม ${p})`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
-      const rowW = 70 + (tens ? (tens + 1) * gap + 14 : 0) + (units + 1) * gap + 14 + gap + 6, per = Math.max(1, Math.floor((W + 6) / (rowW + 6)));
-      items.forEach((q, i) => {
-        const c = i % per, r = Math.floor(i / per), x = 4 + c * (rowW + 6), yy = y + 14 + r * 26;
-        s += `<rect x="${x}" y="${yy - 12}" width="${rowW}" height="24" rx="5" fill="#fff" stroke="${br}" stroke-width=".8"/>` + txt(x + 8, yy + 5, `ข้อ ${q}`, { a: 'start', fs: 14, b: 1 });
-        const LQ = lay.q[q] = { t: 'w', p: p, r: rr, tens: [], units: [] }; let xx = x + 62;
-        if (tens) { if (!r) s += txt(xx + 2, yy - 13.5, 'สิบ', { a: 'start', fs: 9, c: '#9b6b4a' }); for (let v = 0; v <= tens; v++) { xx += gap; s += bub(xx - gap / 2, yy, String(v), false, rr); LQ.tens.push([R1(xx - gap / 2), R1(yy)]); } xx += 14; }
-        if (!r) s += txt(xx + 2, yy - 13.5, 'หน่วย', { a: 'start', fs: 9, c: '#9b6b4a' });
-        for (let v = 0; v <= units; v++) { xx += gap; s += bub(xx - gap / 2, yy, String(v), false, rr); LQ.units.push([R1(xx - gap / 2), R1(yy)]); }
-        xx += 14 + gap; s += bub(xx - gap / 2, yy, '½', false, rr); LQ.half = [R1(xx - gap / 2), R1(yy)];
-      });
-      y += Math.ceil(items.length / per) * 26 + 22;
     }
   });
   s += `<text x="${W - 4}" y="${y + 4}" font-family="THS" font-size="12" text-anchor="end" fill="#9b8b80">${esc(cfg.brand ?? 'Earth & Newton Education')}</text>`;
   const H = y + 10;
-  if (cfg.omr) { // จุดสี่เหลี่ยม 4 มุม ให้Sir’Earth Classจัดภาพสแกนและหาหน้ากระดาษคำตอบ
-    const M = 26, F = 18, cs = [[-M + F / 2, -M + F / 2], [W + M - F / 2, -M + F / 2], [-M + F / 2, H + M - F / 2], [W + M - F / 2, H + M - F / 2]];
-    cs.forEach(c => s += `<rect x="${c[0] - F / 2}" y="${c[1] - F / 2}" width="${F}" height="${F}" fill="#000"/>`);
-    s += `<text x="${W / 2}" y="${H + M - 6}" font-family="THS" font-size="11" text-anchor="middle" fill="#9b8b80">ตรวจด้วยSir’Earth Class · ห้ามเขียนหรือขีดทับจุดดำทั้ง 4 มุม</text>`;
-    lay.fid = cs; lay.fs = F; lay.vb = [-M, -M, W + 2 * M, Math.round(H) + 2 * M];
-  } else lay.vb = [0, 0, W, Math.round(H)];
-  lay.H = Math.round(H); window.__asLay = lay;
-  const vb = lay.vb, maxH = 935; const scale = Math.min(1, maxH / vb[3], W / vb[2]);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(vb[2] * scale)}" height="${Math.round(vb[3] * scale)}" viewBox="${vb.join(' ')}">${s}</svg>`;
+  const maxH = 935; const scale = Math.min(1, maxH / H);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * scale)}" height="${Math.round(H * scale)}" viewBox="0 0 ${W} ${Math.round(H)}">${s}</svg>`;
 }
 function ashtHTML(b) { return `<div class="b-asheet">${answerSheetSVG(b.cfg || ASHEET_DEF)}</div>`; }
 /* ---------- ตารางสรุปคำตอบ ---------- */
@@ -4603,7 +4592,7 @@ const AS_PRESETS = {
 function openAnswerSheet(id, cfg) {
   asTarget = id || null; const c = id ? byId(id).cfg : (cfg || AS_PRESETS.alevel());
   $('#asIns').value = c.ins ?? 'ใช้ดินสอดำ 2B ระบายให้เต็มวง'; $('#asN1').value = c.n1 ?? 'ชื่อ–นามสกุล'; $('#asN2').value = c.n2 ?? 'ชั้น'; $('#asN3').value = c.n3 ?? 'เลขที่';
-  $('#asTitle').value = c.title || ''; $('#asSub').value = c.sub || ''; $('#asLogoC').checked = !!c.logo; $('#asScore').value = c.score || ''; $('#asColor').value = c.color || themeOf(doc.settings).brown; $('#asBrand').value = c.brand ?? (doc.settings.ft ?? 'Earth & Newton Education'); $('#asId').value = c.id || 0; $('#asLab').value = c.lab || '(1)'; $('#asKey').value = c.key || ''; $('#asOmr').checked = !!c.omr;
+  $('#asTitle').value = c.title || ''; $('#asSub').value = c.sub || ''; $('#asLogoC').checked = !!c.logo; $('#asScore').value = c.score || ''; $('#asColor').value = c.color || themeOf(doc.settings).brown; $('#asBrand').value = c.brand ?? (doc.settings.ft ?? 'Earth & Newton Education'); $('#asId').value = c.id || 0; $('#asLab').value = c.lab || '(1)'; $('#asKey').value = c.key || '';
   asSecs(c.secs || []); asPrev(); openDlg('#dAsht');
 }
 function asSecs(secs) {
@@ -4611,34 +4600,21 @@ function asSecs(secs) {
 }
 function asRow(q, i) {
   return `<div class="row asr" data-i="${i}"><label>ข้อ</label><input type="number" data-k="from" value="${q.from}" min="1" style="width:64px"><label>ถึง</label><input type="number" data-k="to" value="${q.to}" min="1" style="width:64px">
-    <select data-k="t">${['mc4', 'mc5', 'int', 'dec', 'write'].map(t => `<option value="${t}"${q.t === t ? ' selected' : ''}>${QTYPES[t]}</option>`).join('')}</select>
-    <label class="dg">หลักจำนวนเต็ม</label><input class="dg" type="number" data-k="d" value="${q.d || 4}" min="1" max="6" style="width:52px"><label class="dc">ทศนิยม</label><input class="dc" type="number" data-k="f" value="${q.f || 2}" min="1" max="3" style="width:52px"><label class="dw">คะแนนเต็ม/ข้อ</label><input class="dw" type="number" data-k="p" value="${q.p || 10}" min="1" max="30" step="0.5" style="width:60px">
+    <select data-k="t">${['mc4', 'mc5', 'int', 'dec'].map(t => `<option value="${t}"${q.t === t ? ' selected' : ''}>${QTYPES[t]}</option>`).join('')}</select>
+    <label class="dg">หลักจำนวนเต็ม</label><input class="dg" type="number" data-k="d" value="${q.d || 4}" min="1" max="6" style="width:52px"><label class="dc">ทศนิยม</label><input class="dc" type="number" data-k="f" value="${q.f || 2}" min="1" max="3" style="width:52px">
     <button class="tb" data-del="${i}" title="ลบส่วนนี้">✕</button></div>`;
 }
 function asRead() {
-  const secs = $$('#asSecs .asr').map(r => { const g = k => $(`[data-k="${k}"]`, r).value; const o = { t: g('t'), from: +g('from'), to: +g('to'), d: +g('d'), f: +g('f') }; if (o.t === 'write') o.p = +g('p') || 10; return o; });
-  return { ins: $('#asIns').value, n1: $('#asN1').value, n2: $('#asN2').value, n3: $('#asN3').value, title: $('#asTitle').value, sub: $('#asSub').value, id: +$('#asId').value || 0, lab: $('#asLab').value, key: $('#asKey').value.trim(), secs, logo: $('#asLogoC').checked || undefined, score: $('#asScore').value.trim() || undefined, color: $('#asColor').value, brand: $('#asBrand').value, omr: $('#asOmr').checked || undefined };
+  const secs = $$('#asSecs .asr').map(r => { const g = k => $(`[data-k="${k}"]`, r).value; return { t: g('t'), from: +g('from'), to: +g('to'), d: +g('d'), f: +g('f') }; });
+  return { ins: $('#asIns').value, n1: $('#asN1').value, n2: $('#asN2').value, n3: $('#asN3').value, title: $('#asTitle').value, sub: $('#asSub').value, id: +$('#asId').value || 0, lab: $('#asLab').value, key: $('#asKey').value.trim(), secs, logo: $('#asLogoC').checked || undefined, score: $('#asScore').value.trim() || undefined, color: $('#asColor').value, brand: $('#asBrand').value };
 }
-function asPrev() { $$('#asSecs .asr').forEach(r => { const t = $('[data-k="t"]', r).value; $$('.dg', r).forEach(e => e.style.display = t === 'int' || t === 'dec' ? '' : 'none'); $$('.dc', r).forEach(e => e.style.display = t === 'dec' ? '' : 'none'); $$('.dw', r).forEach(e => e.style.display = t === 'write' ? '' : 'none'); }); $('#asPrev').innerHTML = answerSheetSVG(asRead()); }
+function asPrev() { $$('#asSecs .asr').forEach(r => { const t = $('[data-k="t"]', r).value; $$('.dg', r).forEach(e => e.style.display = t === 'int' || t === 'dec' ? '' : 'none'); $$('.dc', r).forEach(e => e.style.display = t === 'dec' ? '' : 'none'); }); $('#asPrev').innerHTML = answerSheetSVG(asRead()); }
 $('#asSecs').addEventListener('input', asPrev); $('#asSecs').addEventListener('change', asPrev);
 ['asIns', 'asN1', 'asN2', 'asN3', 'asTitle', 'asSub', 'asId', 'asLab', 'asKey', 'asScore', 'asColor', 'asBrand'].forEach(i => $('#' + i).addEventListener('input', asPrev)); $('#asLogoC').addEventListener('change', asPrev); $('#asLab').addEventListener('change', asPrev);
 $('#asSecs').addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (!d) return; const c = asRead(); c.secs.splice(+d.dataset.del, 1); asSecs(c.secs); asPrev(); });
 $('#asAdd').onclick = () => { const c = asRead(); const last = c.secs[c.secs.length - 1]; const st = last ? last.to + 1 : 1; c.secs.push({ t: 'mc5', from: st, to: st + 9, d: 4, f: 2 }); asSecs(c.secs); asPrev(); };
 $('#asPreset').onchange = e => { const f = AS_PRESETS[e.target.value]; if (!f) return; const c = f(); c.title = $('#asTitle').value || c.title; c.sub = $('#asSub').value; asSecs(c.secs); $('#asId').value = c.id || 0; $('#asLab').value = c.lab; asPrev(); e.target.value = ''; };
 $('#asCancel').onclick = () => closeDlg('#dAsht');
-/* รหัสสำหรับตรวจด้วยเครื่องในSir’Earth Class: รูปแบบกระดาษ + ตำแหน่งวงระบาย + เฉลย */
-function omrCode(cfg) {
-  const c = Object.assign({}, cfg, { omr: true }); answerSheetSVG(c); const lay = window.__asLay;
-  const o = { v: 1, app: 'newton-press', title: [c.title, c.sub].filter(Boolean).join(' · '), lab: c.lab, key: c.key || '', secs: c.secs, lay: lay };
-  return 'NPOMR1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
-}
-$('#asCode').onclick = () => {
-  const cfg = asRead();
-  if (!cfg.omr) { $('#asOmr').checked = true; asPrev(); }
-  const code = omrCode(asRead()), keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean).length;
-  const done = () => alert('คัดลอกรหัสแล้ว ✓' + (keys ? '' : '\n(ยังไม่ได้ใส่คำตอบที่ถูก — ใส่เฉลยใน Sir’Earth Class ได้ หรือใส่ที่ช่อง "คำตอบที่ถูก" ก่อนคัดลอก)') + '\n\nไปที่ Sir’Earth Class (หน้าครู) → แท็บลงคะแนน → เลือกรายการ → 📝 ตรวจข้อสอบ → วางรหัส\n* อย่าลืมกด "ใส่ลงเอกสาร" แล้วพิมพ์กระดาษคำตอบแบบมีจุดดำ 4 มุม');
-  if (navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => prompt('คัดลอกรหัสนี้:', code)); else prompt('คัดลอกรหัสนี้:', code);
-};
 $('#asOk').onclick = () => {
   const cfg = asRead(); closeDlg('#dAsht');
   if (asTarget) { const b = byId(asTarget); b.cfg = cfg; rerender(b.id); changed(true); }
@@ -6568,9 +6544,9 @@ changed = function (imm) { _changedL(imm); if (doc && doc.blocks && doc.blocks.s
 
 /* ===================== ข้อสอบกลางภาค / ปลายภาค: ใบปะหน้ายึดโยงกับตัวข้อสอบ ===================== */
 EXAM_PRESETS.midfinal = { name: 'สอบกลางภาค / ปลายภาค (มีใบปะหน้าโรงเรียน)', subj: 'แบบทดสอบวัดผลปลายภาค', set: 'รายวิชา คณิตศาสตร์เพิ่มเติม 5  รหัส ค33201  ระดับชั้นมัธยมศึกษาปีที่ 6', time: 90, lab: '(1)',
-  parts: [{ n: 'ตอนที่ 1 ข้อสอบปรนัย 5 ตัวเลือก', c: 10, t: 'mc5', p: 0.5, w: 'small' }, { n: 'ตอนที่ 2 ข้อสอบปรนัย เติมคำตอบ', c: 5, t: 'fill', p: 1, w: 'small' }, { n: 'ตอนที่ 3 ข้อสอบอัตนัย แสดงวิธีทำ', c: 4, t: 'write', p: 2.5, w: 'half' }] };
-const XC_SKILL = { mc4: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', mc5: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', fill: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', int: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', dec: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', write: 'วัดทักษะการแก้โจทย์ปัญหา' };
-const xcTypeName = t => ({ mc4: 'ข้อสอบปรนัย 4 ตัวเลือก', mc5: 'ข้อสอบปรนัย 5 ตัวเลือก', fill: 'ข้อสอบปรนัย เติมคำตอบ', int: 'ข้อสอบปรนัย เติมคำตอบ', dec: 'ข้อสอบปรนัย เติมคำตอบ', write: 'ข้อสอบอัตนัย แสดงวิธีทำ' }[t] || ('ข้อสอบ' + (QTYPES[t] || '')));
+  parts: [{ n: 'ตอนที่ 1 ข้อสอบปรนัย 5 ตัวเลือก', c: 10, t: 'mc5', p: 0.5, w: 'small' }, { n: 'ตอนที่ 2 ข้อสอบปรนัย เติมคำตอบ', c: 5, t: 'fill', p: 1, w: 'small' }, { n: 'ตอนที่ 3 ข้อสอบอัตนัย แสดงวิธีทำ', c: 4, t: 'subans', d: 3, p: 2.5, w: 'full' }] };
+const XC_SKILL = { mc4: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', mc5: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', fill: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', int: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', dec: 'วัดทักษะคิดเลขเร็วและทักษะการคิดคำนวณ', write: 'วัดทักษะการแก้โจทย์ปัญหา', subans: 'วัดทักษะการแก้โจทย์ปัญหา', prove: 'วัดทักษะการให้เหตุผล' };
+const xcTypeName = t => ({ mc4: 'ข้อสอบปรนัย 4 ตัวเลือก', mc5: 'ข้อสอบปรนัย 5 ตัวเลือก', fill: 'ข้อสอบปรนัย เติมคำตอบ', int: 'ข้อสอบปรนัย เติมคำตอบ', dec: 'ข้อสอบปรนัย เติมคำตอบ', write: 'ข้อสอบอัตนัย แสดงวิธีทำ', subans: 'ข้อสอบอัตนัย แสดงวิธีทำ' }[t] || ('ข้อสอบ' + (QTYPES[t] || '')));
 // ช่องเลือกในหน้าต่างสร้างชุดข้อสอบ
 (function () { const cv = $('#ebCover'); if (cv && !$('#ebXC')) cv.closest('label').insertAdjacentHTML('beforebegin', '<label><input type="checkbox" id="ebXC"> ใบปะหน้าข้อสอบโรงเรียน (ตรา คำชี้แจง ตาราง ผลการเรียนรู้ ลงนาม · ตัวเลขตามข้อสอบอัตโนมัติ)</label>'); })();
 const _ebLoadX = ebLoad; ebLoad = function (k) { _ebLoadX(k); const m = k === 'midfinal'; $('#ebXC').checked = m; if (m) { $('#ebCover').checked = false; $('#ebQH').checked = false; $('#ebSheet').checked = false; $('#ebPartH').checked = true; $('#ebQ').checked = false; } if (typeof ebSum === 'function') ebSum(); };
@@ -6837,6 +6813,141 @@ extBlockXML = function (b, o) {
   if (r && (b.t === 'lphead' || b.t === 'cshead') && b.dv) { const re = b.t === 'lphead' ? /<w:p><w:pPr><w:pBdr><w:bottom w:val="dotted"(?:(?!<w:p>)[\s\S])*<\/w:p>$/ : /<w:p><w:pPr><w:pBdr><w:bottom w:val="dashed"(?:(?!<w:p>)[\s\S])*<\/w:p>$/; r = r.replace(re, dividerXML(b, b.t === 'lphead' ? 'dot' : 'dash', o.C)); }
   return r;
 };
+
+/* ===================== อัตนัยมีข้อย่อย + ตารางคำตอบ (ข้อ | คำตอบ) ===================== */
+TYPES.anstab = 'ตารางคำตอบข้อย่อย (ข้อ | คำตอบ)';
+QTYPES.subans = 'อัตนัยมีข้อย่อย + ตารางคำตอบ';
+const _extNewAT = extNewBlock;
+extNewBlock = function (b) { _extNewAT(b); if (b.t === 'anstab') Object.assign(b, { l1: 'ข้อ', l2: 'คำตอบ', w: 100, side: false, rhmm: 10 }); };
+function atNums(b) { // เลขข้อย่อยจากบล็อก subq ของข้อเดียวกัน
+  const i = doc.blocks.indexOf(b); const nums = [];
+  for (let j = i - 1; j >= 0; j--) { const x = doc.blocks[j]; if (x.t === 'problem') break; if (x.t === 'subq') nums.unshift(plainText(x.num || '').replace(/[)\s]+$/, '')); }
+  if (!nums.length) for (let k = 1; k <= (+b.n || 3); k++) nums.push(String(k));
+  return nums;
+}
+const _extHTMLAT = extBlockHTML;
+extBlockHTML = function (b) {
+  const r = _extHTMLAT(b); if (r || b.t !== 'anstab') return r;
+  const N = atNums(b); b._sig = N.join('|'); const rh = (+b.rhmm || 11) * 3.7795;
+  const tbl = `<table class="at" style="width:${b.side ? 100 : (+b.w || 100)}%"><tr class="ath"><th contenteditable="true" data-f="l1"></th><th contenteditable="true" data-f="l2"></th></tr>${N.map((n, i) => `<tr style="height:${rh}px"><td class="atn">${esc(n)}</td><td contenteditable="true" data-f="a${i}" data-ph=" "></td></tr>`).join('')}</table>`;
+  if (!b.side) return `<div class="b-anstab">${tbl}</div>`;
+  const lines = Math.ceil(((N.length * rh) + 40) / (9 * 3.7795));
+  return `<div class="b-anstab side"><div class="atl" style="width:${+b.w || 42}%">${tbl}</div><div class="atr">${'<i></i>'.repeat(lines)}</div></div>`;
+};
+// เลขข้อย่อยเปลี่ยน → วาดตารางใหม่
+const _capSyncAT = typeof capSync === 'function' ? capSync : null;
+capSync = function () { if (_capSyncAT) _capSyncAT(); doc.blocks.forEach(b => { if (false) { const el = $(`.blk[data-id="${b.id}"]`); if (el && !el.contains(document.activeElement)) { const nel = makeEl(b); if (el.classList.contains('sel')) nel.classList.add('sel'); el.replaceWith(nel); } } }); };
+const _extInspAT = extInspector;
+extInspector = function (b) {
+  let h = _extInspAT(b); if (b.t !== 'anstab') return h;
+  return h + `<div class="ir"><label>ความกว้างตาราง (% ของหน้า)</label><input type="number" min="25" max="100" step="5" data-bn="w" value="${b.w || 42}"></div>`
+    + `<div class="ir"><label>ความสูงช่องคำตอบ (มม.)</label><input type="number" min="6" max="40" data-bn="rhmm" value="${b.rhmm || 11}"></div>`
+    + `<div class="ir"><label><input type="checkbox" data-bc2="side" ${b.side ? 'checked' : ''}> มีเส้นบรรทัดต่อด้านขวาของตาราง</label></div>`
+    + `<div class="ir"><label>จำนวนแถว (ใช้เมื่อไม่มีข้อย่อย)</label><input type="number" min="1" max="15" data-bn="n" value="${b.n || 3}"></div>`
+    + `<p class="hint" style="font-size:14px">เลขในตารางตามข้อย่อย (6.1, 6.2 …) ของข้อนี้อัตโนมัติ · ช่องคำตอบพิมพ์เฉลยไว้ได้</p>`;
+};
+const _extXMLAT = extBlockXML;
+extBlockXML = function (b, o) {
+  const r = _extXMLAT(b, o); if (r || b.t !== 'anstab') return r; const { C } = o; const N = atNums(b);
+  const tw = (DX.cw - 600) * Math.min(100, +b.w || 100) / 100, w1 = b.side ? tw * .24 : tw * .13, w2 = tw - w1;
+  const bc = C('brown'); const T = h => [].concat(...htmlParas(h || '', {}).map(p => p.runs));
+  const hd = (h) => cell(para(T(h).map(x => x), { jc: 'center', after: 0 }).replace(/<w:rPr>/g, `<w:rPr><w:b/><w:color w:val="${bc}"/>`), { fill: C('bar'), bc, vAlign: 'center' });
+  const rows = [[hd(b.l1 || 'ข้อ'), hd(b.l2 || 'คำตอบ')]].concat(N.map((n, i) => [cell(para([run(n, { b: true, color: bc })], { jc: 'center', after: 0 }), { bc, vAlign: 'center' }), cell(para(T(b['a' + i]), { after: 0 }), { bc, vAlign: 'center' })]));
+  const rh = (+b.rhmm || 11) * 56.7;
+  let x = table(rows, { w: w1 + w2, cols: [w1, w2], rh: [0, ...N.map(() => rh)], noGap: !!b.side, ind: b.side ? 0 : 600 });
+  if (b.side) { const lines = Math.ceil((N.length * (+b.rhmm || 11) + 10) / 9); const L = Array.from({ length: lines }, () => para([], { border: '<w:bottom w:val="single" w:sz="4" w:color="CDB9AD"/>', after: 0, line: 500, lineRule: 'exact' })).join('');
+    x = table([[cell(x + para([], { after: 0 }), { border: '<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/>', w: w1 + w2, px: 0 }), cell(L, { border: '<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/>', w: DX.cw - w1 - w2, px: 80 })]], { w: DX.cw, cols: [w1 + w2, DX.cw - w1 - w2] }); }
+  return x;
+};
+// แทรกทั้งข้อ: โจทย์ + คำถามนำ + ข้อย่อย + เส้นเขียน + ตารางคำตอบ
+const _qBodyAT = qBody;
+qBody = function (t, k, q, c) {
+  if (t !== 'subans') return _qBodyAT(t, k, q, c);
+  const n = +q.d || 3; const half = Math.round(q.p * 2), base = Math.floor(half / n), extra = half - base * n; const ptsOf = j => (base + (j > n - extra ? 1 : 0)) / 2; const B = [];
+  B.push(newBlock('given', { html: 'สถานการณ์ / ข้อมูลของโจทย์ ...' }));
+  B.push(newBlock('question', { html: 'จงหา ... โดยที่' }));
+  for (let j = 1; j <= n; j++) B.push(newBlock('subq', { num: `${k}.${j}`, html: '', pts: `(${ptsTxt(ptsOf(j))} คะแนน)` }));
+  B.push(newBlock('work', workOpts(q.w && q.w !== 'none' && q.w !== 'small' ? q.w : 'full')));
+  B.push(newBlock('anstab', {}));
+  return B;
+};
+if (typeof N_TYPES !== 'undefined' && !N_TYPES.includes('subans')) N_TYPES.push('subans');
+// กรอบทดแบบเต็มหน้า + ตารางคำตอบ: ยืดกรอบทดให้ตารางคำตอบชิดล่างของหน้า
+function atFill() {
+  const P = PAGE_H + PAGE_G;
+  $$('#flow > .blk[data-t="anstab"]').forEach(el => {
+    const pv = el.previousElementSibling; if (!pv || pv.dataset.t !== 'work') return; const wb = byId(pv.dataset.id); if (!wb || !wb.full) return; const w = $('.b-work', pv); if (!w) return;
+    const bot = el.offsetTop + el.offsetHeight, p = Math.floor((bot - 1) / P), re = p * P + PAGE_H - BOT; if (Math.floor(pv.offsetTop / P) !== p) return;
+    const nx = el.nextElementSibling; if (nx && Math.floor(nx.offsetTop / P) === p) return;
+    const add = re - bot - 4; if (add > 6) w.style.height = (w.offsetHeight + add) + 'px';
+  });
+}
+/* ===================== คะแนนข้ออัตนัย: ช่องคะแนนท้ายข้อ · คอลัมน์คะแนนข้อย่อย · ตารางสรุปคะแนน ===================== */
+const ptsNum = s => parseFloat(String(plainText(s || '')).replace(/[^\d.]/g, '')) || 0;
+function probOf(b) { const i = doc.blocks.indexOf(b); for (let j = i - 1; j >= 0; j--) if (doc.blocks[j].t === 'problem') return doc.blocks[j]; return null; }
+function subPts(b) { const i = doc.blocks.indexOf(b), out = []; for (let j = i - 1; j >= 0; j--) { const x = doc.blocks[j]; if (x.t === 'problem') break; if (x.t === 'subq') out.unshift(ptsNum(x.pts)); } return out; }
+function fullOf(b) { const p = probOf(b); const sp = subPts(b).reduce((a, x) => a + x, 0); return p && ptsNum(p.pts) ? ptsNum(p.pts) : sp; }
+const sbHTML = (full) => `<div class="sbx"><span>คะแนนที่ได้</span><i></i><span>/ ${esc(ptsTxt(full || 0))}</span></div>`;
+TYPES.scorebox = 'ช่องคะแนนท้ายข้อ (คะแนนที่ได้ … / เต็ม)';
+TYPES.scoresum = 'ตารางสรุปคะแนน (ปรนัย + อัตนัยรายข้อ)';
+const _extNewSB = extNewBlock;
+extNewBlock = function (b) { _extNewSB(b); if (b.t === 'anstab') Object.assign(b, { sbox: true, scol: false }); };
+// ตารางคำตอบ: เพิ่มคอลัมน์คะแนนข้อย่อย + ช่องคะแนนรวมของข้อ
+const _extHTMLSB = extBlockHTML;
+extBlockHTML = function (b) {
+  if (b.t === 'scorebox') { const f = fullOf(b); b._sig = 'f' + f; return `<div class="b-scorebox">${sbHTML(f)}</div>`; }
+  if (b.t === 'scoresum') { const R = ssRows(b); b._sig = JSON.stringify(R); return `<div class="b-scoresum"><table class="ss"><tr><th contenteditable="true" data-f="h0" data-ph="ส่วน"></th><th>เต็ม</th><th>ได้</th>${b.who ? '<th>ผู้ตรวจ</th>' : ''}</tr>${R.map(r => `<tr${r.tot ? ' class="tot"' : ''}><td>${esc(r.name)}</td><td>${esc(ptsTxt(r.full))}</td><td></td>${b.who ? '<td></td>' : ''}</tr>`).join('')}</table></div>`; }
+  let r = _extHTMLSB(b); if (b.t !== 'anstab' || !r) return r;
+  const SP = subPts(b), full = fullOf(b); b._sig = (b._sig || '') + '|' + SP.join(',') + '|' + full;
+  if (b.scol) { r = r.replace('<th contenteditable="true" data-f="l2"></th>', '<th contenteditable="true" data-f="l2"></th><th class="atsh">คะแนน</th>'); let k = 0; r = r.replace(/(<td contenteditable="true" data-f="a\d+" data-ph=" "><\/td>)/g, (m) => m + `<td class="atsc"><i></i>/ ${esc(ptsTxt(SP[k++] || 0))}</td>`); }
+  if (b.sbox) r = r.replace(/<\/div>$/, sbHTML(full) + '</div>');
+  return r;
+};
+// ตารางสรุปคะแนน: ตอนปรนัยรวมเป็นแถวเดียว ข้ออัตนัยแยกรายข้อ
+const WRITE_QT = new Set(['write', 'prove', 'sub', 'subans', 'err', 'fillsteps', 'short', 'tf', 'match', 'order']);
+function ssRows(sb) {
+  const B = doc.blocks, rows = []; let part = null, partName = '';
+  const flush = () => { if (part && part.n) rows.push({ name: `${partName || 'ปรนัย'} (ข้อ ${part.a}–${part.z})`, full: part.full }); part = null; };
+  B.forEach((x, i) => {
+    if (x.t === 'part') { flush(); partName = plainText(x.html || ''); return; }
+    if (x.t !== 'problem' || x.nobm) return;
+    let qt = x.qt; if (!qt) { for (let j = i + 1; j < B.length && B[j].t !== 'problem' && B[j].t !== 'part'; j++) { if (B[j].t === 'choices') { qt = 'mc'; break; } if (B[j].t === 'anstab' || B[j].t === 'subq') { qt = 'subans'; break; } } }
+    const no = plainText(x.html || '').replace(/^ข้อ\s*/, ''), full = ptsNum(x.pts);
+    if (WRITE_QT.has(qt || 'write')) { flush(); rows.push({ name: 'ข้อ ' + no, full }); }
+    else { if (!part) part = { a: no, z: no, n: 0, full: 0 }; part.z = no; part.n++; part.full += full; }
+  });
+  flush(); rows.push({ name: 'รวม', full: rows.reduce((a, r) => a + r.full, 0), tot: true });
+  return rows;
+}
+// วาดใหม่เมื่อข้อ/คะแนนเปลี่ยน
+const _capSyncSB = capSync;
+capSync = function () { _capSyncSB(); doc.blocks.forEach(b => { if (!['scorebox', 'scoresum', 'anstab'].includes(b.t)) return; const el = $(`.blk[data-id="${b.id}"]`); if (!el || el.contains(document.activeElement)) return; const old = b._sig; b._sig = ''; const tmp = extBlockHTML(b); const now = b._sig; b._sig = old; if (now !== old) { const nel = makeEl(b); if (el.classList.contains('sel')) nel.classList.add('sel'); el.replaceWith(nel); } }); };
+const _extInspSB = extInspector;
+extInspector = function (b) {
+  let h = _extInspSB(b);
+  if (b.t === 'anstab') h += `<div class="ir"><label><input type="checkbox" data-bc2="sbox" ${b.sbox ? 'checked' : ''}> ช่อง “คะแนนที่ได้ … / เต็ม” ท้ายข้อ</label></div><div class="ir"><label><input type="checkbox" data-bc2="scol" ${b.scol ? 'checked' : ''}> คอลัมน์คะแนนแยกข้อย่อย</label></div>`;
+  if (b.t === 'scoresum') h += `<div class="ir"><label><input type="checkbox" data-bc2="who" ${b.who ? 'checked' : ''}> คอลัมน์ “ผู้ตรวจ”</label></div><p class="hint" style="font-size:14px">แถวและคะแนนเต็มสร้างจากข้อสอบในเอกสารอัตโนมัติ · ปรนัยรวมเป็นแถวเดียวต่อตอน · อัตนัยแยกรายข้อ</p>`;
+  if (b.t === 'scorebox') h += `<p class="hint" style="font-size:14px">คะแนนเต็มดึงจากคะแนนของข้อนี้อัตโนมัติ</p>`;
+  return h;
+};
+// Word
+const _extXMLSB = extBlockXML;
+extBlockXML = function (b, o) {
+  const { C } = o; const bc = C('brown');
+  const sbXML = full => para([run('คะแนนที่ได้  ', { b: true, color: bc }), run('..........', {}), run('  / ' + ptsTxt(full || 0), { b: true, color: bc })], { jc: 'right', after: 60, before: 80 });
+  if (b.t === 'scorebox') return sbXML(fullOf(b));
+  if (b.t === 'scoresum') { const R = ssRows(b); const n = b.who ? 4 : 3; const W = DX.cw * .62; const cols = b.who ? [W * .46, W * .16, W * .16, W * .22] : [W * .6, W * .2, W * .2];
+    const hd = t => cell(para([run(t, { b: true, color: bc })], { jc: 'center', after: 0 }), { fill: C('bar'), bc });
+    const rows = [[hd(plainText(b.h0 || '') || 'ส่วน'), hd('เต็ม'), hd('ได้')].concat(b.who ? [hd('ผู้ตรวจ')] : [])].concat(R.map(r => [cell(para([run(r.name, { b: !!r.tot })], { after: 0 }), { bc }), cell(para([run(ptsTxt(r.full), { b: !!r.tot })], { jc: 'center', after: 0 }), { bc }), cell(para([]), { bc })].concat(b.who ? [cell(para([]), { bc })] : [])));
+    return table(rows, { w: W, cols, center: true, rh: [0, ...R.map(() => 420)] }); }
+  let r = _extXMLSB(b, o); if (b.t === 'anstab' && r && b.sbox) r += sbXML(fullOf(b)); return r;
+};
+GROUP_MEMBERS.add('scorebox');
+// ในชุดข้อสอบ: ข้ออัตนัยแบบอื่นมีช่องคะแนนท้ายข้อ + ตารางสรุปคะแนนในข้อสอบกลางภาค/ปลายภาค
+const _qBodySB = qBody;
+qBody = function (t, k, q, c) { const B = _qBodySB(t, k, q, c); if (c && c.xc && ['write', 'prove', 'sub', 'err', 'fillsteps'].includes(t)) B.push(newBlock('scorebox', {})); return B; };
+const _buildExamSB = buildExam;
+buildExam = function (c) { const B = _buildExamSB(c); if (!c.xc) return B; const i = B.findIndex(b => b.xc === 'name'); if (i >= 0) B.splice(i + 1, 0, newBlock('scoresum', { h0: 'ส่วน' })); return B; };
 
 /* ===================== ส่งออก PDF และ Word ===================== */
 function busy(on, msg) { document.body.style.cursor = on ? 'progress' : ''; status(on ? msg : ''); if (!on) schedulePaginate(); }
