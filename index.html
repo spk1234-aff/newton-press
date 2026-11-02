@@ -675,7 +675,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
       <div class="row"><label style="width:120px">ป้ายบรรทัด</label><input type="text" id="asN1" style="width:120px"><input type="text" id="asN2" style="width:70px"><input type="text" id="asN3" style="width:80px"></div>
       <div class="row"><label style="width:120px">บรรทัดรอง</label><input type="text" id="asSub" style="flex:1" placeholder="เช่น คณิตศาสตร์ประยุกต์ 1 ชุดที่ 1"></div>
       <div class="row"><label style="width:120px">ตัวเลือกเขียนเป็น</label><select id="asLab"><option value="(1)">1 2 3 4 5</option><option value="ก.">ก ข ค ง จ</option><option value="A.">A B C D E</option></select><label>เลขประจำตัว</label><input type="number" id="asId" min="0" max="10" style="width:60px"><label>หลัก (0 = ไม่มี)</label></div>
-      <div class="row"><label><input type="checkbox" id="asOmr"> ตรวจด้วยสมุดคะแนนออนไลน์ (เพิ่มจุดดำ 4 มุม · พิมพ์เป็นกระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ)</label></div>
+      <div class="row"><label><input type="checkbox" id="asOmr"> ตรวจด้วยSir’Earth Class (เพิ่มจุดดำ 4 มุม · พิมพ์เป็นกระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ)</label></div>
       <div class="row"><label><input type="checkbox" id="asLogoC"> โลโก้มุมซ้าย</label><label>ช่องคะแนนเต็ม</label><input type="text" id="asScore" style="width:70px" placeholder="เช่น 100"><label>สี</label><input type="color" id="asColor"><label>ข้อความท้าย</label><input type="text" id="asBrand" style="width:200px"></div>
       <div class="hd2">ส่วนของข้อ (กำหนดเองได้)</div>
       <div id="asSecs"></div>
@@ -684,7 +684,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
     </div>
     <div id="asPrev" style="flex:1 1 420px"></div>
   </div>
-  <div class="actions"><button class="tb" id="asCode" title="คัดลอกรูปแบบกระดาษและเฉลย ไปวางในสมุดคะแนนออนไลน์ (แท็บลงคะแนน → ตรวจข้อสอบ)" style="margin-right:auto">📋 รหัสสำหรับตรวจในสมุดคะแนน</button><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
+  <div class="actions"><button class="tb" id="asCode" title="คัดลอกรูปแบบกระดาษและเฉลย ไปวางในSir’Earth Class (แท็บลงคะแนน → ตรวจข้อสอบ)" style="margin-right:auto">📋 รหัสสำหรับตรวจใน Sir’Earth Class</button><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
 </div></div>
 
 <!-- หน้าต่างสร้างชุดข้อสอบ -->
@@ -4574,10 +4574,10 @@ function answerSheetSVG(cfg) {
   });
   s += `<text x="${W - 4}" y="${y + 4}" font-family="THS" font-size="12" text-anchor="end" fill="#9b8b80">${esc(cfg.brand ?? 'Earth & Newton Education')}</text>`;
   const H = y + 10;
-  if (cfg.omr) { // จุดสี่เหลี่ยม 4 มุม ให้สมุดคะแนนออนไลน์จัดภาพสแกนและหาหน้ากระดาษคำตอบ
+  if (cfg.omr) { // จุดสี่เหลี่ยม 4 มุม ให้Sir’Earth Classจัดภาพสแกนและหาหน้ากระดาษคำตอบ
     const M = 26, F = 18, cs = [[-M + F / 2, -M + F / 2], [W + M - F / 2, -M + F / 2], [-M + F / 2, H + M - F / 2], [W + M - F / 2, H + M - F / 2]];
     cs.forEach(c => s += `<rect x="${c[0] - F / 2}" y="${c[1] - F / 2}" width="${F}" height="${F}" fill="#000"/>`);
-    s += `<text x="${W / 2}" y="${H + M - 6}" font-family="THS" font-size="11" text-anchor="middle" fill="#9b8b80">ตรวจด้วยสมุดคะแนนออนไลน์ · ห้ามเขียนหรือขีดทับจุดดำทั้ง 4 มุม</text>`;
+    s += `<text x="${W / 2}" y="${H + M - 6}" font-family="THS" font-size="11" text-anchor="middle" fill="#9b8b80">ตรวจด้วยSir’Earth Class · ห้ามเขียนหรือขีดทับจุดดำทั้ง 4 มุม</text>`;
     lay.fid = cs; lay.fs = F; lay.vb = [-M, -M, W + 2 * M, Math.round(H) + 2 * M];
   } else lay.vb = [0, 0, W, Math.round(H)];
   lay.H = Math.round(H); window.__asLay = lay;
@@ -4626,7 +4626,7 @@ $('#asSecs').addEventListener('click', e => { const d = e.target.closest('[data-
 $('#asAdd').onclick = () => { const c = asRead(); const last = c.secs[c.secs.length - 1]; const st = last ? last.to + 1 : 1; c.secs.push({ t: 'mc5', from: st, to: st + 9, d: 4, f: 2 }); asSecs(c.secs); asPrev(); };
 $('#asPreset').onchange = e => { const f = AS_PRESETS[e.target.value]; if (!f) return; const c = f(); c.title = $('#asTitle').value || c.title; c.sub = $('#asSub').value; asSecs(c.secs); $('#asId').value = c.id || 0; $('#asLab').value = c.lab; asPrev(); e.target.value = ''; };
 $('#asCancel').onclick = () => closeDlg('#dAsht');
-/* รหัสสำหรับตรวจด้วยเครื่องในสมุดคะแนนออนไลน์: รูปแบบกระดาษ + ตำแหน่งวงระบาย + เฉลย */
+/* รหัสสำหรับตรวจด้วยเครื่องในSir’Earth Class: รูปแบบกระดาษ + ตำแหน่งวงระบาย + เฉลย */
 function omrCode(cfg) {
   const c = Object.assign({}, cfg, { omr: true }); answerSheetSVG(c); const lay = window.__asLay;
   const o = { v: 1, app: 'newton-press', title: [c.title, c.sub].filter(Boolean).join(' · '), lab: c.lab, key: c.key || '', secs: c.secs, lay: lay };
@@ -4636,7 +4636,7 @@ $('#asCode').onclick = () => {
   const cfg = asRead();
   if (!cfg.omr) { $('#asOmr').checked = true; asPrev(); }
   const code = omrCode(asRead()), keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean).length;
-  const done = () => alert('คัดลอกรหัสแล้ว ✓' + (keys ? '' : '\n(ยังไม่ได้ใส่คำตอบที่ถูก — ใส่เฉลยในสมุดคะแนนได้ หรือใส่ที่ช่อง "คำตอบที่ถูก" ก่อนคัดลอก)') + '\n\nไปที่สมุดคะแนน → แท็บลงคะแนน → เลือกรายการ → 📝 ตรวจข้อสอบ → วางรหัส\n* อย่าลืมกด "ใส่ลงเอกสาร" แล้วพิมพ์กระดาษคำตอบแบบมีจุดดำ 4 มุม');
+  const done = () => alert('คัดลอกรหัสแล้ว ✓' + (keys ? '' : '\n(ยังไม่ได้ใส่คำตอบที่ถูก — ใส่เฉลยใน Sir’Earth Class ได้ หรือใส่ที่ช่อง "คำตอบที่ถูก" ก่อนคัดลอก)') + '\n\nไปที่ Sir’Earth Class (หน้าครู) → แท็บลงคะแนน → เลือกรายการ → 📝 ตรวจข้อสอบ → วางรหัส\n* อย่าลืมกด "ใส่ลงเอกสาร" แล้วพิมพ์กระดาษคำตอบแบบมีจุดดำ 4 มุม');
   if (navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => prompt('คัดลอกรหัสนี้:', code)); else prompt('คัดลอกรหัสนี้:', code);
 };
 $('#asOk').onclick = () => {
