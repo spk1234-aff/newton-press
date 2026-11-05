@@ -1710,10 +1710,12 @@ $('#bOpen').onclick = () => $('#fileOpen').click();
 $('#fileOpen').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const rd = new FileReader();
-  rd.onload = () => {
+  rd.onload = () => setTimeout(() => {
     try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; delete d.cloud; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); toast('เปิด ' + f.name + ' แล้ว'); }
     catch (err) { toast('เปิดไฟล์นี้ไม่ได้ ต้องเป็นไฟล์ .json ที่บันทึกจากโปรแกรมนี้'); }
-  };
+    busy(false);
+  }, 60);
+  busy(true, 'กำลังเปิดไฟล์ “' + f.name + '”'); rd.onerror = () => { busy(false); toast('อ่านไฟล์ไม่ได้'); };
   rd.readAsText(f); e.target.value = '';
 };
 $('#bNew').onclick = async () => {
@@ -7096,6 +7098,7 @@ async function exportPDF() {
       const par = [];
       outline().forEach(x => { let p = null; for (let l = x.lv - 1; l >= 0; l--) if (par[l]) { p = par[l]; break; } const node = pdf.outline.add(p, x.title, { pageNumber: Math.min(x.page, n) }); par[x.lv] = node; for (let l = x.lv + 1; l < 6; l++) par[l] = null; });
     } catch (e) { console.warn('outline', e); }
+    busy(true, 'กำลังรวมไฟล์ PDF…'); await new Promise(r => setTimeout(r, 0));
     const blob = pdf.output('blob');
     await saveFile(fname('pdf'), blob);
   } catch (e) { console.error(e); toast('สร้าง PDF ไม่สำเร็จ: ' + e.message); }
@@ -7466,6 +7469,7 @@ async function exportDOCX() {
     for (let i = 0; i < B.length; i++) {
       const b = B[i], nx = B[i + 1];
       const inGroup = nx && ((b.t === 'problem' || GROUP_MEMBERS.has(b.t)) && GROUP_MEMBERS.has(nx.t) && nx.t !== 'problem');
+      if (i % 8 === 0) { busy(true, `กำลังสร้างไฟล์ Word ส่วนที่ ${i + 1}/${B.length}`); await new Promise(r => setTimeout(r, 0)); }
       let x = await blockXML(b, !!inGroup || HEADINGS.has(b.t));
  if (b.capOn && (b.t === 'table' || b.t === 'figure')) { const cp = para([run(capLabel(b, capNums()[b.id]) + ' ', { b: true })].concat(...htmlParas(b.cap || '', {}).map(q => q.runs)), { keep: b.t === 'table', jc: b.t === 'table' ? undefined : 'center', after: 60 }); x = b.t === 'table' ? cp + x : x + cp; }
  if (i === AI && i > 0) { body += '%%SECT1%%' + x; continue; }
@@ -7505,6 +7509,7 @@ async function exportDOCX() {
     if (firstH) { z.file('word/header2.xml', firstH); z.file('word/footer2.xml', firstF); z.file('word/_rels/header2.xml.rels', hrels); }
     z.file('word/media/logo.png', lg.data, { base64: true });
     DX.media.forEach(m => z.file('word/media/' + m.name, m.b64, { base64: true }));
+    busy(true, 'กำลังรวมไฟล์ Word…'); await new Promise(r => setTimeout(r, 0));
     const blob = await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     await saveFile(fname('docx'), blob);
   } catch (e) { console.error(e); toast('สร้างไฟล์ Word ไม่สำเร็จ: ' + e.message); }
@@ -7865,7 +7870,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793883428';
+const NP_BUILD = '1793883877';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -7959,7 +7964,7 @@ async function tabGo(j) {
     await tabFlushCloud();
     clearTimeout(saveTimer); snapshot();
     const cur = TB.list[TB.i]; cur.doc = doc; cur.hist = { stack: hist.stack, pos: hist.pos }; cur.top = $('#scroller').scrollTop; cur.fresh = false;
-    tabLoad(j);
+    await tabLoad(j);
   } finally { TB.busy = false; tabBar(); }
 }
 async function tabClose(j) {
@@ -7969,7 +7974,7 @@ async function tabClose(j) {
   if (tabCloud(d)) { await tabFlushCloud(); if (isDirty()) { if (!(await ask('ปิดแท็บ', '<p>งานนี้ยังบันทึกลง Drive ไม่สำเร็จ ถ้าปิดตอนนี้ส่วนที่แก้ล่าสุดจะหายไป ต้องการปิดไหม</p>', 'ปิดแท็บ'))) return; } }
   else if (!TB.list[j].fresh && !(await ask('ปิดแท็บ', `<p>“${esc(d.settings.name || 'เอกสาร')}” ยังไม่อยู่ในคลังงาน Drive ถ้ายังไม่ได้บันทึกเป็นไฟล์ งานจะหายไปเมื่อปิดแท็บ</p><p>ต้องการปิดแท็บนี้ไหม</p>`, 'ปิดแท็บ'))) return;
   TB.list.splice(j, 1);
-  tabLoad(Math.min(j, TB.list.length - 1));
+  await tabLoad(Math.min(j, TB.list.length - 1));
 }
 function tabNew() {
   if (TB.list.length >= TABMAX && !TB.list[TB.i].fresh) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return false; }
@@ -8046,6 +8051,78 @@ function tabBar() {
     if (ai < 0) { L.splice(Math.min(s.i || 0, L.length), 0, { key: TB.list[0].key, doc, hist: null, top: 0 }); ai = Math.min(s.i || 0, L.length - 1); if (L.length > TABMAX) L.splice(ai === 0 ? 1 : 0, L.length - TABMAX); ai = L.findIndex(t => t.doc === doc); }
     L[ai].hist = null; TB.list = L; TB.i = ai; TB.ref = doc; tabBar();
   }).catch(() => { });
+})();
+
+/* ---------- หน้าต่างแจ้งสถานะงานที่ใช้เวลานาน (ส่งออก เปิดไฟล์ สลับแท็บ) ---------- */
+const BZ = { on: false, t0: 0, tick: null, saved: false };
+const paintNow = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 0))));
+function bzEl() {
+  let el = $('#bzBox'); if (el) return el;
+  const css = document.createElement('style');
+  css.textContent = `#bzBox{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(40,30,20,.18);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);cursor:progress}
+#bzBox.on{display:flex}
+#bzBox .bz{min-width:300px;max-width:min(440px,90vw);background:#fff;border-radius:14px;box-shadow:0 12px 40px #0003;padding:18px 22px 16px;font-family:var(--ui-font);color:var(--ui-ink)}
+#bzBox .bz-h{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:700}
+#bzBox .bz-sp{flex:none;width:26px;height:26px;border-radius:50%;border:3px solid #e8dfd4;border-top-color:var(--ui-accent);animation:bzrot .8s linear infinite}
+#bzBox.done .bz-sp{animation:none;border-color:#2e8b57;background:#2e8b57;position:relative}
+#bzBox.done .bz-sp::after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:16px;font-weight:700}
+#bzBox .bz-bar{height:7px;border-radius:4px;background:#f0e9e0;margin:14px 0 6px;overflow:hidden;display:none}
+#bzBox .bz-bar>i{display:block;height:100%;width:0;background:var(--ui-accent);border-radius:4px;transition:width .25s}
+#bzBox .bz-s{font-size:15px;color:#8a8178;display:flex;justify-content:space-between;gap:10px;margin-top:6px}
+@keyframes bzrot{to{transform:rotate(360deg)}}
+.exporting #bzBox{display:flex}`;
+  document.head.appendChild(css);
+  el = document.createElement('div'); el.id = 'bzBox';
+  el.innerHTML = '<div class="bz"><div class="bz-h"><span class="bz-sp"></span><span class="bz-m"></span></div><div class="bz-bar"><i></i></div><div class="bz-s"><span class="bz-n">กรุณารอสักครู่ อย่าเพิ่งปิดหรือสลับหน้านี้</span><span class="bz-t"></span></div></div>';
+  document.body.appendChild(el); return el;
+}
+function bzTime() { const s = Math.round((Date.now() - BZ.t0) / 1000); const t = $('#bzBox .bz-t'); if (t) t.textContent = s >= 2 ? s + ' วินาที' : ''; }
+busy = function (on, msg) {
+  const el = bzEl();
+  document.body.style.cursor = on ? 'progress' : '';
+  status(on ? msg : '');
+  if (on) {
+    if (!BZ.on) { BZ.on = true; BZ.t0 = Date.now(); BZ.saved = false; clearInterval(BZ.tick); BZ.tick = setInterval(bzTime, 500); }
+    clearTimeout(BZ.hide); el.classList.remove('done'); el.classList.add('on');
+    const m = String(msg || 'กำลังทำงาน…'), p = m.match(/(\d+)\s*\/\s*(\d+)/);
+    el.querySelector('.bz-m').textContent = p ? m.replace(/\s*(หน้า|ส่วนที่)?\s*\d+\s*\/\s*\d+\s*$/, '') : m;
+    const bar = el.querySelector('.bz-bar');
+    if (p) { const a = +p[1], b = +p[2]; bar.style.display = 'block'; bar.firstChild.style.width = Math.round(a / b * 100) + '%'; el.querySelector('.bz-n').textContent = (/หน้า/.test(m) ? 'หน้า ' : 'ส่วนที่ ') + a + ' จาก ' + b + ' (' + Math.round(a / b * 100) + '%)'; }
+    else { bar.style.display = 'none'; el.querySelector('.bz-n').textContent = 'กรุณารอสักครู่ อย่าเพิ่งปิดหรือสลับหน้านี้'; }
+    bzTime();
+  } else {
+    if (!BZ.on) return; BZ.on = false; clearInterval(BZ.tick); schedulePaginate();
+    if (BZ.saved) { el.classList.add('done'); el.querySelector('.bz-m').textContent = BZ.saved; el.querySelector('.bz-bar').style.display = 'none'; el.querySelector('.bz-n').textContent = 'ใช้เวลา ' + Math.max(1, Math.round((Date.now() - BZ.t0) / 1000)) + ' วินาที'; el.querySelector('.bz-t').textContent = ''; BZ.hide = setTimeout(() => el.classList.remove('on', 'done'), 1500); }
+    else el.classList.remove('on', 'done');
+  }
+};
+/* ทำงานหนักแบบมีหน้าต่างแจ้ง: แสดงก่อนแล้วค่อยเริ่มงาน เพื่อให้ข้อความขึ้นทันที */
+async function withBusy(msg, fn) {
+  const was = BZ.on; busy(true, msg); await paintNow();
+  try { return await fn(); } finally { if (!was) busy(false); }
+}
+(function bzInit() {
+  bzEl();
+  // ไฟล์ที่ส่งออกบันทึกสำเร็จ → แสดง ✓ แจ้งเสร็จ
+  const _sf = saveFile;
+  saveFile = async function (name, data) { const r = await _sf(name, data); if (BZ.on && r !== false) BZ.saved = /\.pdf$/i.test(name) ? 'ส่งออก PDF เสร็จแล้ว' : /\.docx$/i.test(name) ? 'ส่งออกไฟล์ Word เสร็จแล้ว' : 'บันทึกไฟล์เสร็จแล้ว'; return r; };
+  const _pdf = exportPDF;
+  exportPDF = () => withBusy('กำลังเตรียมส่งออก PDF…', _pdf);
+  const bp = $('#bPdf'); if (bp) bp.onclick = exportPDF;
+  const _dx = exportDOCX;
+  exportDOCX = () => withBusy('กำลังเตรียมส่งออกไฟล์ Word…', _dx);
+  // เปิดงานจาก Drive
+  if (typeof clOpen === 'function') { const _o = clOpen; clOpen = id => withBusy('กำลังเปิดงานจาก Google Drive…', () => _o(id)); }
+  // สลับแท็บไปเอกสารที่ยาว
+  if (typeof tabLoad === 'function') {
+    const _tl = tabLoad;
+    tabLoad = function (j) {
+      const t = TB.list[j], big = t && t.doc && t.doc.blocks && t.doc.blocks.length > 60;
+      if (!big) return _tl(j);
+      busy(true, 'กำลังเปิดแท็บ “' + ((t.doc.settings && t.doc.settings.name) || 'เอกสาร') + '”');
+      return paintNow().then(() => { try { _tl(j); } finally { busy(false); } });
+    };
+  }
 })();
 </script>
 </body>
