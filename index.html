@@ -7155,21 +7155,29 @@ async function pageRenderer(scale = 2.5) {
   $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
   $$('.tools,.wh,.grip,.band,.dropline', st).forEach(e => e.remove()); $$('.msel', st).forEach(e => e.classList.remove('msel'));
   const xml = new XMLSerializer().serializeToString(st);
-  const P = PAGE_H + PAGE_G; const MODE = await foMode(scale);
-  return async i => {
+  const P = PAGE_H + PAGE_G;
+  const draw = async (i, mode) => {
     const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.body.className} fo" style="${vars};width:794px;height:${PAGE_H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${css.replace(/<\/style/gi, '')}</style><div style="position:absolute;left:0;top:${-i * P}px">${xml}</div></div>`;
-    const svg = foSVG(html, 794, PAGE_H, scale, MODE);
-    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    try {
-      const img = new Image(); img.decoding = 'sync';
-      await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg load')); img.src = url; });
-      await new Promise(r => setTimeout(r, 30));
-      const cv = document.createElement('canvas'); cv.width = 794 * scale; cv.height = PAGE_H * scale;
-      const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
-      cv.toDataURL('image/jpeg', 0.5); // ตรวจว่าไม่ติด taint
-      return cv;
-    } finally { }
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(foSVG(html, 794, PAGE_H, scale, mode));
+    const img = new Image(); img.decoding = 'sync';
+    await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg load')); img.src = url; });
+    await new Promise(r => setTimeout(r, 30));
+    const cv = document.createElement('canvas'); cv.width = 794 * scale; cv.height = PAGE_H * scale;
+    const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+    cv.toDataURL('image/jpeg', 0.5); // ตรวจว่าไม่ติด taint
+    return cv;
   };
+  // ขอบเขตหมึกบนหน้า (สัดส่วน 0–1) ใช้เทียบว่าภาพที่ได้เต็มหน้าจริง
+  const inkBox = cv => { const W = 80, H = 113, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(cv, 0, 0, W, H); const d = g.getImageData(0, 0, W, H).data; let r = 0, b = 0, l = W, t = H;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const k = (y * W + x) * 4; if (d[k] + d[k + 1] + d[k + 2] < 690) { if (x > r) r = x; if (y > b) b = y; if (x < l) l = x; if (y < t) t = y; } }
+    return r ? { r: r / W, b: b / H, l: l / W, t: t / H } : null; };
+  let MODE = FO_MODE.page;
+  if (!MODE) {
+    const ref = inkBox(await draw(0, 'one')); MODE = 'one';
+    if (ref) for (const m of ['vb', 'tf']) { try { const q = inkBox(await draw(0, m)); if (q && Math.abs(q.r - ref.r) < 0.06 && Math.abs(q.b - ref.b) < 0.06 && Math.abs(q.l - ref.l) < 0.06) { MODE = m; break; } } catch (e) { } }
+    FO_MODE.page = MODE; console.log('PDF render mode', MODE);
+  }
+  return i => draw(i, MODE);
 }
 
 /* ---------- Word (.docx) ---------- */
@@ -7891,7 +7899,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793886974';
+const NP_BUILD = '1793888086';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
