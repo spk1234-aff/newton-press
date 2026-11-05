@@ -1711,7 +1711,7 @@ $('#fileOpen').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const rd = new FileReader();
   rd.onload = () => {
-    try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); toast('เปิด ' + f.name + ' แล้ว'); }
+    try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; delete d.cloud; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); toast('เปิด ' + f.name + ' แล้ว'); }
     catch (err) { toast('เปิดไฟล์นี้ไม่ได้ ต้องเป็นไฟล์ .json ที่บันทึกจากโปรแกรมนี้'); }
   };
   rd.readAsText(f); e.target.value = '';
@@ -7858,14 +7858,14 @@ function clStatus(t, warn) {
   const bFile = document.createElement('button'); bFile.className = 'tb'; bFile.id = 'bFile'; bFile.textContent = 'เปิดไฟล์'; bFile.title = 'เปิดไฟล์ .json จากเครื่อง (ไฟล์ที่ไม่ได้อยู่ในคลังงาน)'; bFile.onclick = () => $('#fileOpen').click(); bOpen.after(bFile);
   const nb = $('#bNew'); if (nb) { const o = nb.onclick; nb.onclick = async () => { if (isDirty() && CLD.user) await clSave({ silent: true }); return o(); }; }
   // ไฟล์ที่เปิดจากเครื่องไม่ผูกกับคลังงาน
-  const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { if (doc && doc.cloud) { delete doc.cloud; autosave(); } clStatus(); if (CLD.user) toast('เปิดไฟล์จากเครื่องแล้ว · กด “บันทึก” เพื่อเก็บเข้าคลังงานใน Google Drive', 4000); }, 300));
+  const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { clStatus(); if (CLD.user) toast('เปิดไฟล์จากเครื่องแล้ว · กด “บันทึก” เพื่อเก็บเข้าคลังงานใน Google Drive', 4000); }, 300));
   let signedBefore = false; try { signedBefore = !!localStorage.getItem('np-cloud'); } catch (e) { }
   // โหลดระบบล็อกอินไว้ก่อน เพื่อให้กดปุ่มแล้วหน้าต่าง Google ขึ้นได้ทันที (Safari/iPad)
   fbLoad().then(() => { if (CLD.user && !tokOk()) clStatus('แตะเพื่อเชื่อม Drive', true); else clStatus(); }).catch(() => { if (signedBefore) clStatus('ออฟไลน์', true); });
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793881268';
+const NP_BUILD = '1793883428';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -7881,6 +7881,171 @@ const NP_BUILD = '1793881268';
     } catch (e) { }
   }
   if (location.protocol.startsWith('http')) { setTimeout(check, 5000); setInterval(check, 10 * 60e3); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); }); }
+})();
+
+/* ---------- แท็บเอกสาร: เปิดได้พร้อมกันสูงสุด 5 ไฟล์ ---------- */
+const TABMAX = 5;
+const TB = { list: [], i: 0, ref: null, sw: false, busy: false, t: null };
+const tabKey = () => 't' + Math.random().toString(36).slice(2, 9);
+const tabCloud = d => !!(d && d.cloud && d.cloud.id);
+const tabSleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---- เก็บแท็บทั้งหมดไว้ใน IndexedDB (พื้นที่มากกว่า localStorage) ---- */
+let tabDB = null;
+function tabIDB() {
+  if (tabDB) return tabDB;
+  tabDB = new Promise((ok, no) => { try { const r = indexedDB.open('newton-press', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); } catch (e) { no(e); } });
+  return tabDB;
+}
+async function tabIdbGet(k) { const db = await tabIDB(); return new Promise(ok => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => ok(q.result); q.onerror = () => ok(null); }); }
+async function tabIdbSet(k, v) { const db = await tabIDB(); return new Promise(ok => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => ok(true); tx.onerror = () => ok(false); }); }
+function tabStore(now) {
+  clearTimeout(TB.t);
+  const go = () => { if (!TB.list.length) return; const L = TB.list.map((t, k) => ({ key: t.key, doc: JSON.stringify(k === TB.i ? doc : t.doc) })); tabIdbSet('tabs', { i: TB.i, list: L }).catch(() => { }); };
+  if (now) go(); else TB.t = setTimeout(go, 1500);
+}
+const _autosaveT = autosave;
+autosave = function () { _autosaveT(); try { if (TB.list[TB.i]) localStorage.setItem('np-tabkey', TB.list[TB.i].key); } catch (e) { } tabStore(); tabBar(); };
+
+/* ---- เอกสารถูกแทนที่ (เปิดไฟล์ / เปิดจากคลัง / แม่แบบใหม่ / สร้างเฉลย) → แยกเป็นแท็บใหม่ ---- */
+function tabAdopt() {
+  const nd = doc, od = TB.ref, cur = TB.list[TB.i];
+  if (!cur) return;
+  const keepCur = () => { cur.doc = od; cur.hist = { stack: hist.stack, pos: hist.pos }; cur.top = $('#scroller').scrollTop; };
+  if (tabCloud(nd)) { // งานนี้เปิดอยู่แล้วในอีกแท็บ → อัปเดตแท็บนั้นแล้วสลับไป
+    const j = TB.list.findIndex((t, k) => k !== TB.i && tabCloud(t.doc) && t.doc.cloud.id === nd.cloud.id);
+    if (j >= 0) { keepCur(); TB.list[j].doc = nd; TB.list[j].hist = null; TB.i = j; hist.stack = []; hist.pos = -1; curId = null; return; }
+    if (tabCloud(od) && od.cloud.id === nd.cloud.id) return; // โหลดฉบับใหม่ของงานเดิม
+  }
+  if (cur.fresh) { cur.fresh = false; return; } // แท็บตัวอย่างที่ยังไม่ได้แก้ → ใช้แทนได้เลย
+  if (TB.list.length >= TABMAX) { // เต็ม → คงงานเดิมไว้
+    doc = od; setTimeout(() => toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500), 400); return;
+  }
+  keepCur();
+  TB.list.splice(TB.i + 1, 0, { key: tabKey(), doc: nd, hist: null, top: 0 });
+  TB.i++; hist.stack = []; hist.pos = -1; curId = null; try { selSet.clear(); } catch (e) { }
+}
+const _renderAllT = renderAll;
+renderAll = function () {
+  if (TB.ref && doc !== TB.ref && !hist.lock && !TB.sw) tabAdopt();
+  _renderAllT();
+  TB.ref = doc; tabBar();
+};
+
+/* ---- สลับ / ปิดแท็บ ---- */
+async function tabFlushCloud() {
+  if (typeof CLD === 'undefined') return true;
+  for (let n = 0; CLD.loading && n < 40; n++) await tabSleep(100);
+  clearTimeout(CLD.timer);
+  if (isDirty() && CLD.user && tokOk()) await clSave({ silent: true });
+  for (let n = 0; CLD.busy && n < 100; n++) await tabSleep(150);
+  return true;
+}
+function tabLoad(j) {
+  const t = TB.list[j]; TB.i = j; TB.sw = true;
+  doc = t.doc; hist.stack = t.hist ? t.hist.stack : []; hist.pos = t.hist ? t.hist.pos : -1;
+  curId = null; try { selSet.clear(); blockMode = false; } catch (e) { }
+  applySettings(); renderAll(); TB.sw = false;
+  if (hist.pos < 0) snapshot();
+  try { refreshInspector(); } catch (e) { }
+  schedulePaginate(); setTimeout(() => { $('#scroller').scrollTop = t.top || 0; }, 120);
+  if (typeof clStatus === 'function') clStatus();
+  autosave(); tabStore(true);
+}
+async function tabGo(j) {
+  if (j === TB.i || TB.busy || !TB.list[j]) return;
+  TB.busy = true; tabBar();
+  try {
+    await tabFlushCloud();
+    clearTimeout(saveTimer); snapshot();
+    const cur = TB.list[TB.i]; cur.doc = doc; cur.hist = { stack: hist.stack, pos: hist.pos }; cur.top = $('#scroller').scrollTop; cur.fresh = false;
+    tabLoad(j);
+  } finally { TB.busy = false; tabBar(); }
+}
+async function tabClose(j) {
+  if (TB.busy || TB.list.length < 2) return;
+  if (j !== TB.i) { await tabGo(j); if (TB.i !== j) return; }
+  const d = doc;
+  if (tabCloud(d)) { await tabFlushCloud(); if (isDirty()) { if (!(await ask('ปิดแท็บ', '<p>งานนี้ยังบันทึกลง Drive ไม่สำเร็จ ถ้าปิดตอนนี้ส่วนที่แก้ล่าสุดจะหายไป ต้องการปิดไหม</p>', 'ปิดแท็บ'))) return; } }
+  else if (!TB.list[j].fresh && !(await ask('ปิดแท็บ', `<p>“${esc(d.settings.name || 'เอกสาร')}” ยังไม่อยู่ในคลังงาน Drive ถ้ายังไม่ได้บันทึกเป็นไฟล์ งานจะหายไปเมื่อปิดแท็บ</p><p>ต้องการปิดแท็บนี้ไหม</p>`, 'ปิดแท็บ'))) return;
+  TB.list.splice(j, 1);
+  tabLoad(Math.min(j, TB.list.length - 1));
+}
+function tabNew() {
+  if (TB.list.length >= TABMAX && !TB.list[TB.i].fresh) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return false; }
+  openTemplates(); return true;
+}
+const tabFull = () => TB.list.length >= TABMAX && !(TB.list[TB.i] && TB.list[TB.i].fresh);
+
+/* ---- แถบแท็บ ---- */
+function tabBar() {
+  let el = $('#docTabs');
+  if (!el) { el = document.createElement('div'); el.id = 'docTabs'; $('#main').before(el); }
+  const one = TB.list.length < 2;
+  el.innerHTML = TB.list.map((t, k) => {
+    const d = k === TB.i ? doc : t.doc, nm = esc((d && d.settings && d.settings.name) || 'เอกสาร'), dirty = d && d.cloud && d.cloud.dirty;
+    return `<div class="dt${k === TB.i ? ' on' : ''}" data-k="${k}" title="${nm}${tabCloud(d) ? ' · อยู่ในคลัง Drive' : ' · ยังไม่อยู่ในคลัง'}"><span class="dt-ic">${tabCloud(d) ? '☁︎' : '📄'}</span><span class="dt-n">${nm}</span>${dirty ? '<span class="dt-d" title="ยังไม่บันทึก">●</span>' : ''}${one ? '' : `<button class="dt-x" data-x="${k}" title="ปิดแท็บ">✕</button>`}</div>`;
+  }).join('') + `<button class="dt-add" title="เอกสารใหม่ในแท็บใหม่ (สูงสุด ${TABMAX} แท็บ)"${tabFull() ? ' disabled' : ''}>＋</button>${TB.busy ? '<span class="dt-busy">กำลังสลับ…</span>' : ''}`;
+}
+(function tabInit() {
+  const css = document.createElement('style');
+  css.textContent = `#docTabs{flex:0 0 auto;display:flex;align-items:flex-end;gap:2px;padding:4px 10px 0;background:var(--ui-bg);border-bottom:1px solid var(--ui-line);overflow-x:auto;scrollbar-width:thin}
+#docTabs .dt{display:flex;align-items:center;gap:5px;max-width:230px;min-width:0;padding:5px 8px 5px 10px;border:1px solid var(--ui-line);border-bottom:0;border-radius:8px 8px 0 0;background:var(--ui-panel);opacity:.72;cursor:pointer;font-size:16px;white-space:nowrap;user-select:none}
+#docTabs .dt.on{opacity:1;background:#fff;box-shadow:0 -2px 0 var(--ui-accent) inset;margin-bottom:-1px;padding-bottom:6px}
+#docTabs .dt:hover{opacity:1}
+#docTabs .dt-n{overflow:hidden;text-overflow:ellipsis;min-width:0}
+#docTabs .dt-ic{font-size:13px;opacity:.7}
+#docTabs .dt-d{color:#c2410c;font-size:11px}
+#docTabs .dt-x{border:0;background:none;cursor:pointer;color:#8a8178;font-size:13px;padding:0 2px;border-radius:4px;line-height:1}
+#docTabs .dt-x:hover{background:#0001;color:#b91c1c}
+#docTabs .dt-add{border:1px dashed var(--ui-line);background:none;border-radius:8px;cursor:pointer;font-size:17px;padding:2px 10px;margin:0 0 4px 4px;color:var(--ui-accent)}
+#docTabs .dt-add:disabled{opacity:.35;cursor:not-allowed}
+#docTabs .dt-busy{font-size:14px;color:#8a8178;margin:0 0 6px 8px}
+@media print{#docTabs{display:none}}.exporting #docTabs{display:none}`;
+  document.head.appendChild(css);
+  let fresh = false; try { fresh = !localStorage.getItem('en-editor-draft'); } catch (e) { }
+  TB.list = [{ key: tabKey(), doc, hist: null, top: 0, fresh }]; TB.i = 0; TB.ref = doc;
+  tabBar();
+  $('#bar').parentNode.addEventListener('click', e => {
+    const tb = e.target.closest('#docTabs'); if (!tb) return;
+    const x = e.target.closest('.dt-x'); if (x) { e.stopPropagation(); tabClose(+x.dataset.x); return; }
+    if (e.target.closest('.dt-add')) { tabNew(); return; }
+    const t = e.target.closest('.dt'); if (t) tabGo(+t.dataset.k);
+  });
+  // คลิกกลาง = ปิดแท็บ
+  document.addEventListener('auxclick', e => { const t = e.target.closest && e.target.closest('#docTabs .dt'); if (t && e.button === 1) { e.preventDefault(); tabClose(+t.dataset.k); } });
+  // ปุ่ม "ใหม่" = เอกสารใหม่ในแท็บใหม่ (ไม่ต้องเตือนว่างานจะหาย)
+  const nb = $('#bNew'); if (nb) nb.onclick = async () => { if (tabFull()) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return; } if (typeof CLD !== 'undefined' && isDirty() && CLD.user) await clSave({ silent: true }); openTemplates(); };
+  // เปิดไฟล์จากเครื่อง: เช็กจำนวนแท็บก่อนเปิดหน้าต่างเลือกไฟล์
+  const fo = $('#fileOpen'); if (fo) fo.addEventListener('click', e => { if (tabFull()) { e.preventDefault(); toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); } });
+  // เปิดจากคลัง: ถ้างานนั้นเปิดอยู่แล้วในอีกแท็บ → สลับไปเลย
+  if (typeof clOpen === 'function') {
+    const _o = clOpen;
+    clOpen = async function (id) {
+      const j = TB.list.findIndex((t, k) => tabCloud(k === TB.i ? doc : t.doc) && (k === TB.i ? doc : t.doc).cloud.id === id);
+      if (j >= 0 && j !== TB.i) { closeDlg('#dCloud'); await tabGo(j); toast('งานนี้เปิดอยู่แล้วในแท็บนี้'); return; }
+      if (j < 0 && tabFull()) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return; }
+      return _o(id);
+    };
+  }
+  // คีย์ลัด Ctrl/⌘ + Alt + ← / → สลับแท็บ
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && TB.list.length > 1) {
+      e.preventDefault(); const n = TB.list.length; tabGo((TB.i + (e.key === 'ArrowRight' ? 1 : n - 1)) % n);
+    }
+  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') tabStore(true); });
+  window.addEventListener('pagehide', () => tabStore(true));
+  // กู้แท็บที่เปิดค้างไว้ครั้งก่อน
+  tabIdbGet('tabs').then(s => {
+    if (!s || !s.list || s.list.length < 2) return;
+    let ak = ''; try { ak = localStorage.getItem('np-tabkey') || ''; } catch (e) { }
+    const L = []; let ai = -1;
+    s.list.slice(0, TABMAX).forEach((t, k) => { let d = null; try { d = JSON.parse(t.doc); } catch (e) { } if (!d || !d.blocks) return; if (t.key === ak) { ai = L.length; L.push({ key: t.key, doc, hist: null, top: 0 }); } else L.push({ key: t.key, doc: d, hist: null, top: 0 }); });
+    if (L.length < 2) return;
+    if (ai < 0) { L.splice(Math.min(s.i || 0, L.length), 0, { key: TB.list[0].key, doc, hist: null, top: 0 }); ai = Math.min(s.i || 0, L.length - 1); if (L.length > TABMAX) L.splice(ai === 0 ? 1 : 0, L.length - TABMAX); ai = L.findIndex(t => t.doc === doc); }
+    L[ai].hist = null; TB.list = L; TB.i = ai; TB.ref = doc; tabBar();
+  }).catch(() => { });
 })();
 </script>
 </body>
