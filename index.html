@@ -6828,6 +6828,47 @@ extInspector = function (b) {
   const p = tblColPct(b);
   return h + `<div class="ir col"><label>ความกว้างแต่ละคอลัมน์ (% ของตาราง)</label><div class="cwgrid">${p.map((x, j) => `<div class="cwc"><span>ค.${j + 1}</span><button class="tb" onclick="tblNudgeCol('${b.id}', ${j}, -5)">−</button><input type="number" min="3" max="94" step="1" value="${Math.round(x)}" onchange="tblSetCol('${b.id}', ${j}, this.value)"><button class="tb" onclick="tblNudgeCol('${b.id}', ${j}, 5)">+</button></div>`).join('')}</div><button class="tb" onclick="const x = byId('${b.id}'); delete x.cw; rerender(x.id); changed(true); refreshInspector()">แบ่งเท่ากันทุกคอลัมน์</button></div>`;
 };
+/* ---------- ปรับขนาดพอดีเนื้อหาอัตโนมัติ (ทั้งตาราง) ---------- */
+function tblFitMeasure(b) {
+  const blk = $(`.blk[data-id="${b.id}"]`), t = blk && $('table', blk); if (!t) return null;
+  const host = $('#flow'); const flowW = $('.b-table', blk).getBoundingClientRect().width / TZ();
+  const c = t.cloneNode(true); $$('colgroup', c).forEach(x => x.remove()); $$('tr.pgsp, tr.rephd', c).forEach(x => x.remove()); $$('tr', c).forEach(tr => tr.style.height = '');
+  c.style.cssText += ';table-layout:auto;width:auto;max-width:' + flowW + 'px;position:absolute;left:-99999px;top:0;visibility:hidden';
+  const box = document.createElement('div'); box.className = $('.b-table', blk).className; box.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + flowW + 'px'; box.appendChild(c); blk.appendChild(box);
+  const rows = Array.from(c.rows); const n = Math.max(...rows.map(r => Array.from(r.cells).reduce((a, x) => a + (x.colSpan || 1), 0)));
+  // ความกว้างที่อยากได้ = ข้อความยาวสุดแบบไม่ตัดบรรทัด, ต่ำสุด = คำยาวสุด
+  const want = Array(n).fill(0), min = Array(n).fill(30);
+  rows.forEach(r => { let j = 0; Array.from(r.cells).forEach(cell => { const s = cell.colSpan || 1; if (s === 1) { cell.style.whiteSpace = 'nowrap'; want[j] = Math.max(want[j], cell.getBoundingClientRect().width / TZ()); cell.style.whiteSpace = ''; } j += s; }); });
+  c.style.width = '1px'; rows.forEach(r => { let j = 0; Array.from(r.cells).forEach(cell => { const s = cell.colSpan || 1; if (s === 1) min[j] = Math.max(min[j], cell.getBoundingClientRect().width / TZ()); j += s; }); });
+  box.remove();
+  for (let j = 0; j < n; j++) { if (!want[j]) want[j] = 60; want[j] = Math.max(want[j] + 2, min[j]); }
+  let tot = want.reduce((a, x) => a + x, 0), w = want.slice();
+  if (tot > flowW) { // ยาวเกินหน้า: ให้คอลัมน์ที่ข้อความยาวยอมตัดบรรทัด (ลดส่วนที่เกินตามสัดส่วนส่วนที่ลดได้)
+    const minTot = min.reduce((a, x) => a + x, 0), room = Math.max(0, flowW - minTot), extra = want.map((x, j) => x - min[j]), exTot = extra.reduce((a, x) => a + x, 0) || 1;
+    w = min.map((m, j) => m + room * extra[j] / exTot); tot = flowW;
+  }
+  return { cols: w, pct: Math.min(100, Math.ceil(tot / flowW * 100)) };
+}
+function tblAutoFit(id, quiet) {
+  const b = byId(id || curId); if (!b || b.t !== 'table') return;
+  const m = tblFitMeasure(b); if (!m) return;
+  b.cw = m.cols.map(x => Math.round(x)).join(','); delete b.rh; delete b.rha;
+  if (m.pct >= 96) { b.full = true; delete b.tw; } else { b.full = false; b.tw = Math.max(20, m.pct); }
+  rerender(b.id); if (!quiet) { changed(true); if (curId === b.id) refreshInspector(); toast('ปรับขนาดตารางให้พอดีเนื้อหาแล้ว · ลากเส้นเพื่อปรับเองต่อได้'); }
+}
+function tblAutoFitAll() { const T = doc.blocks.filter(b => b.t === 'table'); T.forEach(b => tblAutoFit(b.id, true)); changed(true); refreshInspector(); toast(`ปรับตารางพอดีเนื้อหาแล้ว ${T.length} ตาราง`); }
+const _extInspFit = extInspector;
+extInspector = function (b) {
+  const h = _extInspFit(b); if (b.t !== 'table') return h;
+  return h.replace('<div class="ir flowctl"><b>ขนาดตาราง</b></div>', `<div class="ir flowctl"><b>ขนาดตาราง</b></div><div class="ir" style="gap:6px;flex-wrap:wrap"><button class="tb primary" onclick="tblAutoFit()">✨ พอดีเนื้อหา (ทั้งตาราง)</button><button class="tb" onclick="tblAutoFitAll()">ทุกตารางในเอกสาร</button></div>`);
+};
+// เมนูคลิกขวา: เพิ่มคำสั่งพอดีเนื้อหา
+const _tblMenuFit = tblMenu;
+tblMenu = function (x, y, b, kind, idx) {
+  _tblMenuFit(x, y, b, kind, idx); if (!tmenu) return;
+  tmenu.insertAdjacentHTML('beforeend', '<hr><button data-fit="1">✨ ปรับทั้งตารางให้พอดีเนื้อหา</button>');
+  $('[data-fit]', tmenu).addEventListener('click', ev => { ev.stopPropagation(); tblMenuClose(); tblAutoFit(b.id); });
+};
 
 /* ===================== เส้นคั่น / ลายคั่น ปรับได้ (จุดไข่ปลา เส้นประ เส้นทึบ คลื่น อิโมจิ สัญลักษณ์) ===================== */
 const DV_STYLES = [['dot', 'จุดไข่ปลา ••••'], ['dash', 'เส้นประ - - -'], ['solid', 'เส้นทึบ ───'], ['thick', 'เส้นหนา ━━━'], ['double', 'เส้นคู่ ═══'], ['wave', 'เส้นคลื่น 〰'], ['char', 'สัญลักษณ์ / อิโมจิ'], ['none', 'ไม่มีเส้น']];
@@ -7806,7 +7847,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793864525';
+const NP_BUILD = '1793875608';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
