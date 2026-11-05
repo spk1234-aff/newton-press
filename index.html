@@ -687,17 +687,15 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
       <div class="row"><label style="width:120px">ป้ายบรรทัด</label><input type="text" id="asN1" style="width:120px"><input type="text" id="asN2" style="width:70px"><input type="text" id="asN3" style="width:80px"></div>
       <div class="row"><label style="width:120px">บรรทัดรอง</label><input type="text" id="asSub" style="flex:1" placeholder="เช่น คณิตศาสตร์ประยุกต์ 1 ชุดที่ 1"></div>
       <div class="row"><label style="width:120px">ตัวเลือกเขียนเป็น</label><select id="asLab"><option value="(1)">1 2 3 4 5</option><option value="ก.">ก ข ค ง จ</option><option value="A.">A B C D E</option></select><label>เลขประจำตัว</label><input type="number" id="asId" min="0" max="10" style="width:60px"><label>หลัก (0 = ไม่มี)</label></div>
-      <div class="row"><label><input type="checkbox" id="asOmr"> ตรวจด้วย Sir’Earth Class (เพิ่มจุดดำ 4 มุม · พิมพ์เป็นกระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ)</label></div>
       <div class="row"><label><input type="checkbox" id="asLogoC"> โลโก้มุมซ้าย</label><label>ช่องคะแนนเต็ม</label><input type="text" id="asScore" style="width:70px" placeholder="เช่น 100"><label>สี</label><input type="color" id="asColor"><label>ข้อความท้าย</label><input type="text" id="asBrand" style="width:200px"></div>
-      <div class="hd2">ส่วนของข้อ (กำหนดเองได้) <button class="tb" id="asSync" title="อ่านตอน ข้อ ชนิด และคะแนนจากข้อสอบในเอกสารนี้" style="margin-left:8px">🔄 จัดตามข้อสอบในเอกสาร</button></div>
-      <div id="asWarn" style="display:none;background:#fff4e5;border:1px solid #f0c48a;color:#8a4b00;border-radius:8px;padding:6px 10px;margin:4px 0 8px;font-size:14px"></div>
+      <div class="hd2">ส่วนของข้อ (กำหนดเองได้)</div>
       <div id="asSecs"></div>
       <div class="row"><button class="tb" id="asAdd">+ เพิ่มส่วน</button></div>
       <div class="row" style="flex-direction:column;align-items:stretch"><label>คำตอบที่ถูก (ใส่เพื่อทำกระดาษเฉลย · เว้นว่าง = กระดาษเปล่า) เช่น 3,1,5,2 … และข้อตัวเลข 12.5</label><input type="text" id="asKey"></div>
     </div>
     <div id="asPrev" style="flex:1 1 420px"></div>
   </div>
-  <div class="actions"><button class="tb" id="asCode" title="คัดลอกรูปแบบกระดาษและเฉลย ไปวางใน Sir’Earth Class (แท็บลงคะแนน → ตรวจข้อสอบ)" style="margin-right:auto">📋 รหัสสำหรับตรวจใน Sir’Earth Class</button><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
+  <div class="actions"><button class="tb" id="asCancel">ยกเลิก</button><button class="tb primary" id="asOk">ใส่ลงเอกสาร</button></div>
 </div></div>
 
 <!-- หน้าต่างสร้างชุดข้อสอบ -->
@@ -4509,12 +4507,11 @@ function partHTML() { return `<div class="b-part"><div contenteditable="true" da
 
 /* ---------- กระดาษคำตอบแบบฝน (SVG) ---------- */
 const ASHEET_DEF = { title: 'กระดาษคำตอบ', sub: '', id: 0, lab: '(1)', key: '', secs: [{ t: 'mc5', from: 1, to: 25 }, { t: 'dec', from: 26, to: 30, d: 4, f: 2 }] };
-function sheetFromParts(parts, lab) { let k = 1; const secs = parts.map(q => { const t = ['mc4', 'mc5', 'int', 'dec'].includes(q.t) ? q.t : q.t === 'fill' ? 'dec' : 'write', m = /ตอนที่\s*[\dก-ฮ]+/.exec(q.n || ''); const s = { t, from: k, to: k + q.c - 1, d: q.d || 4, f: q.f || 2 }; if (+q.p) s.p = +q.p; if (m) s.part = m[0]; if (t === 'write' && q.t !== 'write') s.qt = q.t; k += q.c; return s; }); return { title: 'กระดาษคำตอบ', sub: '', id: 0, lab: lab || '(1)', key: '', secs }; }
+function sheetFromParts(parts, lab) { let k = 1; const secs = parts.map(q => { const s = { t: q.t, from: k, to: k + q.c - 1, d: q.d || 4, f: q.f || 2 }; k += q.c; return s; }).filter(s => s.t !== 'write'); return { title: 'กระดาษคำตอบ', sub: '', id: 0, lab: lab || '(1)', key: '', secs }; }
 function choiceLabels(n, lab) { if (lab === 'ก.') return 'กขคงจ'.slice(0, n).split(''); if (lab === 'A.') return 'ABCDE'.slice(0, n).split(''); return Array.from({ length: n }, (_, i) => String(i + 1)); }
 function answerSheetSVG(cfg) {
   const W = 658, ink = CL.dark, br = cfg.color || (typeof themeOf === 'function' ? themeOf(doc.settings).brown : CL.brown); let s = '', y = 0;
-  const lay = { v: 1, W: W, id: [], q: {} }, R1 = v => Math.round(v * 10) / 10; // ตำแหน่งวงระบายทั้งหมด (ใช้ตรวจด้วยเครื่อง)
-  /* โหมดตรวจด้วยเครื่อง: พิมพ์กระดาษเปล่า เฉลยไปอยู่ในรหัสตรวจ */ const keys = cfg.omr ? [] : String(cfg.key || '').split(/[,\s]+/).filter(Boolean); const keyOf = q => keys[q - 1];
+  const keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean); const keyOf = q => keys[q - 1];
   const txt = (x, yy, t, o = {}) => `<text x="${x}" y="${yy}" font-family="${o.f || 'THS'}" font-size="${o.fs || 15}" text-anchor="${o.a || 'middle'}" fill="${o.c || ink}"${o.b ? ' font-weight="700"' : ''}>${esc(String(t))}</text>`;
   const bub = (x, yy, t, on, r = 8.2) => `<circle cx="${x}" cy="${yy}" r="${r}" fill="${on ? '#222' : '#fff'}" stroke="${br}" stroke-width="1.1"/>` + (on ? '' : txt(x, yy + 3.6, t, { fs: t.length > 1 ? 9 : 10.5, c: '#9b6b4a', f: /[ก-ฮ]/.test(t) ? 'THS' : 'KaTeX_Main' }));
   // หัว
@@ -4541,7 +4538,7 @@ function answerSheetSVG(cfg) {
   const wx = ex + 140; s += cfg.noex ? '' : `<circle cx="${wx}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><path d="M${wx - 5} ${iy - 10}l10 10M${wx + 5} ${iy - 10}l-10 10" stroke="#222" stroke-width="1.6"/><circle cx="${wx + 22}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><path d="M${wx + 18} ${iy - 5}l3 4 6 -8" stroke="#222" stroke-width="1.6" fill="none"/><circle cx="${wx + 44}" cy="${iy - 5}" r="7" fill="#fff" stroke="${br}"/><circle cx="${wx + 44}" cy="${iy - 5}" r="3.5" fill="#222"/>`;
   if (cfg.id) { // เลขประจำตัวผู้สอบ
     const x0 = W - idW - 6; s += txt(x0 + idW / 2, y + 22, 'เลขประจำตัว', { fs: 14, b: 1, c: br });
-    for (let j = 0; j < cfg.id; j++) { const x = x0 + 12 + j * 22 + 11; s += `<rect x="${x - 9}" y="${y + 30}" width="18" height="20" fill="#fff" stroke="${br}"/>`; lay.id[j] = []; for (let d = 0; d <= 9; d++) { s += bub(x, y + 64 + d * 20, String(d), false, 7.5); lay.id[j].push([R1(x), R1(y + 64 + d * 20)]); } } lay.idr = 7.5;
+    for (let j = 0; j < cfg.id; j++) { const x = x0 + 12 + j * 22 + 11; s += `<rect x="${x - 9}" y="${y + 30}" width="18" height="20" fill="#fff" stroke="${br}"/>`; for (let d = 0; d <= 9; d++) s += bub(x, y + 64 + d * 20, String(d), false, 7.5); }
   }
   y += hH + 22;
   // ส่วนต่าง ๆ
@@ -4553,50 +4550,28 @@ function answerSheetSVG(cfg) {
     if (sec.t === 'mc4' || sec.t === 'mc5') {
       const n = sec.t === 'mc4' ? 4 : 5; const labs = choiceLabels(n, cfg.lab);
       const colW = 32 + n * 22 + 18; const cols = Math.max(1, Math.min(Math.floor((W + 10) / colW), Math.ceil(items.length / 5))); const rows = Math.ceil(items.length / cols); const gx = (W - cols * colW) / Math.max(1, cols);
-      s += txt(4, y, `${sec.part ? sec.part + ' · ' : ''}ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.t]}${+sec.p ? ' · ข้อละ ' + ptsTxt(+sec.p) + ' คะแนน' : ''}`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
-      items.forEach((q, i) => { const c = Math.floor(i / rows), r = i % rows; const x = 4 + c * (colW + gx), yy = y + 14 + r * 23; if (r % 5 === 0 && r) s += ''; s += `<rect x="${x}" y="${yy - 11}" width="${colW - 6}" height="22" fill="${r % 2 ? '#fcf6f0' : '#fff'}"/>` + txt(x + 24, yy + 5, q, { a: 'end', fs: 14, b: 1, f: 'KaTeX_Main' }); const k = keyOf(q); labs.forEach((t, j) => s += bub(x + 42 + j * 22, yy, t, k && (k === t || k === String(j + 1)))); lay.q[q] = { t: 'mc', n: n, r: 8.2, l: labs, o: labs.map((t, j) => [R1(x + 42 + j * 22), R1(yy)]) }; if (+sec.p) lay.q[q].pt = +sec.p; });
+      s += txt(4, y, `ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.t]}`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
+      items.forEach((q, i) => { const c = Math.floor(i / rows), r = i % rows; const x = 4 + c * (colW + gx), yy = y + 14 + r * 23; if (r % 5 === 0 && r) s += ''; s += `<rect x="${x}" y="${yy - 11}" width="${colW - 6}" height="22" fill="${r % 2 ? '#fcf6f0' : '#fff'}"/>` + txt(x + 24, yy + 5, q, { a: 'end', fs: 14, b: 1, f: 'KaTeX_Main' }); const k = keyOf(q); labs.forEach((t, j) => s += bub(x + 42 + j * 22, yy, t, k && (k === t || k === String(j + 1)))); });
       y += rows * 23 + 22;
     } else if (sec.t === 'int' || sec.t === 'dec') {
       const d = +sec.d || 4, f = sec.t === 'dec' ? (+sec.f || 2) : 0, nd = d + f; const compact = numTotal > 10; const bw = compact ? 16.5 : 22, vs = compact ? 15.5 : 20, rr = compact ? 6.3 : 7.5, BH = 60 + 9 * vs + 14; const boxW = nd * bw + (f ? 10 : 0) + 18; const per = Math.max(1, Math.floor((W + 4) / (boxW + 10))); const gx = per > 1 ? (W - 8 - per * boxW) / (per - 1) : 0;
-      s += txt(4, y, `${sec.part ? sec.part + ' · ' : ''}ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.t]} ${sec.t === 'dec' ? 'x'.repeat(d) + '.' + 'x'.repeat(f) : d + ' หลัก'}${+sec.p ? ' · ข้อละ ' + ptsTxt(+sec.p) : ''}`, { a: 'start', fs: 15, b: 1, c: br });
+      s += txt(4, y, `ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.t]} ${sec.t === 'dec' ? 'x'.repeat(d) + '.' + 'x'.repeat(f) : d + ' หลัก'}`, { a: 'start', fs: 15, b: 1, c: br });
       if (sec.t === 'dec') s += txt(W - 4, y, `ตัวอย่าง ตอบ 2.4 เขียนและระบายเป็น ${'0'.repeat(Math.max(0, d - 1))}2.4${'0'.repeat(Math.max(0, f - 1))}`, { a: 'end', fs: 13, c: CL.teal });
       y += 10;
       items.forEach((q, i) => {
         const c = i % per, r = Math.floor(i / per); const x = 4 + c * (boxW + gx), y0 = y + r * (BH + 10);
         s += `<rect x="${x}" y="${y0}" width="${boxW}" height="${BH}" rx="6" fill="#fff" stroke="${br}" stroke-width="1"/>` + txt(x + boxW / 2, y0 + 18, `ข้อ ${q}`, { fs: 14, b: 1 });
         let k = keyOf(q); let digs = null; if (k !== undefined) { const v = Math.abs(parseFloat(k)); if (isFinite(v)) { const str = f ? v.toFixed(f) : String(Math.round(v)); const [a, bpart = ''] = str.split('.'); digs = (a.padStart(d, '0').slice(-d) + bpart).split(''); } }
-        const LQ = lay.q[q] = { t: sec.t, d: d, f: f, r: rr, c: [] }; if (+sec.p) LQ.pt = +sec.p;
-        for (let j = 0; j < nd; j++) { const xx = x + 9 + j * bw + (f && j >= d ? 10 : 0) + bw / 2; LQ.c[j] = []; for (let v = 0; v <= 9; v++) LQ.c[j].push([R1(xx), R1(y0 + 60 + v * vs)]); s += `<rect x="${xx - bw / 2 + 1}" y="${y0 + 26}" width="${bw - 2}" height="20" fill="#fff" stroke="${br}"/>` + (digs ? txt(xx, y0 + 41, digs[j], { fs: 14, f: 'KaTeX_Main' }) : ''); for (let v = 0; v <= 9; v++) s += bub(xx, y0 + 60 + v * vs, String(v), digs && digs[j] === String(v), rr); }
+        for (let j = 0; j < nd; j++) { const xx = x + 9 + j * bw + (f && j >= d ? 10 : 0) + bw / 2; s += `<rect x="${xx - bw / 2 + 1}" y="${y0 + 26}" width="${bw - 2}" height="20" fill="#fff" stroke="${br}"/>` + (digs ? txt(xx, y0 + 41, digs[j], { fs: 14, f: 'KaTeX_Main' }) : ''); for (let v = 0; v <= 9; v++) s += bub(xx, y0 + 60 + v * vs, String(v), digs && digs[j] === String(v), rr); }
         if (f) { const xp = x + 9 + d * bw + 5; s += `<circle cx="${xp}" cy="${y0 + 43}" r="2.2" fill="${ink}"/>`; }
       });
       y += Math.ceil(items.length / per) * (BH + 10) + 16;
-    } else if (sec.t === 'write') { // ข้อเขียน: ช่องให้ครูระบายคะแนน
-      const p = Math.max(0.5, +sec.p || 10), tens = Math.floor(p / 10), units = p >= 10 ? 9 : Math.floor(p), rr = 7.2, gap = 19;
-      s += txt(4, y, `${sec.part ? sec.part + ' · ' : ''}ข้อ ${sec.from}–${sec.to} ${QTYPES[sec.qt] || QTYPES.write} · คะแนนครู (เต็ม ${ptsTxt(p)})`, { a: 'start', fs: 15, b: 1, c: br }); y += 12;
-      const rowW = 70 + (tens ? (tens + 1) * gap + 14 : 0) + (units + 1) * gap + 14 + gap + 6, per = Math.max(1, Math.floor((W + 6) / (rowW + 6)));
-      items.forEach((q, i) => {
-        const c = i % per, r = Math.floor(i / per), x = 4 + c * (rowW + 6), yy = y + 14 + r * 26;
-        s += `<rect x="${x}" y="${yy - 12}" width="${rowW}" height="24" rx="5" fill="#fff" stroke="${br}" stroke-width=".8"/>` + txt(x + 8, yy + 5, `ข้อ ${q}`, { a: 'start', fs: 14, b: 1 });
-        const LQ = lay.q[q] = { t: 'w', p: p, r: rr, tens: [], units: [] }; let xx = x + 62;
-        if (tens) { if (!r) s += txt(xx + 2, yy - 13.5, 'สิบ', { a: 'start', fs: 9, c: '#9b6b4a' }); for (let v = 0; v <= tens; v++) { xx += gap; s += bub(xx - gap / 2, yy, String(v), false, rr); LQ.tens.push([R1(xx - gap / 2), R1(yy)]); } xx += 14; }
-        if (!r) s += txt(xx + 2, yy - 13.5, 'หน่วย', { a: 'start', fs: 9, c: '#9b6b4a' });
-        for (let v = 0; v <= units; v++) { xx += gap; s += bub(xx - gap / 2, yy, String(v), false, rr); LQ.units.push([R1(xx - gap / 2), R1(yy)]); }
-        xx += 14 + gap; s += bub(xx - gap / 2, yy, '½', false, rr); LQ.half = [R1(xx - gap / 2), R1(yy)];
-      });
-      y += Math.ceil(items.length / per) * 26 + 22;
     }
   });
   s += `<text x="${W - 4}" y="${y + 4}" font-family="THS" font-size="12" text-anchor="end" fill="#9b8b80">${esc(cfg.brand ?? 'Earth & Newton Education')}</text>`;
   const H = y + 10;
-  if (cfg.omr) { // จุดสี่เหลี่ยม 4 มุม ให้Sir’Earth Classจัดภาพสแกนและหาหน้ากระดาษคำตอบ
-    const M = 26, F = 18, cs = [[-M + F / 2, -M + F / 2], [W + M - F / 2, -M + F / 2], [-M + F / 2, H + M - F / 2], [W + M - F / 2, H + M - F / 2]];
-    cs.forEach(c => s += `<rect x="${c[0] - F / 2}" y="${c[1] - F / 2}" width="${F}" height="${F}" fill="#000"/>`);
-    s += `<text x="${W / 2}" y="${H + M - 6}" font-family="THS" font-size="11" text-anchor="middle" fill="#9b8b80">ตรวจด้วย Sir’Earth Class · ห้ามเขียนหรือขีดทับจุดดำทั้ง 4 มุม</text>`;
-    lay.fid = cs; lay.fs = F; lay.vb = [-M, -M, W + 2 * M, Math.round(H) + 2 * M];
-  } else lay.vb = [0, 0, W, Math.round(H)];
-  lay.H = Math.round(H); window.__asLay = lay;
-  const vb = lay.vb, maxH = 935; const scale = Math.min(1, maxH / vb[3], W / vb[2]);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(vb[2] * scale)}" height="${Math.round(vb[3] * scale)}" viewBox="${vb.join(' ')}">${s}</svg>`;
+  const maxH = 935; const scale = Math.min(1, maxH / H);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * scale)}" height="${Math.round(H * scale)}" viewBox="0 0 ${W} ${Math.round(H)}">${s}</svg>`;
 }
 function ashtHTML(b) { return `<div class="b-asheet">${answerSheetSVG(b.cfg || ASHEET_DEF)}</div>`; }
 /* ---------- ตารางสรุปคำตอบ ---------- */
@@ -4605,55 +4580,6 @@ function keyTableHTML(b) {
   if (!ks.length) return '<div class="b-keytable"><div class="dv-err">ใส่คำตอบในแผงรูปแบบด้านขวา เช่น 3,1,5,2,4</div></div>';
   let h = '<table class="kt">'; for (let i = 0; i < ks.length; i += per) { const row = ks.slice(i, i + per); h += '<tr class="kh">' + row.map((_, j) => `<td>ข้อ ${st + i + j}</td>`).join('') + '</tr><tr>' + row.map(k => `<td>${kx(texFor(k.replace(/^(-?\d+)\/(\d+)$/, '\\frac{$1}{$2}'), {}))}</td>`).join('') + '</tr>'; }
   return `<div class="b-keytable">${h}</table></div>`;
-}
-
-/* ---------- ข้อสอบในเอกสาร → กระดาษคำตอบ (ชนิด/คะแนนตรงกันเสมอ) ---------- */
-function examQs() {
-  const B = doc.blocks, out = []; let part = '', k = 0;
-  B.forEach((b, i) => {
-    if (b.t === 'part') { const t = plainText(b.html || ''); const m = /ตอนที่\s*[\dก-ฮ]+/.exec(t); part = m ? m[0].replace(/\s+/, ' ') : t.slice(0, 24); return; }
-    if (b.t !== 'problem' || b.nobm) return;
-    const tx = plainText(b.html || ''); if (/ตัวอย่าง/.test(tx)) return;
-    const m = /ข้อ\s*(\d+)/.exec(tx); const q = m ? +m[1] : k + 1; k = q;
-    let t = b.qt; if (!t) { for (let j = i + 1; j < B.length && B[j].t !== 'problem' && B[j].t !== 'part'; j++) if (B[j].t === 'choices') { t = (B[j].items || []).length >= 5 ? 'mc5' : 'mc4'; break; } }
-    const p = parseFloat(String(b.pts || '').replace(/[^\d.]/g, '')) || 0;
-    const st = t === 'mc4' || t === 'mc5' ? t : t === 'int' ? 'int' : t === 'dec' || t === 'fill' ? 'dec' : 'write';
-    out.push({ q, t: st, qt: t || 'write', p, part, id: b.id });
-  });
-  return out;
-}
-function sheetFromDoc(old) {
-  const qs = examQs(), secs = [], prev = q => (old || []).find(s => q >= +s.from && q <= +s.to && s.t === 'dec');
-  qs.forEach(x => { const L = secs[secs.length - 1]; if (L && L.t === x.t && L.p === x.p && L.part === x.part && (L.qt || '') === (x.t === 'write' ? x.qt : '') && x.q === L.to + 1) L.to = x.q; else { const o = prev(x.q); secs.push({ t: x.t, from: x.q, to: x.q, d: o ? +o.d : 4, f: o ? +o.f : 2, p: x.p, part: x.part, qt: x.t === 'write' ? x.qt : undefined }); } });
-  return { secs, total: Math.round(qs.reduce((a, x) => a + x.p, 0) * 100) / 100, n: qs.length };
-}
-function rangeTxt(a) { const r = []; a.sort((x, y) => x - y).forEach(q => { const L = r[r.length - 1]; if (L && q === L[1] + 1) L[1] = q; else r.push([q, q]); }); return r.map(x => x[0] === x[1] ? x[0] : x[0] + '–' + x[1]).join(', '); }
-/* เทียบกระดาษคำตอบกับข้อสอบ: คืนรายการสิ่งที่ไม่ตรงกัน */
-function asCheck(cfg) {
-  const qs = examQs().filter(x => x.p); if (!qs.length) return [];
-  const on = {}; (cfg.secs || []).forEach(s => { for (let q = +s.from; q <= +s.to; q++) on[q] = s; });
-  const miss = [], typ = [], pts = []; qs.forEach(x => { const s = on[x.q]; if (!s) miss.push(x.q); else { if (s.t !== x.t) typ.push(x.q); if (+s.p && Math.abs(+s.p - x.p) > 1e-9 || s.t === 'write' && !+s.p) pts.push(x.q); } });
-  const ex = Object.keys(on).map(Number).filter(q => !qs.some(x => x.q === q));
-  const out = []; if (miss.length) out.push('ข้อ ' + rangeTxt(miss) + ' ไม่มีในกระดาษคำตอบ'); if (ex.length) out.push('ข้อ ' + rangeTxt(ex) + ' ไม่มีในข้อสอบ');
-  if (typ.length) out.push('ข้อ ' + rangeTxt(typ) + ' ชนิดไม่ตรงกับข้อสอบ'); if (pts.length) out.push('ข้อ ' + rangeTxt(pts) + ' คะแนนเต็มไม่ตรงกับข้อสอบ');
-  const tot = Math.round(qs.reduce((a, x) => a + x.p, 0) * 100) / 100; if (cfg.score && +cfg.score !== tot) out.push(`ช่องคะแนนเต็มเขียน ${cfg.score} แต่ข้อสอบรวม ${ptsTxt(tot)}`);
-  return out;
-}
-/* ตำแหน่งข้อในเล่ม (หน้า + ช่วงความสูง) ให้ Sir’Earth Class ตัดภาพมาให้ครูตรวจบนจอ */
-function examBook(qs) {
-  try {
-    const P = PAGE_H + PAGE_G, els = $$('#flow > .blk'), idx = {}; els.forEach((el, i) => idx[el.dataset.id] = i);
-    const reg = {}, R4 = v => Math.round(v * 1e4) / 1e4;
-    qs.forEach(x => {
-      const i0 = idx[x.id]; if (i0 == null) return; let i1 = i0;
-      while (i1 + 1 < els.length && !/^(problem|part|asheet|pagebreak|keytable)$/.test(els[i1 + 1].dataset.t)) i1++;
-      const top = els[i0].offsetTop, bot = els[i1].offsetTop + els[i1].offsetHeight, segs = [];
-      for (let p = Math.floor(top / P); p <= Math.floor((bot - 1) / P); p++) { const a = Math.max(top, p * P) - p * P, b = Math.min(bot, p * P + PAGE_H) - p * P; if (b - a > 8) segs.push([p, R4(a / PAGE_H), R4(b / PAGE_H)]); }
-      if (segs.length) reg[x.q] = segs;
-    });
-    const sh = els.find(el => el.dataset.t === 'asheet');
-    return { n: $('#sheets').childElementCount, sheet: sh ? Math.floor(sh.offsetTop / P) : -1, reg };
-  } catch (e) { return null; }
 }
 
 /* ---------- หน้าต่างกระดาษคำตอบ ---------- */
@@ -4666,7 +4592,7 @@ const AS_PRESETS = {
 function openAnswerSheet(id, cfg) {
   asTarget = id || null; const c = id ? byId(id).cfg : (cfg || AS_PRESETS.alevel());
   $('#asIns').value = c.ins ?? 'ใช้ดินสอดำ 2B ระบายให้เต็มวง'; $('#asN1').value = c.n1 ?? 'ชื่อ–นามสกุล'; $('#asN2').value = c.n2 ?? 'ชั้น'; $('#asN3').value = c.n3 ?? 'เลขที่';
-  $('#asTitle').value = c.title || ''; $('#asSub').value = c.sub || ''; $('#asLogoC').checked = !!c.logo; $('#asScore').value = c.score || ''; $('#asColor').value = c.color || themeOf(doc.settings).brown; $('#asBrand').value = c.brand ?? (doc.settings.ft ?? 'Earth & Newton Education'); $('#asId').value = c.id || 0; $('#asLab').value = c.lab || '(1)'; $('#asKey').value = c.key || ''; $('#asOmr').checked = !!c.omr;
+  $('#asTitle').value = c.title || ''; $('#asSub').value = c.sub || ''; $('#asLogoC').checked = !!c.logo; $('#asScore').value = c.score || ''; $('#asColor').value = c.color || themeOf(doc.settings).brown; $('#asBrand').value = c.brand ?? (doc.settings.ft ?? 'Earth & Newton Education'); $('#asId').value = c.id || 0; $('#asLab').value = c.lab || '(1)'; $('#asKey').value = c.key || '';
   asSecs(c.secs || []); asPrev(); openDlg('#dAsht');
 }
 function asSecs(secs) {
@@ -4674,42 +4600,21 @@ function asSecs(secs) {
 }
 function asRow(q, i) {
   return `<div class="row asr" data-i="${i}"><label>ข้อ</label><input type="number" data-k="from" value="${q.from}" min="1" style="width:64px"><label>ถึง</label><input type="number" data-k="to" value="${q.to}" min="1" style="width:64px">
-    <select data-k="t">${['mc4', 'mc5', 'int', 'dec', 'write'].map(t => `<option value="${t}"${q.t === t ? ' selected' : ''}>${QTYPES[t]}</option>`).join('')}</select>
-    <label class="dg">หลักจำนวนเต็ม</label><input class="dg" type="number" data-k="d" value="${q.d || 4}" min="1" max="6" style="width:52px"><label class="dc">ทศนิยม</label><input class="dc" type="number" data-k="f" value="${q.f || 2}" min="1" max="3" style="width:52px"><label>คะแนน/ข้อ</label><input type="number" data-k="p" value="${q.p != null && q.p !== '' ? q.p : (q.t === 'write' ? 10 : '')}" min="0" max="30" step="0.5" style="width:60px" placeholder="–">${q.part ? `<input type="hidden" data-k="part" value="${esc(q.part)}">` : ''}${q.qt ? `<input type="hidden" data-k="qt" value="${esc(q.qt)}">` : ''}
+    <select data-k="t">${['mc4', 'mc5', 'int', 'dec'].map(t => `<option value="${t}"${q.t === t ? ' selected' : ''}>${QTYPES[t]}</option>`).join('')}</select>
+    <label class="dg">หลักจำนวนเต็ม</label><input class="dg" type="number" data-k="d" value="${q.d || 4}" min="1" max="6" style="width:52px"><label class="dc">ทศนิยม</label><input class="dc" type="number" data-k="f" value="${q.f || 2}" min="1" max="3" style="width:52px">
     <button class="tb" data-del="${i}" title="ลบส่วนนี้">✕</button></div>`;
 }
 function asRead() {
-  const secs = $$('#asSecs .asr').map(r => { const g = k => { const e = $(`[data-k="${k}"]`, r); return e ? e.value : ''; }; const o = { t: g('t'), from: +g('from'), to: +g('to'), d: +g('d'), f: +g('f') }; const p = parseFloat(g('p')); if (o.t === 'write') o.p = p > 0 ? p : 10; else if (p > 0) o.p = p; if (g('part')) o.part = g('part'); if (g('qt') && o.t === 'write') o.qt = g('qt'); return o; });
-  return { ins: $('#asIns').value, n1: $('#asN1').value, n2: $('#asN2').value, n3: $('#asN3').value, title: $('#asTitle').value, sub: $('#asSub').value, id: +$('#asId').value || 0, lab: $('#asLab').value, key: $('#asKey').value.trim(), secs, logo: $('#asLogoC').checked || undefined, score: $('#asScore').value.trim() || undefined, color: $('#asColor').value, brand: $('#asBrand').value, omr: $('#asOmr').checked || undefined };
+  const secs = $$('#asSecs .asr').map(r => { const g = k => $(`[data-k="${k}"]`, r).value; return { t: g('t'), from: +g('from'), to: +g('to'), d: +g('d'), f: +g('f') }; });
+  return { ins: $('#asIns').value, n1: $('#asN1').value, n2: $('#asN2').value, n3: $('#asN3').value, title: $('#asTitle').value, sub: $('#asSub').value, id: +$('#asId').value || 0, lab: $('#asLab').value, key: $('#asKey').value.trim(), secs, logo: $('#asLogoC').checked || undefined, score: $('#asScore').value.trim() || undefined, color: $('#asColor').value, brand: $('#asBrand').value };
 }
-function asWarn() { const w = asCheck(asRead()), el = $('#asWarn'); el.style.display = w.length ? '' : 'none'; el.innerHTML = w.length ? '⚠️ กระดาษคำตอบไม่ตรงกับข้อสอบในเอกสาร: ' + w.map(esc).join(' · ') + ' — กด <b>🔄 จัดตามข้อสอบในเอกสาร</b>' : ''; }
-function asPrev() { setTimeout(asWarn, 0); $$('#asSecs .asr').forEach(r => { const t = $('[data-k="t"]', r).value; $$('.dg', r).forEach(e => e.style.display = t === 'int' || t === 'dec' ? '' : 'none'); $$('.dc', r).forEach(e => e.style.display = t === 'dec' ? '' : 'none'); $$('.dw', r).forEach(e => e.style.display = t === 'write' ? '' : 'none'); }); $('#asPrev').innerHTML = answerSheetSVG(asRead()); }
+function asPrev() { $$('#asSecs .asr').forEach(r => { const t = $('[data-k="t"]', r).value; $$('.dg', r).forEach(e => e.style.display = t === 'int' || t === 'dec' ? '' : 'none'); $$('.dc', r).forEach(e => e.style.display = t === 'dec' ? '' : 'none'); }); $('#asPrev').innerHTML = answerSheetSVG(asRead()); }
 $('#asSecs').addEventListener('input', asPrev); $('#asSecs').addEventListener('change', asPrev);
 ['asIns', 'asN1', 'asN2', 'asN3', 'asTitle', 'asSub', 'asId', 'asLab', 'asKey', 'asScore', 'asColor', 'asBrand'].forEach(i => $('#' + i).addEventListener('input', asPrev)); $('#asLogoC').addEventListener('change', asPrev); $('#asLab').addEventListener('change', asPrev);
 $('#asSecs').addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (!d) return; const c = asRead(); c.secs.splice(+d.dataset.del, 1); asSecs(c.secs); asPrev(); });
 $('#asAdd').onclick = () => { const c = asRead(); const last = c.secs[c.secs.length - 1]; const st = last ? last.to + 1 : 1; c.secs.push({ t: 'mc5', from: st, to: st + 9, d: 4, f: 2 }); asSecs(c.secs); asPrev(); };
 $('#asPreset').onchange = e => { const f = AS_PRESETS[e.target.value]; if (!f) return; const c = f(); c.title = $('#asTitle').value || c.title; c.sub = $('#asSub').value; asSecs(c.secs); $('#asId').value = c.id || 0; $('#asLab').value = c.lab; asPrev(); e.target.value = ''; };
 $('#asCancel').onclick = () => closeDlg('#dAsht');
-$('#asSync').onclick = () => {
-  const x = sheetFromDoc(asRead().secs); if (!x.n) { toast('ยังไม่พบข้อสอบ (บล็อก "ข้อ …" ที่มีคะแนน) ในเอกสารนี้'); return; }
-  asSecs(x.secs); if (x.total) $('#asScore').value = ptsTxt(x.total); if (!(+$('#asId').value)) $('#asId').value = 5; $('#asOmr').checked = true; asPrev();
-  toast(`จัดตามข้อสอบแล้ว: ${x.n} ข้อ · รวม ${ptsTxt(x.total)} คะแนน · ข้อเขียนให้คะแนนบนจอใน Sir’Earth Class หรือระบายก็ได้`);
-};
-/* รหัสสำหรับตรวจด้วยเครื่องในSir’Earth Class: รูปแบบกระดาษ + ตำแหน่งวงระบาย + เฉลย */
-function omrCode(cfg) {
-  const c = Object.assign({}, cfg, { omr: true }); answerSheetSVG(c); const lay = window.__asLay;
-  const o = { v: 2, app: 'newton-press', title: [c.title, c.sub].filter(Boolean).join(' · '), lab: c.lab, key: c.key || '', secs: c.secs, lay: lay };
-  const wq = examQs().filter(x => (c.secs || []).some(s => s.t === 'write' && x.q >= +s.from && x.q <= +s.to)); if (wq.length) { const bk = examBook(wq); if (bk) o.book = bk; }
-  return 'NPOMR1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
-}
-$('#asCode').onclick = () => {
-  const cfg = asRead();
-  if (!cfg.omr) { $('#asOmr').checked = true; asPrev(); }
-  const w = asCheck(asRead()); if (w.length && !confirm('กระดาษคำตอบยังไม่ตรงกับข้อสอบ:\n• ' + w.join('\n• ') + '\n\nคัดลอกรหัสต่อเลยไหม? (แนะนำกด "ยกเลิก" แล้วกด 🔄 จัดตามข้อสอบในเอกสาร)')) return;
-  const code = omrCode(asRead()), keys = String(cfg.key || '').split(/[,\s]+/).filter(Boolean).length;
-  const done = () => alert('คัดลอกรหัสแล้ว ✓' + (keys ? '' : '\n(ยังไม่ได้ใส่คำตอบที่ถูก — ใส่เฉลยใน Sir’Earth Class ได้ หรือใส่ที่ช่อง "คำตอบที่ถูก" ก่อนคัดลอก)') + '\n\nไปที่ Sir’Earth Class (หน้าครู) → แท็บลงคะแนน → เลือกรายการ → 📝 ตรวจข้อสอบ → วางรหัส\n* อย่าลืมกด "ใส่ลงเอกสาร" แล้วพิมพ์กระดาษคำตอบแบบมีจุดดำ 4 มุม');
-  if (navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => prompt('คัดลอกรหัสนี้:', code)); else prompt('คัดลอกรหัสนี้:', code);
-};
 $('#asOk').onclick = () => {
   const cfg = asRead(); closeDlg('#dAsht');
   if (asTarget) { const b = byId(asTarget); b.cfg = cfg; rerender(b.id); changed(true); }
@@ -5504,6 +5409,9 @@ scAdd('⌘⇧8', 'รายการจุด •', 'ย่อหน้า', () 
 scAdd('Tab / ⇧Tab', 'ในรายการ: เลื่อนเป็นรายการย่อย / ถอยกลับ · ในข้อความ: เว้นระยะแท็บ · ในตาราง: ไปช่องถัดไป', 'ย่อหน้า', null, () => false);
 scAdd('↵ บนรายการว่าง', 'จบรายการ', 'ย่อหน้า', null, () => false);
 scAdd('⇧↵', 'ขึ้นบรรทัดใหม่ในย่อหน้า/รายการเดิม', 'ย่อหน้า', null, () => false);
+scAdd('↵ ต้นข้อความ', 'ดันทั้งกล่องลง 1 บรรทัด (เนื้อหาล่างเลื่อนตาม)', 'ย่อหน้า', null, () => false);
+scAdd('⌫ ต้นข้อความ', 'ดึงกล่องขึ้น (ลบบรรทัดว่างด้านบน)', 'ย่อหน้า', null, () => false);
+scAdd('↵ บนกรอบที่เลือก', 'ดันบล็อกลง · ⇧↵ = เข้าแก้ไขข้อความ', 'ย่อหน้า', null, () => false);
 scAdd('พิมพ์ 1. a) (1) ก. - แล้วเว้นวรรค', 'เปลี่ยนเป็นรายการอัตโนมัติ', 'ย่อหน้า', null, () => false);
 // แทรก
 scAdd('⌥⌘E', 'แทรกสมการ', 'แทรก', needText(() => openMath(null)), e => M(e) && e.altKey && !e.shiftKey && e.code === 'KeyE');
@@ -6512,6 +6420,43 @@ function labelIndent() {
   openDlg = function (sel) { const s = $('#scroller'); if (s) { s0 = s.scrollTop; t0 = Date.now(); } return _o(sel); };
   closeDlg = function (sel) { const r = _c(sel); const s = $('#scroller'); if (s && s0 !== null) { const keep = s0, tc = Date.now(); [0, 30, 100, 250, 500, 900].forEach(ms => setTimeout(() => { if (user < tc && Math.abs(s.scrollTop - keep) > 4 && !$('.dlg-back.open')) s.scrollTop = keep; }, ms)); } return r; };
 })();
+/* ===== Enter = ดันเนื้อหาลงจริง (แทรกบรรทัดว่างด้านบน) =====
+   · เคอร์เซอร์อยู่ต้นข้อความของกล่อง/บล็อก แล้วกด Enter → บล็อกทั้งกล่องเลื่อนลง 1 บรรทัด (เนื้อหาด้านล่างเลื่อนตาม)
+   · เลือกบล็อกเป็นกรอบ (กด Esc) แล้วกด Enter → ดันลงทีละบรรทัด · Backspace ต้นข้อความ/บนกรอบ → ดึงขึ้น (ลบบรรทัดว่างด้านบน)
+   · Shift+Enter ตอนเลือกเป็นกรอบ = เข้าไปแก้ไขข้อความ */
+function pushDown(id, keepEdit) {
+  const i = idx(id); if (i < 0) return; const nb = newBlock('para'); doc.blocks.splice(i, 0, nb);
+  const el = $(`.blk[data-id="${id}"]`); if (el) { el.before(makeEl(nb)); paginate(); } else renderAll();
+  changed(true); return nb;
+}
+function isBlankPara(b) { return b && b.t === 'para' && !String(plainText(b.html || '')).replace(/[​\s]/g, '') && !/class="(mx|ic)|<img/.test(b.html || ''); }
+function pullUp(id) {
+  const i = idx(id); const pb = doc.blocks[i - 1]; if (!isBlankPara(pb)) return false;
+  doc.blocks.splice(i - 1, 1); const pe = $(`.blk[data-id="${pb.id}"]`); if (pe) { pe.remove(); paginate(); } else renderAll(); changed(true); return true;
+}
+document.addEventListener('keydown', e => {
+  if (e.isComposing || e.metaKey || e.ctrlKey || e.altKey || (typeof dlgOpen === 'function' && dlgOpen())) return;
+  if (e.key !== 'Enter' && e.key !== 'Backspace') return;
+  const t = e.target.closest && e.target.closest('#flow [contenteditable="true"]');
+  if (t) { // กำลังพิมพ์
+    if (e.shiftKey) return; const blk = t.closest('.blk'); if (!blk) return;
+    if (edsOf(blk)[0] !== t) return; if (t.closest('li')) return;
+    const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return;
+    const ci = caretInfo(t); if (!ci.atStart) return;
+    if (e.key === 'Enter') { if (isEmptyEd(t)) return; e.preventDefault(); e.stopImmediatePropagation(); const sc = $('#scroller'), y = sc && sc.scrollTop; pushDown(blk.dataset.id); if (sc) sc.scrollTop = y; caretToStart(t); return; }
+    if (e.key === 'Backspace' && !isEmptyEd(t)) { const pb = doc.blocks[idx(blk.dataset.id) - 1]; if (isBlankPara(pb)) { e.preventDefault(); e.stopImmediatePropagation(); pullUp(blk.dataset.id); caretToStart(t); } }
+    return;
+  }
+  // เลือกเป็นกรอบ
+  if (typeof blockMode === 'undefined' || !blockMode || !curId || document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+  if (e.key === 'Enter') {
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (e.shiftKey) { const el = $(`.blk[data-id="${curId}"]`); const ed = el && $('[contenteditable="true"]', el); if (ed) { blockMode = false; selectBlock(curId); placeCaretEnd(ed); } return; }
+    pushDown(curId); selectBlock(curId); enterBlockMode(); return;
+  }
+  if (e.key === 'Backspace' && selSet.size <= 1) { const pb = doc.blocks[idx(curId) - 1]; if (isBlankPara(pb)) { e.preventDefault(); e.stopImmediatePropagation(); pullUp(curId); selectBlock(curId); enterBlockMode(); } }
+}, true);
+function caretToStart(ed) { ed.focus({ preventScroll: true }); const r = document.createRange(); r.selectNodeContents(ed); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 
 /* ===================== ทำครั้งเดียว: เลขตาราง/ภาพรันเอง · สารบัญทุกแบบ · แผนการสอนซิงก์จุดประสงค์ ===================== */
 /* ---------- คำบรรยายตาราง / ภาพ + เลขรันอัตโนมัติ ---------- */
@@ -7098,7 +7043,6 @@ async function elemPNG(el, scale = 3) {
   return { data: cv.toDataURL('image/png').split(',')[1], w, h };
 }
 /* วาดหน้ากระดาษด้วยเอนจินของเบราว์เซอร์เอง (SVG foreignObject) — สมการ KaTeX ตรงกับบนจอทุกจุด */
-const WEBKIT_FO = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|Electron|FxiOS/.test(navigator.userAgent);
 async function pageRenderer(scale = 2.5) {
   let css = '';
   for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) css += r.cssText + '\n'; } catch (e) { } }
@@ -7114,9 +7058,7 @@ async function pageRenderer(scale = 2.5) {
   const P = PAGE_H + PAGE_G;
   return async i => {
     const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.body.className} fo" style="${vars};width:794px;height:${PAGE_H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${css.replace(/<\/style/gi, '')}</style><div style="position:absolute;left:0;top:${-i * P}px">${xml}</div></div>`;
-    const svg = WEBKIT_FO // Safari/iPad: foreignObject ไม่ขยายตาม viewBox (ภาพหดเหลือ 40%) → ขยายด้วย CSS transform แทน
-      ? `<svg xmlns="http://www.w3.org/2000/svg" width="${794 * scale}" height="${PAGE_H * scale}"><foreignObject x="0" y="0" width="${794 * scale}" height="${PAGE_H * scale}"><div xmlns="http://www.w3.org/1999/xhtml" style="width:794px;height:${PAGE_H}px;transform:scale(${scale});transform-origin:0 0">${html}</div></foreignObject></svg>`
-      : `<svg xmlns="http://www.w3.org/2000/svg" width="${794 * scale}" height="${PAGE_H * scale}" viewBox="0 0 794 ${PAGE_H}"><foreignObject x="0" y="0" width="794" height="${PAGE_H}">${html}</foreignObject></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${794 * scale}" height="${PAGE_H * scale}" viewBox="0 0 794 ${PAGE_H}"><foreignObject x="0" y="0" width="794" height="${PAGE_H}">${html}</foreignObject></svg>`;
     const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     try {
       const img = new Image(); img.decoding = 'sync';
