@@ -7462,77 +7462,125 @@ $('#bDocx').onclick = async () => {
 
 init();
 
-/* ===================== คลังงานออนไลน์ (โฟลเดอร์ · ซิงก์ Mac ↔ iPad ผ่าน Firebase) ===================== */
+/* ===================== คลังงานบน Google Drive (โฟลเดอร์ · ซิงก์ Mac ↔ iPad) =====================
+   ล็อกอินด้วย Google (Firebase Auth) แล้วใช้สิทธิ์ drive.file เก็บงานเป็นไฟล์ .json ในโฟลเดอร์ “Newton Press” ของ Drive */
 const FB_CFG = '{"apiKey": "AIzaSyDL1pPHI5T5dZ8b1I66TL1UYbH03kOeiBU", "authDomain": "newton-press-a9c0f.firebaseapp.com", "projectId": "newton-press-a9c0f", "storageBucket": "newton-press-a9c0f.firebasestorage.app", "messagingSenderId": "757660078449", "appId": "1:757660078449:web:dca69a407981dc80fda6d0"}';
 const FB_V = '10.12.2';
-const CLD = { user: null, db: null, folders: [], docs: [], cur: '', view: 'all', q: '', ready: null, timer: null, busy: false, mode: 'open' };
-const CHUNK = 280000;
+const DRIVE = 'https://www.googleapis.com/drive/v3/files', DUP = 'https://www.googleapis.com/upload/drive/v3/files';
+const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const CLD = { user: null, root: '', folders: [], docs: [], cur: '', view: 'all', q: '', ready: null, timer: null, busy: false, mode: 'open', needAuth: false, loaded: false };
+const TOK = (() => { try { return JSON.parse(localStorage.getItem('np-gtok') || '{}'); } catch (e) { return {}; } })();
+function setTok(t) { if (!t) return; TOK.t = t; TOK.exp = Date.now() + 55 * 60e3; try { localStorage.setItem('np-gtok', JSON.stringify(TOK)); } catch (e) { } CLD.needAuth = false; }
+const tokOk = () => TOK.t && Date.now() < (TOK.exp || 0);
 function fbLoad() {
   if (CLD.ready) return CLD.ready;
   const s = src => new Promise((ok, no) => { const e = document.createElement('script'); e.src = src; e.onload = ok; e.onerror = () => no(new Error('โหลด ' + src + ' ไม่ได้')); document.head.appendChild(e); });
   const B = `https://www.gstatic.com/firebasejs/${FB_V}/`;
   CLD.ready = s(B + 'firebase-app-compat.js').then(() => Promise.all([s(B + 'firebase-auth-compat.js'), s(B + 'firebase-firestore-compat.js')])).then(() => {
-    firebase.initializeApp(JSON.parse(FB_CFG)); CLD.db = firebase.firestore(); try { CLD.db.settings({ ignoreUndefinedProperties: true, merge: true }); } catch (e) { }
-    return new Promise(ok => { let first = true; firebase.auth().onAuthStateChanged(u => { CLD.user = u; clStatus(); if (u) clListen(); if (first) { first = false; ok(); } }); });
+    firebase.initializeApp(JSON.parse(FB_CFG));
+    firebase.auth().getRedirectResult().then(r => { if (r && r.credential && r.credential.accessToken) { setTok(r.credential.accessToken); clRefresh(); } }).catch(() => { });
+    return new Promise(ok => { let first = true; firebase.auth().onAuthStateChanged(u => { CLD.user = u; if (u) { if (!tokOk()) CLD.needAuth = true; else clRefresh(); } clStatus(); clRender(); if (first) { first = false; ok(); } }); });
   }).catch(e => { CLD.ready = null; throw e; });
   return CLD.ready;
 }
-const uref = () => CLD.db.collection('users').doc(CLD.user.uid);
 const now = () => Date.now();
 const newRev = () => now().toString(36) + Math.random().toString(36).slice(2, 7);
 const DEV = (() => { try { let d = localStorage.getItem('np-dev'); if (!d) { d = /iPad|Macintosh.*Mobile|iPhone/.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform)) ? 'iPad' : 'Mac'; localStorage.setItem('np-dev', d); } return d; } catch (e) { return 'เครื่องนี้'; } })();
+function gProv() { const P = new firebase.auth.GoogleAuthProvider(); P.addScope(SCOPE); const hint = CLD.user && CLD.user.email; P.setCustomParameters(hint ? { login_hint: hint } : { prompt: 'select_account' }); return P; }
+/* ต้องเรียกจากการกดปุ่มโดยตรง (Safari บล็อกหน้าต่างล็อกอินที่ไม่ได้มาจากการกด) */
 async function clSignIn() {
-  await fbLoad(); const P = new firebase.auth.GoogleAuthProvider(); P.setCustomParameters({ prompt: 'select_account' });
-  try { await firebase.auth().signInWithPopup(P); }
-  catch (e) { if (/popup|cancelled|operation-not-supported/.test(e.code || '')) { if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return; await firebase.auth().signInWithRedirect(P); } else { toast('เข้าสู่ระบบไม่ได้: ' + (e.message || e)); } }
+  if (!window.firebase || !firebase.apps.length) { await fbLoad(); }
+  const P = gProv(); const u = firebase.auth().currentUser;
+  try { const r = u ? await u.reauthenticateWithPopup(P) : await firebase.auth().signInWithPopup(P); setTok(r.credential && r.credential.accessToken); try { localStorage.setItem('np-cloud', '1'); } catch (e) { } await clRefresh(); clStatus(); return true; }
+  catch (e) {
+    const c = e.code || '';
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return false;
+    if (/popup-blocked|operation-not-supported/.test(c)) { try { localStorage.setItem('np-cloud', '1'); } catch (x) { } await (u ? u.reauthenticateWithRedirect(P) : firebase.auth().signInWithRedirect(P)); return false; }
+    toast('เข้าสู่ระบบไม่ได้: ' + (e.message || e)); return false;
+  }
 }
-async function clSignOut() { await fbLoad(); await firebase.auth().signOut(); CLD.folders = []; CLD.docs = []; clRender(); }
-let clUnsub = [];
-function clListen() {
-  clUnsub.forEach(f => f()); clUnsub = [];
-  clUnsub.push(uref().collection('folders').onSnapshot(s => { CLD.folders = s.docs.map(d => Object.assign({ id: d.id }, d.data())); clRender(); }));
-  clUnsub.push(uref().collection('docs').onSnapshot(s => { CLD.docs = s.docs.map(d => Object.assign({ id: d.id }, d.data())); clRender(); clCheckRemote(); }));
+async function clSignOut() { await fbLoad(); await firebase.auth().signOut(); TOK.t = ''; TOK.exp = 0; try { localStorage.removeItem('np-gtok'); localStorage.setItem('np-cloud', ''); } catch (e) { } CLD.folders = []; CLD.docs = []; CLD.root = ''; CLD.loaded = false; clStatus(''); clRender(); }
+/* ---------- เรียก Drive API ---------- */
+class NeedAuth extends Error { constructor() { super('ต้องเชื่อมต่อ Google Drive ใหม่ (กดเข้าสู่ระบบอีกครั้ง)'); this.need = true; } }
+async function gd(url, opt = {}) {
+  if (!tokOk()) { CLD.needAuth = true; throw new NeedAuth(); }
+  const r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + TOK.t }, opt.headers || {}) }));
+  if (r.status === 401) { TOK.exp = 0; CLD.needAuth = true; throw new NeedAuth(); }
+  if (!r.ok) { let m = r.status + ''; try { const j = await r.json(); m = (j.error && j.error.message) || m; } catch (e) { } throw new Error('Google Drive: ' + m); }
+  return opt.raw ? r : (r.status === 204 ? null : r.json());
 }
-/* ---------- อ่าน/เขียนเอกสาร (แบ่งเป็นชิ้นเพราะ Firestore จำกัด 1MB ต่อรายการ) ---------- */
+const gq = o => Object.entries(o).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+const FOLDER = 'application/vnd.google-apps.folder';
+async function ensureRoot() {
+  if (CLD.root) return CLD.root;
+  const r = await gd(DRIVE + '?' + gq({ q: "appProperties has { key='np' and value='root' } and trashed=false", fields: 'files(id,appProperties)', spaces: 'drive' }));
+  if (r.files && r.files.length) { CLD.root = r.files[0].id; CLD.rootProps = r.files[0].appProperties || {}; return CLD.root; }
+  const f = await gd(DRIVE + '?fields=id,appProperties', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Newton Press', mimeType: FOLDER, appProperties: { np: 'root' } }) });
+  CLD.root = f.id; CLD.rootProps = f.appProperties || {}; return CLD.root;
+}
+const stripExt = n => String(n || '').replace(/\.json$/i, '');
+async function clRefresh() {
+  if (!CLD.user) return;
+  try {
+    const root = await ensureRoot(); const all = []; let page = '';
+    do {
+      const r = await gd(DRIVE + '?' + gq(Object.assign({ q: "appProperties has { key='np' and value='folder' } or appProperties has { key='np' and value='doc' }", fields: 'nextPageToken,files(id,name,parents,modifiedTime,trashed,appProperties)', pageSize: 1000, spaces: 'drive' }, page ? { pageToken: page } : {})));
+      all.push(...(r.files || [])); page = r.nextPageToken || '';
+    } while (page);
+    const par = f => { const p = (f.parents || [])[0] || ''; return p === root ? '' : p; };
+    CLD.folders = all.filter(f => f.appProperties.np === 'folder' && !f.trashed).map(f => ({ id: f.id, name: f.name, parent: par(f) }));
+    const fid = new Set(CLD.folders.map(f => f.id));
+    CLD.docs = all.filter(f => f.appProperties.np === 'doc').map(f => { const a = f.appProperties; let folder = par(f); if (folder && !fid.has(folder)) folder = ''; return { id: f.id, name: stripExt(f.name), folder, ts: Date.parse(f.modifiedTime), dev: a.dev || '', pages: +a.pages || 0, rev: a.rev || '', trash: !!f.trashed }; });
+    CLD.loaded = true; CLD.needAuth = false; clRender(); clStatus(); clCheckRemote();
+    if (!(CLD.rootProps || {}).migrated) clMigrate();
+  } catch (e) { if (e.need) { clStatus('แตะเพื่อเชื่อม Drive', true); clRender(); } else toast('โหลดรายการจาก Drive ไม่ได้: ' + (e.message || e)); }
+}
+/* ---------- อ่าน/เขียนเอกสาร ---------- */
 async function clWrite(id, meta, data) {
-  const rev = newRev(); const json = JSON.stringify(data); const parts = []; for (let i = 0; i < json.length; i += CHUNK) parts.push(json.slice(i, i + CHUNK));
-  const ref = uref().collection('docs').doc(id); const old = (await ref.get()).data();
-  let batch = CLD.db.batch(), bytes = 0; const flush = async () => { await batch.commit(); batch = CLD.db.batch(); bytes = 0; };
-  for (let i = 0; i < parts.length; i++) { if (bytes > 6e6) await flush(); batch.set(ref.collection('parts').doc(String(i)), { d: parts[i], rev }); bytes += parts[i].length * 3; }
-  for (let i = parts.length; i < ((old && old.n) || 0); i++) batch.delete(ref.collection('parts').doc(String(i)));
-  batch.set(ref, Object.assign({}, meta, { n: parts.length, rev, ts: now(), dev: DEV, size: json.length }), { merge: true });
-  await batch.commit(); return rev;
+  const rev = newRev(); const body = JSON.stringify(data);
+  const md = { name: (meta.name || 'เอกสาร') + '.json', mimeType: 'application/json', appProperties: { np: 'doc', rev, dev: DEV, pages: String(meta.pages || 0) } };
+  if (!id) md.parents = [meta.folder || await ensureRoot()];
+  const bd = 'np' + Math.random().toString(36).slice(2);
+  const mp = new Blob([`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(md)}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n`, body, `\r\n--${bd}--`]);
+  const f = await gd((id ? DUP + '/' + id : DUP) + '?uploadType=multipart&fields=id,modifiedTime', { method: id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + bd }, body: mp });
+  return { id: f.id, rev };
 }
+async function clMeta(id) { return gd(DRIVE + '/' + id + '?fields=id,name,parents,trashed,modifiedTime,appProperties'); }
 async function clRead(id) {
-  const ref = uref().collection('docs').doc(id); const m = (await ref.get()).data(); if (!m) throw new Error('ไม่พบงานนี้');
-  const ps = await ref.collection('parts').get(); const arr = []; ps.docs.forEach(d => { arr[+d.id] = d.data(); });
-  if (arr.length < m.n || arr.slice(0, m.n).some(p => !p || p.rev !== m.rev)) throw new Error('ข้อมูลกำลังบันทึกจากอีกเครื่อง ลองใหม่อีกครั้ง');
-  return { meta: m, data: JSON.parse(arr.slice(0, m.n).map(p => p.d).join('')) };
+  const m = await clMeta(id); const r = await gd(DRIVE + '/' + id + '?alt=media', { raw: true }); const data = JSON.parse(await r.text());
+  const root = await ensureRoot(); const p = (m.parents || [])[0] || '';
+  return { meta: { name: stripExt(m.name), folder: p === root ? '' : p, rev: (m.appProperties || {}).rev || '', dev: (m.appProperties || {}).dev || '', pages: +(m.appProperties || {}).pages || 0, ts: Date.parse(m.modifiedTime) }, data };
 }
 const isDirty = () => !!(doc && doc.cloud && doc.cloud.id && doc.cloud.dirty);
 function pagesNow() { const s = $('#sheets'); return (s && s.childElementCount) || 0; }
 /* ---------- บันทึก ---------- */
 async function clSave(opts = {}) {
   if (!CLD.user) { openCloud('save'); return false; }
-  const c = doc.cloud || {}; if (!c.id || opts.asNew) { openCloud('save'); return false; }
+  const c = doc.cloud || {}; if (!c.new && (!c.id || opts.asNew)) { openCloud('save'); return false; }
   if (CLD.busy) return false; CLD.busy = true; clStatus('กำลังบันทึก…'); const seq0 = CLD.seq || 0;
   try {
-    const ref = uref().collection('docs').doc(c.id); const m = (await ref.get()).data();
-    if (m && m.rev && c.rev && m.rev !== c.rev && !opts.force) {
-      CLD.busy = false; clStatus('มีฉบับใหม่กว่าจาก' + (m.dev || 'อีกเครื่อง'), true);
-      if (opts.silent) return false;
-      const ok = await ask('มีการแก้ไขจากอีกเครื่อง', `<p>งาน “${esc(m.name || '')}” ถูกบันทึกจาก <b>${esc(m.dev || 'อีกเครื่อง')}</b> เมื่อ ${clTime(m.ts)} หลังจากที่เปิดไว้ในเครื่องนี้</p><p>กด “บันทึกทับ” เพื่อใช้ฉบับในเครื่องนี้แทน หรือกดยกเลิกแล้วเปิดจากคลังงานเพื่อโหลดฉบับล่าสุด</p>`, 'บันทึกทับ');
-      if (!ok) return false; return clSave(Object.assign({}, opts, { force: true }));
+    if (c.id && !opts.force) {
+      const m = await clMeta(c.id); const a = m.appProperties || {};
+      if (a.rev && c.rev && a.rev !== c.rev) {
+        CLD.busy = false; clStatus('มีฉบับใหม่กว่าจาก' + (a.dev || 'อีกเครื่อง'), true);
+        if (opts.silent) return false;
+        const ok = await ask('มีการแก้ไขจากอีกเครื่อง', `<p>งาน “${esc(stripExt(m.name))}” ถูกบันทึกจาก <b>${esc(a.dev || 'อีกเครื่อง')}</b> เมื่อ ${clTime(Date.parse(m.modifiedTime))} หลังจากที่เปิดไว้ในเครื่องนี้</p><p>กด “บันทึกทับ” เพื่อใช้ฉบับในเครื่องนี้แทน หรือกดยกเลิกแล้วเปิดจากคลังงานเพื่อโหลดฉบับล่าสุด</p>`, 'บันทึกทับ');
+        if (!ok) return false; return clSave(Object.assign({}, opts, { force: true }));
+      }
     }
     const data = Object.assign({}, doc); delete data.cloud;
-    const rev = await clWrite(c.id, { name: doc.settings.name || 'เอกสาร', folder: c.folder || '', pages: pagesNow() }, data);
-    doc.cloud = { id: c.id, folder: c.folder || '', rev, dirty: (CLD.seq || 0) !== seq0 }; autosave(); clStatus(doc.cloud.dirty ? 'ยังไม่บันทึก' : 'บันทึกแล้ว'); if (!opts.silent) toast('บันทึกลงคลังงานแล้ว'); return true;
-  } catch (e) { clStatus('บันทึกไม่สำเร็จ', true); if (!opts.silent) toast('บันทึกไม่สำเร็จ: ' + (e.message || e)); return false; }
-  finally { CLD.busy = false; }
+    const r = await clWrite(c.id || '', { name: doc.settings.name || 'เอกสาร', folder: c.folder || '', pages: pagesNow() }, data);
+    doc.cloud = { id: r.id, folder: c.folder || '', rev: r.rev, dirty: (CLD.seq || 0) !== seq0 }; autosave(); clStatus(doc.cloud.dirty ? 'ยังไม่บันทึก' : 'บันทึกแล้ว'); if (!opts.silent) toast('บันทึกลง Google Drive แล้ว');
+    CLD.busy = false; clRefresh(); return true;
+  } catch (e) {
+    if (e.need) { clStatus('แตะเพื่อบันทึกลง Drive', true); if (!opts.silent) toast('ต้องยืนยันบัญชี Google อีกครั้ง กดป้าย ☁︎ หรือปุ่มบันทึก'); }
+    else { clStatus('บันทึกไม่สำเร็จ', true); if (!opts.silent) toast('บันทึกไม่สำเร็จ: ' + (e.message || e)); }
+    return false;
+  } finally { CLD.busy = false; }
 }
 async function clSaveNew(name, folder) {
-  const id = uref().collection('docs').doc().id; doc.settings.name = name; doc.cloud = { id, folder, rev: '' };
-  const ok = await clSave({ force: true }); if (ok) { CLD.cur = folder; clRender(); } return ok;
+  doc.settings.name = name; doc.cloud = { id: '', new: true, folder, rev: '' };
+  const ok = await clSave({ force: true }); if (ok) { CLD.cur = folder; clRender(); } else if (doc.cloud && !doc.cloud.id) delete doc.cloud; return ok;
 }
 async function clOpen(id) {
   if (isDirty() && doc.cloud.id !== id) { await clSave({ silent: true }); }
@@ -7542,86 +7590,112 @@ async function clOpen(id) {
     doc = data; doc.settings = Object.assign(sampleDoc().settings, data.settings || {}); doc.settings.name = meta.name; doc.cloud = { id, folder: meta.folder || '', rev: meta.rev };
     CLD.loading = true; curId = null; applySettings(); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); setTimeout(() => { CLD.loading = false; if (doc.cloud) { doc.cloud.dirty = false; autosave(); } clStatus(); }, 2500); refreshInspector(); $('#scroller').scrollTop = 0;
     closeDlg('#dCloud'); clStatus('บันทึกแล้ว'); toast('เปิด “' + meta.name + '” แล้ว');
-  } catch (e) { clStatus(''); toast('เปิดไม่ได้: ' + (e.message || e)); }
+  } catch (e) { clStatus(e.need ? 'แตะเพื่อเชื่อม Drive' : '', !!e.need); toast('เปิดไม่ได้: ' + (e.message || e)); }
 }
 /* เปิดแอปมาแล้วงานเดิมมีฉบับใหม่จากอีกเครื่อง → โหลดให้อัตโนมัติ (ถ้าเครื่องนี้ไม่มีอะไรค้างบันทึก) */
-let clChecked = false;
 async function clCheckRemote() {
   const c = doc && doc.cloud; if (!c || !c.id || CLD.busy) return; const m = CLD.docs.find(d => d.id === c.id); if (!m) return;
-  if (m.trash) { if (!clChecked) clStatus('งานนี้อยู่ในถังขยะ', true); clChecked = true; return; }
-  if (!m.rev || m.rev === c.rev) { clChecked = true; return; }
+  if (m.trash) { clStatus('งานนี้อยู่ในถังขยะ', true); return; }
+  if (!m.rev || m.rev === c.rev) return;
   if (!isDirty()) { await clOpen(c.id); toast('โหลดฉบับล่าสุดที่บันทึกจาก ' + (m.dev || 'อีกเครื่อง') + ' แล้ว'); }
   else clStatus('มีฉบับใหม่กว่าจาก' + (m.dev || 'อีกเครื่อง'), true);
-  clChecked = true;
 }
-/* บันทึกอัตโนมัติขึ้นคลังงาน (เมื่องานนี้อยู่ในคลังแล้ว) */
+/* บันทึกอัตโนมัติ (เมื่องานนี้อยู่ในคลังแล้ว) */
 const _changedCL = changed;
 changed = function (imm) {
   _changedCL(imm);
   if (CLD.loading) return;
-  if (!(doc && doc.cloud && doc.cloud.id)) { const st = $('#clStat'); if (st && st.style.display !== 'none') clStatus(''); }
-  if (doc && doc.cloud && doc.cloud.id) { CLD.seq = (CLD.seq || 0) + 1; doc.cloud.dirty = true; if (CLD.user) { clStatus('ยังไม่บันทึก'); clearTimeout(CLD.timer); CLD.timer = setTimeout(() => clSave({ silent: true }), 12000); } }
+  if (!(doc && doc.cloud && doc.cloud.id)) { const st = $('#clStat'); if (st && st.style.display !== 'none') clStatus(''); return; }
+  CLD.seq = (CLD.seq || 0) + 1; doc.cloud.dirty = true;
+  if (CLD.user) { clStatus(tokOk() ? 'ยังไม่บันทึก' : 'แตะเพื่อบันทึกลง Drive', !tokOk()); clearTimeout(CLD.timer); if (tokOk()) CLD.timer = setTimeout(() => clSave({ silent: true }), 12000); }
 };
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && isDirty() && CLD.user) { clearTimeout(CLD.timer); clSave({ silent: true }); } });
-/* ---------- โฟลเดอร์ ---------- */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && isDirty() && CLD.user && tokOk()) { clearTimeout(CLD.timer); clSave({ silent: true }); }
+  if (document.visibilityState === 'visible' && CLD.user && tokOk()) clRefresh();
+});
+/* ---------- โฟลเดอร์ (เป็นโฟลเดอร์จริงใน Drive) ---------- */
 const fById = id => CLD.folders.find(f => f.id === id);
 function fPath(id) { const out = []; let f = fById(id), k = 0; while (f && k++ < 20) { out.unshift(f.name); f = fById(f.parent || ''); } return out; }
 const kids = p => CLD.folders.filter(f => (f.parent || '') === p).sort((a, b) => a.name.localeCompare(b.name, 'th'));
-async function clNewFolder() {
+async function mkFolder(name, parent) { const f = await gd(DRIVE + '?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: FOLDER, parents: [parent || await ensureRoot()], appProperties: { np: 'folder' } }) }); return f.id; }
+const patch = (id, body, qs = '') => gd(DRIVE + '/' + id + '?fields=id' + qs, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+const guard = fn => async (...a) => { try { await fn(...a); } catch (e) { toast((e.message || e) + ''); if (e.need) { clStatus('แตะเพื่อเชื่อม Drive', true); clRender(); } } };
+const clNewFolder = guard(async () => {
   const ok = await ask('โฟลเดอร์ใหม่', `<div class="row"><label for="cfName">ชื่อโฟลเดอร์</label><input type="text" id="cfName" style="flex:1" placeholder="เช่น ม.4 เทอม 2"></div><p class="hint">สร้างไว้ใน: ${esc(['คลังงาน'].concat(fPath(CLD.cur)).join(' › '))}</p>`, 'สร้าง');
   const name = ok && $('#cfName').value.trim(); if (!name) return;
-  const r = await uref().collection('folders').add({ name, parent: CLD.cur || '', ts: now() }); CLD.cur = r.id; CLD.view = 'all'; clRender();
-}
-async function clRenameFolder(id) {
+  const id = await mkFolder(name, CLD.cur); CLD.folders.push({ id, name, parent: CLD.cur || '' }); CLD.cur = id; CLD.view = 'all'; clRender(); clRefresh();
+});
+const clRenameFolder = guard(async id => {
   const f = fById(id); if (!f) return;
   const ok = await ask('เปลี่ยนชื่อโฟลเดอร์', `<div class="row"><input type="text" id="cfName" style="flex:1" value="${esc(f.name)}"></div>`, 'บันทึก');
-  const name = ok && $('#cfName').value.trim(); if (name) await uref().collection('folders').doc(id).update({ name });
-}
-async function clDelFolder(id) {
+  const name = ok && $('#cfName').value.trim(); if (!name) return; await patch(id, { name }); f.name = name; clRender();
+});
+const clDelFolder = guard(async id => {
   const f = fById(id); if (!f) return;
   const inside = CLD.docs.filter(d => (d.folder || '') === id && !d.trash).length, sub = kids(id).length;
   if (inside || sub) { await ask('ลบโฟลเดอร์ไม่ได้', `<p>โฟลเดอร์ “${esc(f.name)}” ยังมีงาน ${inside} ไฟล์ และโฟลเดอร์ย่อย ${sub} โฟลเดอร์ ย้ายหรือลบข้างในออกก่อน</p>`, 'เข้าใจแล้ว'); return; }
-  if (!(await ask('ลบโฟลเดอร์', `<p>ลบโฟลเดอร์ว่าง “${esc(f.name)}” ใช่ไหม</p>`, 'ลบโฟลเดอร์'))) return;
-  CLD.docs.filter(d => (d.folder || '') === id && d.trash).forEach(d => uref().collection('docs').doc(d.id).update({ folder: '' }));
-  await uref().collection('folders').doc(id).delete(); CLD.cur = f.parent || ''; clRender();
-}
+  if (!(await ask('ลบโฟลเดอร์', `<p>ย้ายโฟลเดอร์ว่าง “${esc(f.name)}” ไปถังขยะของ Google Drive ใช่ไหม</p>`, 'ลบโฟลเดอร์'))) return;
+  await patch(id, { trashed: true }); CLD.cur = f.parent || ''; clRefresh();
+});
 function folderOptions(sel) {
   const out = [`<option value=""${!sel ? ' selected' : ''}>คลังงาน (ชั้นนอกสุด)</option>`];
   const walk = (p, d) => kids(p).forEach(f => { out.push(`<option value="${f.id}"${f.id === sel ? ' selected' : ''}>${'　'.repeat(d)}📁 ${esc(f.name)}</option>`); walk(f.id, d + 1); });
   walk('', 1); return out.join('');
 }
 /* ---------- งาน: ย้าย เปลี่ยนชื่อ สำเนา ลบ ---------- */
-async function clMove(id, folder) {
-  await uref().collection('docs').doc(id).update({ folder }); if (doc.cloud && doc.cloud.id === id) { doc.cloud.folder = folder; autosave(); }
-}
+const clMove = guard(async (id, folder) => {
+  const d = CLD.docs.find(x => x.id === id); const root = await ensureRoot(); const from = (d && d.folder) || root, to = folder || root; if (from === to) return;
+  await patch(id, {}, '&' + gq({ addParents: to, removeParents: from })); if (d) d.folder = folder; if (doc.cloud && doc.cloud.id === id) { doc.cloud.folder = folder; autosave(); } clRender(); toast('ย้ายแล้ว');
+});
 async function clMoveAsk(id) {
   const d = CLD.docs.find(x => x.id === id); if (!d) return;
   const ok = await ask('ย้ายไปโฟลเดอร์', `<p>ย้าย “${esc(d.name)}” ไปที่</p><select id="cfTo" style="width:100%;font:inherit;padding:4px">${folderOptions(d.folder || '')}</select>`, 'ย้าย');
-  if (ok) { await clMove(id, $('#cfTo').value); toast('ย้ายแล้ว'); }
+  if (ok) await clMove(id, $('#cfTo').value);
 }
-async function clRename(id) {
+const clRename = guard(async id => {
   const d = CLD.docs.find(x => x.id === id); if (!d) return;
   const ok = await ask('เปลี่ยนชื่องาน', `<div class="row"><input type="text" id="cfName" style="flex:1" value="${esc(d.name)}"></div>`, 'บันทึก');
   const name = ok && $('#cfName').value.trim(); if (!name) return;
-  await uref().collection('docs').doc(id).update({ name }); if (doc.cloud && doc.cloud.id === id) { doc.settings.name = name; autosave(); }
-}
-async function clCopy(id) {
-  clStatus('กำลังทำสำเนา…');
-  try { const { meta, data } = await clRead(id); const nid = uref().collection('docs').doc().id; data.settings = Object.assign({}, data.settings, { name: meta.name + ' (สำเนา)' }); await clWrite(nid, { name: meta.name + ' (สำเนา)', folder: meta.folder || '', pages: meta.pages }, data); toast('ทำสำเนาแล้ว'); }
-  catch (e) { toast('ทำสำเนาไม่ได้: ' + (e.message || e)); } clStatus(doc.cloud && doc.cloud.id ? 'บันทึกแล้ว' : '');
-}
-async function clTrash(id, on) { await uref().collection('docs').doc(id).update({ trash: on ? now() : firebase.firestore.FieldValue.delete() }); toast(on ? 'ย้ายไปถังขยะแล้ว (กู้คืนได้)' : 'กู้คืนแล้ว'); }
-async function clPurge(id) {
+  await patch(id, { name: name + '.json' }); d.name = name; if (doc.cloud && doc.cloud.id === id) { doc.settings.name = name; autosave(); } clRender();
+});
+const clCopy = guard(async id => {
+  clStatus('กำลังทำสำเนา…'); const { meta, data } = await clRead(id); data.settings = Object.assign({}, data.settings, { name: meta.name + ' (สำเนา)' });
+  await clWrite('', { name: meta.name + ' (สำเนา)', folder: meta.folder || '', pages: meta.pages }, data); toast('ทำสำเนาแล้ว'); clStatus(); clRefresh();
+});
+const clTrash = guard(async (id, on) => { await patch(id, { trashed: !!on }); const d = CLD.docs.find(x => x.id === id); if (d) d.trash = !!on; clRender(); toast(on ? 'ย้ายไปถังขยะแล้ว (กู้คืนได้)' : 'กู้คืนแล้ว'); });
+const clPurge = guard(async id => {
   const d = CLD.docs.find(x => x.id === id); if (!d) return;
-  if (!(await ask('ลบถาวร', `<p>ลบ “${esc(d.name)}” ออกจากคลังงานถาวร กู้คืนไม่ได้อีก ใช่ไหม</p>`, 'ลบถาวร'))) return;
-  const ref = uref().collection('docs').doc(id); const ps = await ref.collection('parts').get(); const b = CLD.db.batch(); ps.docs.forEach(p => b.delete(p.ref)); b.delete(ref); await b.commit();
+  if (!(await ask('ลบถาวร', `<p>ลบ “${esc(d.name)}” ออกจาก Google Drive ถาวร กู้คืนไม่ได้อีก ใช่ไหม</p>`, 'ลบถาวร'))) return;
+  await gd(DRIVE + '/' + id, { method: 'DELETE' }); CLD.docs = CLD.docs.filter(x => x.id !== id); clRender();
   if (doc.cloud && doc.cloud.id === id) { delete doc.cloud; autosave(); clStatus(''); }
-}
+});
 async function clBackup() { // ดาวน์โหลดสำรองทั้งคลังเป็นไฟล์เดียว
   clStatus('กำลังรวมไฟล์สำรอง…');
   try { const out = { app: 'newton-press-library', ts: now(), folders: CLD.folders, docs: [] }; for (const d of CLD.docs.filter(x => !x.trash)) { const { meta, data } = await clRead(d.id); out.docs.push({ meta, data }); }
     saveFile('คลังงาน Newton Press ' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(out)); }
-  catch (e) { toast('สำรองไม่สำเร็จ: ' + (e.message || e)); } clStatus(doc.cloud && doc.cloud.id ? 'บันทึกแล้ว' : '');
+  catch (e) { toast('สำรองไม่สำเร็จ: ' + (e.message || e)); } clStatus();
+}
+/* ---------- ย้ายงานจากคลังเดิม (Firebase) ไป Drive ครั้งเดียว ---------- */
+async function clMigrate() {
+  if (CLD.migrating) return; CLD.migrating = true;
+  try {
+    const uref = firebase.firestore().collection('users').doc(CLD.user.uid);
+    const [fs, ds] = await Promise.all([uref.collection('folders').get(), uref.collection('docs').get()]);
+    const oldF = fs.docs.map(d => Object.assign({ id: d.id }, d.data())), oldD = ds.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(d => !d.trash);
+    if (oldF.length || oldD.length) {
+      clStatus('กำลังย้ายงานเดิมไป Drive…'); const map = {}; let left = oldF.slice(), guardN = 0;
+      while (left.length && guardN++ < 50) { const next = []; for (const f of left) { const p = f.parent || ''; if (p && !(p in map)) { next.push(f); continue; } map[f.id] = await mkFolder(f.name, p ? map[p] : ''); } left = next; }
+      for (const d of oldD) {
+        const ps = await uref.collection('docs').doc(d.id).collection('parts').get(); const arr = []; ps.docs.forEach(p => { arr[+p.id] = p.data(); });
+        if (arr.length < d.n) continue; const data = JSON.parse(arr.slice(0, d.n).map(p => p.d).join(''));
+        const r = await clWrite('', { name: d.name, folder: d.folder ? map[d.folder] || '' : '', pages: d.pages }, data);
+        if (doc.cloud && doc.cloud.id === d.id) { doc.cloud = { id: r.id, folder: d.folder ? map[d.folder] || '' : '', rev: r.rev, dirty: doc.cloud.dirty }; autosave(); }
+      }
+      toast(`ย้ายงานเดิม ${oldD.length} งาน และ ${oldF.length} โฟลเดอร์ ไปไว้ใน Google Drive แล้ว`);
+    }
+    await patch(CLD.root, { appProperties: { np: 'root', migrated: '1' } }); CLD.rootProps = { np: 'root', migrated: '1' };
+    if (oldF.length || oldD.length) clRefresh();
+  } catch (e) { console.warn('migrate', e); } finally { CLD.migrating = false; clStatus(); }
 }
 /* ---------- หน้าต่างคลังงาน ---------- */
 function clTime(t) { if (!t) return ''; const d = new Date(t), n = new Date(); const hm = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); if (d.toDateString() === n.toDateString()) return 'วันนี้ ' + hm; const y = new Date(n - 864e5); if (d.toDateString() === y.toDateString()) return 'เมื่อวาน ' + hm; return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) + ' ' + hm; }
@@ -7633,6 +7707,7 @@ function clDlg() {
 }
 function openCloud(mode = 'open') {
   CLD.mode = mode; clDlg(); if (doc.cloud && doc.cloud.id && mode === 'save') CLD.cur = doc.cloud.folder || ''; openDlg('#dCloud'); clRender();
+  if (CLD.user && tokOk() && CLD.loaded) clRefresh();
   if (!CLD.ready) fbLoad().then(clRender).catch(e => { $('#clMain').innerHTML = `<p class="hint">เชื่อมต่อคลังงานไม่ได้ (${esc(e.message || e)}) ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่</p>` + localBox(); bindLocal(); });
 }
 function localBox() { return `<div class="cl-local"><b>ไฟล์ในเครื่อง</b><button class="tb" id="clFOpen">เปิดไฟล์ .json จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button></div>`; }
@@ -7642,11 +7717,17 @@ function clRender() {
   const acc = $('#clAcc'), main = $('#clMain');
   if (!CLD.ready) { acc.innerHTML = ''; main.innerHTML = '<p class="hint">กำลังเชื่อมต่อคลังงาน…</p>'; return; }
   if (!CLD.user) {
-    acc.innerHTML = ''; main.innerHTML = `<div class="cl-signin"><div class="cl-big">☁︎</div><p>เข้าสู่ระบบด้วยบัญชี Google เพื่อเก็บงานเป็นโฟลเดอร์ และเปิดงานเดียวกันได้ทั้งบน Mac และ iPad</p><button class="tb primary" id="clIn">เข้าสู่ระบบด้วย Google</button><p class="hint">ใช้บัญชีเดียวกันทุกเครื่อง งานจะซิงก์ให้อัตโนมัติ</p></div>` + localBox();
-    $('#clIn').onclick = clSignIn; bindLocal(); return;
+    acc.innerHTML = ''; main.innerHTML = `<div class="cl-signin"><div class="cl-big">☁︎</div><p>เข้าสู่ระบบด้วยบัญชี Google เพื่อเก็บงานไว้ใน <b>Google Drive</b> (โฟลเดอร์ “Newton Press”) แยกเป็นโฟลเดอร์ และเปิดงานเดียวกันได้ทั้งบน Mac และ iPad</p><button class="tb primary" id="clIn">เข้าสู่ระบบด้วย Google</button><p class="hint">ตอนเข้าสู่ระบบ Google จะขออนุญาตให้แอปจัดการเฉพาะไฟล์ที่แอปสร้างใน Drive ของคุณ</p></div>` + localBox();
+    $('#clIn').onclick = () => clSignIn(); bindLocal(); return;
   }
+  if (!tokOk() || CLD.needAuth) {
+    acc.innerHTML = `<span class="cl-me">${esc(CLD.user.email || '')}</span><button class="tb" id="clOut">ออกจากระบบ</button>`;
+    main.innerHTML = `<div class="cl-signin"><div class="cl-big">☁︎</div><p>เพื่อความปลอดภัย Google ให้ยืนยันบัญชีใหม่ทุกประมาณ 1 ชั่วโมง กดปุ่มด้านล่างเพื่อเชื่อมต่อ Google Drive ต่อ</p><button class="tb primary" id="clIn">เชื่อมต่อ Google Drive</button></div>` + localBox();
+    $('#clIn').onclick = async () => { if (await clSignIn()) { clRender(); if (isDirty()) clSave({ silent: true }); } }; $('#clOut').onclick = () => clSignOut(); bindLocal(); return;
+  }
+  if (!CLD.loaded) { acc.innerHTML = ''; main.innerHTML = '<p class="hint" style="padding:30px;text-align:center">กำลังโหลดรายการจาก Google Drive…</p>'; return; }
   acc.innerHTML = `<span class="cl-me">${CLD.user.photoURL ? `<img src="${esc(CLD.user.photoURL)}" alt="">` : ''}${esc(CLD.user.email || CLD.user.displayName || '')}</span><button class="tb" id="clOut">ออกจากระบบ</button>`;
-  $('#clOut').onclick = async () => { if (await ask('ออกจากระบบ', '<p>ออกจากระบบคลังงานบนเครื่องนี้ใช่ไหม งานในคลังยังอยู่ครบ</p>', 'ออกจากระบบ')) clSignOut(); };
+  $('#clOut').onclick = async () => { if (await ask('ออกจากระบบ', '<p>ออกจากระบบบนเครื่องนี้ใช่ไหม งานใน Google Drive ยังอยู่ครบ</p>', 'ออกจากระบบ')) clSignOut(); };
   if (CLD.cur && !fById(CLD.cur)) CLD.cur = '';
   const tree = (p, dep) => kids(p).map(f => { const n = CLD.docs.filter(x => (x.folder || '') === f.id && !x.trash).length; return `<div class="cl-f${CLD.view === 'all' && CLD.cur === f.id ? ' on' : ''}" data-f="${f.id}" style="padding-left:${10 + dep * 16}px">📁 <span>${esc(f.name)}</span><i>${n || ''}</i></div>` + tree(f.id, dep + 1); }).join('');
   const nTrash = CLD.docs.filter(x => x.trash).length;
@@ -7663,8 +7744,8 @@ function clRender() {
   const row = x => `<div class="cl-d${x.id === curId2 ? ' cur' : ''}" data-d="${x.id}" draggable="true"><div class="cl-dn">📄 <b>${esc(x.name || 'ไม่มีชื่อ')}</b>${x.id === curId2 ? '<em>กำลังเปิดอยู่</em>' : ''}<small>${clTime(x.ts)}${x.dev ? ' · ' + esc(x.dev) : ''}${x.pages ? ' · ' + x.pages + ' หน้า' : ''}${(q || CLD.view === 'recent') && x.folder ? ' · 📁 ' + esc(fPath(x.folder).join(' › ')) : ''}</small></div><div class="cl-da">${x.trash ? `<button class="tb" data-a="restore">กู้คืน</button><button class="tb" data-a="purge">ลบถาวร</button>` : `<button class="tb primary" data-a="open">เปิด</button><button class="tb" data-a="more" title="ตัวเลือก">⋯</button>`}</div></div>`;
   const body = subs.map(f => `<div class="cl-d cl-sub" data-f="${f.id}"><div class="cl-dn">📁 <b>${esc(f.name)}</b><small>${CLD.docs.filter(x => (x.folder || '') === f.id && !x.trash).length} งาน</small></div><div class="cl-da"><button class="tb" data-fa="ren" title="เปลี่ยนชื่อ">✎</button><button class="tb" data-fa="del" title="ลบโฟลเดอร์">🗑</button></div></div>`).join('') + list.map(row).join('');
   const saveBar = CLD.view === 'trash' ? '' : `<div class="cl-save"><label>บันทึกงานที่เปิดอยู่ลงใน <b>${esc(['คลังงาน'].concat(fPath(CLD.cur)).join(' › '))}</b></label><div class="row"><input type="text" id="clName" value="${esc(doc.settings.name || 'เอกสาร')}" placeholder="ชื่องาน"><button class="tb primary" id="clSaveHere">${curId2 ? 'บันทึกเป็นงานใหม่ที่นี่' : 'บันทึกที่นี่'}</button>${curId2 ? '<button class="tb" id="clSaveNow">บันทึกทับงานเดิม</button>' : ''}</div></div>`;
-  main.innerHTML = `<div class="cl-wrap">${side}<div class="cl-mainc"><div class="cl-bar"><div class="cl-crumb">${crumbs}</div><input type="search" id="clQ" placeholder="ค้นหาชื่องาน" value="${esc(CLD.q)}"></div>${CLD.mode === 'save' ? saveBar : ''}<div class="cl-list">${body || `<p class="hint cl-empty">${CLD.view === 'trash' ? 'ถังขยะว่าง' : q ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงานในโฟลเดอร์นี้'}</p>`}</div>${CLD.mode !== 'save' ? saveBar : ''}<div class="cl-foot"><button class="tb" id="clFOpen">เปิดไฟล์ .json จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button><button class="tb" id="clBak" title="ดาวน์โหลดงานทั้งหมดในคลังเป็นไฟล์เดียว เก็บสำรองไว้">สำรองทั้งคลัง</button></div></div></div>`;
-  bindLocal(); $('#clBak').onclick = clBackup; $('#clNF').onclick = clNewFolder;
+  main.innerHTML = `<div class="cl-wrap">${side}<div class="cl-mainc"><div class="cl-bar"><div class="cl-crumb">${crumbs}</div><input type="search" id="clQ" placeholder="ค้นหาชื่องาน" value="${esc(CLD.q)}"></div>${CLD.mode === 'save' ? saveBar : ''}<div class="cl-list">${body || `<p class="hint cl-empty">${CLD.view === 'trash' ? 'ถังขยะว่าง' : q ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงานในโฟลเดอร์นี้'}</p>`}</div>${CLD.mode !== 'save' ? saveBar : ''}<div class="cl-foot"><button class="tb" id="clFOpen">เปิดไฟล์ .json จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button><button class="tb" id="clBak" title="ดาวน์โหลดงานทั้งหมดในคลังเป็นไฟล์เดียว เก็บสำรองไว้">สำรองทั้งคลัง</button><button class="tb" id="clRef" title="โหลดรายการใหม่จาก Drive">↻ รีเฟรช</button><a class="tb" href="https://drive.google.com/drive/folders/${CLD.root}" target="_blank" rel="noopener">เปิดใน Google Drive ↗</a></div></div></div>`;
+  bindLocal(); $('#clBak').onclick = clBackup; $('#clRef').onclick = () => clRefresh(); $('#clNF').onclick = clNewFolder;
   const qi = $('#clQ'); qi.oninput = () => { CLD.q = qi.value; const p = qi.selectionStart; clRender(); const n = $('#clQ'); n.focus(); n.setSelectionRange(p, p); };
   $$('[data-f]', main).forEach(e => { if (e.matches('.cl-d') ) return; e.onclick = () => { CLD.cur = e.dataset.f; CLD.view = 'all'; CLD.q = ''; clRender(); }; });
   $$('[data-v]', main).forEach(e => e.onclick = () => { CLD.view = e.dataset.v; CLD.q = ''; clRender(); });
@@ -7679,7 +7760,7 @@ function clRender() {
   $$('.cl-side .cl-f[data-f], .cl-sub', main).forEach(t => {
     t.ondragover = ev => { if ([...ev.dataTransfer.types].includes('text/np-doc')) { ev.preventDefault(); t.classList.add('drop'); } };
     t.ondragleave = () => t.classList.remove('drop');
-    t.ondrop = ev => { ev.preventDefault(); t.classList.remove('drop'); const id = ev.dataTransfer.getData('text/np-doc'); if (id) clMove(id, t.dataset.f).then(() => toast('ย้ายแล้ว')); };
+    t.ondrop = ev => { ev.preventDefault(); t.classList.remove('drop'); const id = ev.dataTransfer.getData('text/np-doc'); if (id) clMove(id, t.dataset.f); };
   });
   const sh = $('#clSaveHere'); if (sh) sh.onclick = async () => { const name = $('#clName').value.trim() || 'เอกสาร'; if (await clSaveNew(name, CLD.cur)) { CLD.mode = 'open'; clRender(); } };
   const sn = $('#clSaveNow'); if (sn) sn.onclick = async () => { if (await clSave()) closeDlg('#dCloud'); };
@@ -7696,21 +7777,25 @@ function clStatus(t, warn) {
   const s = $('#clStat'); if (!s) return;
   if (t === undefined) t = doc && doc.cloud && doc.cloud.id ? (doc.cloud.dirty ? 'ยังไม่บันทึก' : 'บันทึกแล้ว') : '';
   s.textContent = t ? '☁︎ ' + t : ''; s.classList.toggle('warn', !!warn); s.style.display = t ? '' : 'none';
-  s.title = doc && doc.cloud && doc.cloud.id ? 'งานนี้อยู่ในคลังงาน: ' + ['คลังงาน'].concat(fPath(doc.cloud.folder || '')).join(' › ') + ' · บันทึกอัตโนมัติ' : '';
+  s.title = doc && doc.cloud && doc.cloud.id ? 'งานนี้อยู่ใน Google Drive: ' + ['Newton Press'].concat(fPath(doc.cloud.folder || '')).join(' › ') + ' · บันทึกอัตโนมัติ' : '';
 }
 (function initCloud() {
   const bOpen = $('#bOpen'), bSave = $('#bSave'); if (!bOpen) return;
-  bOpen.textContent = 'คลังงาน'; bOpen.title = 'เปิดงาน · จัดโฟลเดอร์ · ซิงก์ Mac ↔ iPad';
+  bOpen.textContent = 'คลังงาน'; bOpen.title = 'เปิดงานจาก Google Drive · จัดโฟลเดอร์ · ซิงก์ Mac ↔ iPad';
   bOpen.onclick = () => openCloud('open');
-  bSave.title = 'บันทึกลงคลังงาน (⌘S)';
-  bSave.onclick = async () => { if (CLD.ready) { try { await CLD.ready; } catch (e) { } } if (CLD.user && doc.cloud && doc.cloud.id) clSave(); else openCloud('save'); };
-  const st = document.createElement('span'); st.id = 'clStat'; st.style.display = 'none'; st.onclick = () => openCloud('open'); bSave.after(st);
+  bSave.title = 'บันทึกลง Google Drive (⌘S)';
+  bSave.onclick = async () => {
+    if (CLD.user && doc.cloud && doc.cloud.id) { if (!tokOk()) { if (!(await clSignIn())) return; } clSave(); }
+    else openCloud('save');
+  };
+  const st = document.createElement('span'); st.id = 'clStat'; st.style.display = 'none';
+  st.onclick = async () => { if (CLD.user && !tokOk()) { if (await clSignIn()) { if (isDirty()) clSave(); } return; } openCloud('open'); }; bSave.after(st);
   const nb = $('#bNew'); if (nb) { const o = nb.onclick; nb.onclick = async () => { if (isDirty() && CLD.user) await clSave({ silent: true }); return o(); }; }
   // ไฟล์ที่เปิดจากเครื่องไม่ผูกกับคลังงาน
   const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { if (doc && doc.cloud) { delete doc.cloud; autosave(); clStatus(''); } }, 300));
   let signedBefore = false; try { signedBefore = !!localStorage.getItem('np-cloud'); } catch (e) { }
-  if ((doc && doc.cloud && doc.cloud.id) || signedBefore) fbLoad().then(() => { try { localStorage.setItem('np-cloud', CLD.user ? '1' : ''); } catch (e) { } clStatus(); }).catch(() => clStatus('ออฟไลน์', true));
-  const _si = clSignIn; clSignIn = async function () { await _si(); try { localStorage.setItem('np-cloud', '1'); } catch (e) { } };
+  // โหลดระบบล็อกอินไว้ก่อน เพื่อให้กดปุ่มแล้วหน้าต่าง Google ขึ้นได้ทันที (Safari/iPad)
+  fbLoad().then(() => { if (CLD.user && !tokOk()) clStatus('แตะเพื่อเชื่อม Drive', true); else clStatus(); }).catch(() => { if (signedBefore) clStatus('ออฟไลน์', true); });
 })();
 </script>
 </body>
