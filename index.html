@@ -7509,6 +7509,7 @@ async function clRead(id) {
   if (arr.length < m.n || arr.slice(0, m.n).some(p => !p || p.rev !== m.rev)) throw new Error('ข้อมูลกำลังบันทึกจากอีกเครื่อง ลองใหม่อีกครั้ง');
   return { meta: m, data: JSON.parse(arr.slice(0, m.n).map(p => p.d).join('')) };
 }
+const isDirty = () => !!(doc && doc.cloud && doc.cloud.id && doc.cloud.dirty);
 function pagesNow() { const s = $('#sheets'); return (s && s.childElementCount) || 0; }
 /* ---------- บันทึก ---------- */
 async function clSave(opts = {}) {
@@ -7558,6 +7559,7 @@ const _changedCL = changed;
 changed = function (imm) {
   _changedCL(imm);
   if (CLD.loading) return;
+  if (!(doc && doc.cloud && doc.cloud.id)) { const st = $('#clStat'); if (st && st.style.display !== 'none') clStatus(''); }
   if (doc && doc.cloud && doc.cloud.id) { CLD.seq = (CLD.seq || 0) + 1; doc.cloud.dirty = true; if (CLD.user) { clStatus('ยังไม่บันทึก'); clearTimeout(CLD.timer); CLD.timer = setTimeout(() => clSave({ silent: true }), 12000); } }
 };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && isDirty() && CLD.user) { clearTimeout(CLD.timer); clSave({ silent: true }); } });
