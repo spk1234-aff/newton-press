@@ -296,6 +296,7 @@ table.dv{border-collapse:collapse}
 
 .b-lphead{margin:2px 0 10px}.b-lphead .lpt{background:var(--brown);color:#fff;text-align:center;font-weight:700;font-size:1.3em;padding:5px 8px;margin-bottom:6px}
 .b-lphead .lpr{display:flex;justify-content:space-between;gap:12px;color:var(--brown);font-weight:700;padding:2px 6px}.b-lphead .lpr>div{min-width:40px}
+.b-lphead>div.lpr:nth-child(4)>div:first-child,.b-lphead>div.lpr:nth-child(4)>div:last-child{white-space:nowrap;flex:none}
 .b-lphead .lpdot{border-top:3px dotted var(--brown);margin:8px 0 2px}
 .b-lpsec{color:var(--brown);font-weight:700;font-size:1.05em;margin:8px 0 2px}.b-lpsec.sub{margin-left:2.6em}.b-lpsec.ctr{text-align:center}
 .b-lpbar{background:var(--brown);color:#fff;font-weight:700;text-align:center;font-size:1.15em;padding:4px 8px;margin:10px 0 6px}
@@ -6201,8 +6202,10 @@ function openPlanCover() {
 function openSyllabus() {
   docDlg('กำหนดการจัดการเรียนรู้ (Course Syllabus)', [...COURSE_F, ['hrs', 'เวลาเรียน (ชั่วโมง)', '60'], ['cred', 'หน่วยกิต', '1.5'],
     ['desc', 'คำอธิบายรายวิชา (ศึกษา ฝึกทักษะ ... ในเนื้อหาต่อไปนี้)', 'ลำดับและอนุกรม ...\nคณิตศาสตร์การเงิน ...', 't', 3],
-    ['out', 'ผลการเรียนรู้ (บรรทัดละข้อ)', '', 't', 4], ['units', 'หน่วยการเรียนรู้: สัปดาห์ | ชื่อหน่วย | ชั่วโมง (บรรทัดละหน่วย)', '1-9 | ลำดับและอนุกรม | 27\n11-16 | คณิตศาสตร์การเงิน | 18\n17-19 | แคลคูลัสเบื้องต้น 1 | 9', 't', 3],
-    ['sc', 'คะแนน ก่อนกลางภาค / กลางภาค / หลังกลางภาค / ปลายภาค', '30 / 20 / 30 / 20'], ['date', 'วันที่ลงนาม', '31 มีนาคม พ.ศ. 2569'],
+    ['kind', 'รายวิชาใช้', 'out', 's', [['out', 'ผลการเรียนรู้ (รายวิชาเพิ่มเติม)'], ['ind', 'มาตรฐาน/ตัวชี้วัด (รายวิชาพื้นฐาน)']]],
+    ['ex', 'ชั่วโมงสอบ กลางภาค / ปลายภาค (ใส่ – ถ้าไม่นับรวม)', '2 / 2'],
+    ['out', 'ผลการเรียนรู้ หรือ ตัวชี้วัด (บรรทัดละข้อ เช่น ค3.2 ม 5/1 เข้าใจ...)', '', 't', 4], ['units', 'หน่วยการเรียนรู้: สัปดาห์ | ชื่อหน่วย | ชั่วโมง | รหัสตัวชี้วัด/ผลการเรียนรู้ | จุดประสงค์ (บรรทัดละหน่วย; 2 ช่องท้ายเว้นได้)', '1-9 | ลำดับและอนุกรม | 27\n11-16 | คณิตศาสตร์การเงิน | 18\n17-19 | แคลคูลัสเบื้องต้น 1 | 9', 't', 3],
+    ['sc', 'คะแนน ก่อนกลางภาค / กลางภาค / หลังกลางภาค / ปลายภาค', '30 / 20 / 30 / 20'], ['media', 'สื่อ / แหล่งเรียนรู้ (บรรทัดละข้อ เว้นว่าง = ค่าเริ่มต้น)', '', 't', 2], ['date', 'วันที่ลงนาม', '31 มีนาคม พ.ศ. 2569'],
   ], V => {
     const B = []; const add = (t, x) => { const b = newBlock(t, x || {}); B.push(b); return b; }; const sc = (V('sc').match(/\d+/g) || [30, 20, 30, 20]).map(Number);
     courseCover(add, V, 'กำหนดการจัดการเรียนรู้ (Course Syllabus)');
@@ -6211,23 +6214,26 @@ function openSyllabus() {
     add('pjtext', { noind: true, html: '<b>ศึกษา ฝึกทักษะและกระบวนการทางคณิตศาสตร์ในเนื้อหาของสาระ ดังนี้</b>' }); lnz(V('desc')).forEach(x => add('pjtext', { html: esc(x) }));
     add('pjtext', { html: 'โดยจัดประสบการณ์ให้ผู้เรียนได้พัฒนาทักษะและกระบวนการทางคณิตศาสตร์ อันได้แก่ การแก้ปัญหา การสื่อสารและการสื่อความหมายทางคณิตศาสตร์ การเชื่อมโยง การให้เหตุผล และการคิดสร้างสรรค์ การใช้สื่อ อุปกรณ์ เทคโนโลยี และแหล่งข้อมูล และนำประสบการณ์ ตลอดจนทักษะและกระบวนการที่ได้ไปใช้ในการเรียนรู้สิ่งต่าง ๆ และใช้ในชีวิตประจำวันอย่างสร้างสรรค์ รวมทั้งเห็นคุณค่าและมีเจตคติที่ดีต่อคณิตศาสตร์ สามารถทำงานอย่างเป็นระบบ มีความรอบคอบ มีวิจารณญาณ และมีคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์' });
     add('pjtext', { html: 'การวัดและประเมินผล ใช้วิธีการที่หลากหลายตามสภาพความเป็นจริงให้สอดคล้องกับเนื้อหาและทักษะที่ต้องการวัด' });
-    const O = lnz(V('out')); add('pjsec', { html: 'ผลการเรียนรู้' }); add('lptext', { html: O.length ? `<ol>${O.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<ol><li>...</li></ol>' }); add('pjsec', { html: `รวมทั้งหมด ${O.length || '...'} ผลการเรียนรู้` });
+    const O = lnz(V('out')), IND = V('kind') === 'ind', OL = IND ? 'ตัวชี้วัด' : 'ผลการเรียนรู้';
+    if (IND) { add('pjsec', { html: 'รหัสตัวชี้วัด' }); add('pjtext', { noind: true, html: 'ตัวชี้วัดระหว่างทาง<br>' + TAB + '-' }); add('pjtext', { noind: true, html: 'ตัวชี้วัดปลายทาง' }); O.forEach(x => { const m = /^(ค\s*\d\.\d\s*ม\.?\s*\d\/\d+)\s*(.*)$/.exec(x); add('lptext', { ind: 2.6, html: m ? `<b>${esc(m[1])}</b>${TAB}${esc(m[2])}` : esc(x) }); }); }
+    else { add('pjsec', { html: 'ผลการเรียนรู้' }); add('lptext', { html: O.length ? `<ol>${O.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<ol><li>...</li></ol>' }); }
+    add('pjsec', { html: `รวมทั้งหมด ${O.length || '...'} ${OL}` });
     // ตารางโครงสร้าง
     add('pagebreak'); head('กำหนดการจัดการเรียนรู้ (Course Syllabus)');
     const U = lnz(V('units')).map(l => l.split('|').map(x => x.trim()));
-    const R = [['สัปดาห์ที่', 'ชื่อหน่วยการเรียนรู้', 'ผลการเรียนรู้', 'จุดประสงค์การเรียนรู้', 'ภาระงาน/ชิ้นงาน', 'เวลา (คาบ)', 'น้ำหนักคะแนน', '', '', ''], ['', '', '', '', '', '', 'ก่อน', 'กลาง', 'หลัง', 'ปลาย']], rs = { 0: 'L', 1: 'L' }, mg = { '0,0': [2, 1], '0,1': [2, 1], '0,2': [2, 1], '0,3': [2, 1], '0,4': [2, 1], '0,5': [2, 1], '0,6': [1, 4] };
-    const half = Math.ceil(U.length / 2); let tot = 0;
-    const urow = (u, i) => { tot += +u[2] || 0; R.push([esc(u[0] || ''), `<b>${esc(u[1] || '')}</b>`, '', '', '1. แบบทดสอบเก็บคะแนน<br>2. แบบฝึกหัด', esc(u[2] || ''), i < half ? (i === 0 ? String(sc[0]) : '') : '', '', i >= half ? (i === half ? String(sc[2]) : '') : '', '']); };
+    const R = [['สัปดาห์ที่', 'ชื่อหน่วยการเรียนรู้', IND ? 'รหัสตัวชี้วัด' : 'ผลการเรียนรู้', 'จุดประสงค์การเรียนรู้', 'ภาระงาน/ชิ้นงาน', 'เวลา (ชั่วโมง)', 'น้ำหนักคะแนน', '', '', ''], ['', '', '', '', '', '', 'ก่อน', 'กลาง', 'หลัง', 'ปลาย']], rs = { 0: 'L', 1: 'L' }, mg = { '0,0': [2, 1], '0,1': [2, 1], '0,2': [2, 1], '0,3': [2, 1], '0,4': [2, 1], '0,5': [2, 1], '0,6': [1, 4] };
+    const half = Math.ceil(U.length / 2); let tot = 0; const exh = (V('ex') || '').split('/').map(x => x.trim()); const exN = k => /^\d+$/.test(exh[k] || '') ? +exh[k] : null; const exS = k => exN(k) === null ? '–' : String(exN(k));
+    const urow = (u, i) => { tot += +u[2] || 0; R.push([esc(u[0] || ''), `<b>${esc(u[1] || '')}</b>`, esc(u[3] || ''), esc(u[4] || ''), '1. แบบทดสอบเก็บคะแนน<br>2. แบบฝึกหัด', esc(u[2] || ''), i < half ? (i === 0 ? String(sc[0]) : '') : '', '', i >= half ? (i === half ? String(sc[2]) : '') : '', '']); };
     const tr = (t, h, a, s) => { const i = R.length; R.push([`<b>${t}</b>`, '', '', '', '', String(h), ...a]); rs[i] = s || 'L'; mg[`${i},0`] = [1, 5]; return i; };
-    U.slice(0, half).forEach((u, i) => urow(u, i)); tr('สอบกลางภาคเรียน', 3, ['', String(sc[1]), '', ''], 'L'); U.slice(half).forEach((u, i) => urow(u, half + i));
-    const i1 = tr('รวมระหว่างเรียน', tot + 3, [String(sc[0] + sc[1] + sc[2]), '', '', '']); mg[`${i1},6`] = [1, 3]; tr('สอบปลายภาค', 3, ['', '', '', String(sc[3])]); const i3 = tr('รวม', tot + 6, [String(sc.reduce((a, x) => a + x, 0)), '', '', '']); mg[`${i3},6`] = [1, 4];
+    U.slice(0, half).forEach((u, i) => urow(u, i)); tr('สอบกลางภาคเรียน', exS(0), ['', String(sc[1]), '', ''], 'L'); U.slice(half).forEach((u, i) => urow(u, half + i));
+    const i1 = tr('รวมระหว่างเรียน', tot + (exN(0) || 0), [String(sc[0] + sc[1] + sc[2]), '', '', '']); mg[`${i1},6`] = [1, 3]; tr('สอบปลายภาค', exS(1), ['', '', '', String(sc[3])]); const i3 = tr('รวม', tot + (exN(0) || 0) + (exN(1) || 0), [String(sc.reduce((a, x) => a + x, 0)), '', '', '']); mg[`${i3},6`] = [1, 4];
     add('table', { rows: R, rs, mg, full: true, compact: true, cw: '7,11,19,19,14,6,6,6,6,6' });
     // ทักษะ คุณลักษณะ
     add('pagebreak'); const ls = (h, L, lead) => { add('pjsec', { html: h }); add('lptext', { html: `${lead}<ol>${L.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` }); };
     ls('ทักษะและกระบวนการทางคณิตศาสตร์', SKILLS.p, `ทั้งหมด ${SKILLS.p.length} ข้อ`); ls('คุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์', SKILLS.a, `ทั้งหมด ${SKILLS.a.length} ข้อ`); ls('สมรรถนะที่สำคัญของผู้เรียนตามหลักสูตร', SKILLS.c, 'สมรรถนะสำคัญ 5 ประการ'); ls('คุณลักษณะอันพึงประสงค์ของผู้เรียนตามหลักสูตร', SKILLS.d, `ทั้งหมด ${SKILLS.d.length} ข้อ`);
     add('pagebreak'); add('pjsec', { html: 'แผนการวัดและประเมินผล' });
     add('lptext', { html: `<ul><li>การประเมินระหว่างเรียน<ul><li>การประเมินก่อนกลางภาค${TAB}${sc[0]} คะแนน</li><li>กลางภาค${TAB}${TAB}${sc[1]} คะแนน</li><li>การประเมินหลังกลางภาค${TAB}${sc[2]} คะแนน</li></ul></li><li>การประเมินปลายภาคเรียน${TAB}${sc[3]} คะแนน</li></ul>` });
-    add('pjsec', { html: 'สื่อ / แหล่งเรียนรู้' }); add('lptext', { html: '<ol><li>เอกสารประกอบการเรียนและแบบฝึกหัดสอน เรื่อง ... จัดทำโดย' + esc(V('teacher')) + '</li><li>หนังสือเรียนรายวิชาเพิ่มเติมคณิตศาสตร์ ... สสวท.</li></ol>' });
+    add('pjsec', { html: 'สื่อ / แหล่งเรียนรู้' }); { const M = lnz(V('media')); add('lptext', { html: M.length ? `<ol>${M.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<ol><li>เอกสารประกอบการเรียนและแบบฝึกหัดสอน เรื่อง ... จัดทำโดย' + esc(V('teacher')) + '</li><li>หนังสือเรียนรายวิชาเพิ่มเติมคณิตศาสตร์ ... สสวท.</li></ol>' }); }
     add('pjsec', { html: 'ข้อตกลงเบื้องต้น' }); add('pjsec', { sub: true, html: '1. ข้อตกลงในห้องเรียน' });
     add('pjtext', { html: '1.1 นักเรียนจะต้องมีเวลาเข้าเรียนไม่ต่ำกว่า 80% หรือขาดเรียนไม่เกิน 20% ของเวลาเรียนทั้งหมด จึงจะมีสิทธิ์เข้าสอบวัดผลปลายภาคเรียน หากเวลาเรียนไม่ถึงตามที่กำหนดจะต้องดำเนินการแก้ไขตามเงื่อนไขที่โรงเรียนกำหนด' });
     add('pjtext', { html: '1.2 ไม่เข้าห้องเรียนช้าเกิน 15 นาที เว้นแต่มีเหตุจำเป็นเร่งด่วนซึ่งพิจารณาโดยครูผู้สอนและเพื่อนร่วมชั้นเรียนเป็นรายกรณี' });
@@ -6527,9 +6533,9 @@ extInspector = function (b) {
   return h;
 };
 /* ---------- แผนการสอน: แก้จุดประสงค์ครั้งเดียว ตารางวัดผล / บันทึกหลังสอน / แบบประเมิน ตามให้เอง ---------- */
-const liTexts = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return $$('li', d).map(li => { $$('.mx', li).forEach(s => s.textContent = s.dataset.tex); return li.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean); };
-function lpFind() {
-  const B = doc.blocks; if (!B.some(b => b.t === 'lphead')) return null;
+const liTexts = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return $$('li', d).map(li => { $$('.mx', li).forEach(s => s.textContent = '$' + s.dataset.tex + '$'); return li.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean); };
+function lpFind(B) {
+  B = B || doc.blocks; if (!B.some(b => b.t === 'lphead')) return null;
   const R = { src: {}, tbl: {}, desc: {} }; let sec = '';
   B.forEach((b, i) => {
     if (b.t === 'lpsec') { sec = plainText(b.html || ''); return; }
@@ -6543,28 +6549,30 @@ function lpFind() {
 }
 function lpLists(R) { const L = {}; ['K', 'P', 'A', 'C', 'D'].forEach(k => L[k] = R.src[k] ? liTexts(R.src[k].html) : []); L.C = L.C.map(x => /^ความสามารถใน/.test(x) ? x : 'ความสามารถใน' + x); return L; }
 const lpStrip = h => plainText(h || '');
+// ข้อความที่มี $...$ → HTML ที่มีสมการ
+const lpTx = x => String(x).split(/(\$[^$]+\$)/).map(p => /^\$[^$]+\$$/.test(p) ? `<span class="mx" contenteditable="false" data-tex="${esc(p.slice(1, -1))}"></span>` : esc(p)).join('');
 function genEval(L, old) {
   const kr = (old || []).find((r, i) => /\(K\)/.test(lpStrip(r[0]))) || []; const tool0 = kr[1] || 'ตรวจใบกิจกรรม', tool1 = kr[2] || 'ใบกิจกรรม', crit = kr[3] || 'นักเรียนได้คะแนนร้อยละ 60 ขึ้นไปถือว่าผ่าน';
   const rows = [], keys = [], rs = {}; const add = (k, r, s) => { if (s) rs[rows.length] = s; rows.push(r); keys.push(k); };
   add('h', ['จุดประสงค์การเรียนรู้', 'วิธีการวัดผล', 'เครื่องมือวัดผล', 'เกณฑ์การประเมิน'], 'H');
-  add('sK', ['ด้านความรู้', '', '', ''], 'S'); L.K.forEach((x, i) => add('K' + i, [`${i + 1}. ${esc(x)} (K)`, tool0, tool1, crit]));
-  add('sP', ['ด้านทักษะและกระบวนการทางคณิตศาสตร์', '', '', ''], 'S'); add('P', [`นักเรียนมีความสามารถ<br>${L.P.map((x, i) => `${i + 1}. ${esc(x)}`).join('<br>')}`, 'ตรวจใบกิจกรรม', 'ใบกิจกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
-  add('sA', ['ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์', '', '', ''], 'S'); add('A', [L.A.map((x, i) => `${i + 1}. ${esc(x)}`).join('<br>'), 'สังเกตพฤติกรรม', 'แบบสังเกตพฤติกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
-  add('D', [`<b>คุณลักษณะอันพึงประสงค์</b><br>${L.D.map(x => '- ' + esc(x)).join('<br>')}`, 'สังเกตพฤติกรรม', 'แบบประเมินคุณลักษณะอันพึงประสงค์', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
-  add('C', [`<b>สมรรถนะสำคัญของผู้เรียน</b><br>${L.C.map(x => '- ' + esc(x)).join('<br>')}`, 'สังเกตพฤติกรรม', 'แบบประเมินสมรรถนะสำคัญของผู้เรียน', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
+  add('sK', ['ด้านความรู้', '', '', ''], 'S'); L.K.forEach((x, i) => add('K' + i, [`${i + 1}. ${lpTx(x)} (K)`, tool0, tool1, crit]));
+  add('sP', ['ด้านทักษะและกระบวนการทางคณิตศาสตร์', '', '', ''], 'S'); add('P', [`นักเรียนมีความสามารถ<br>${L.P.map((x, i) => `${i + 1}. ${lpTx(x)}`).join('<br>')}`, 'ตรวจใบกิจกรรม', 'ใบกิจกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
+  add('sA', ['ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์', '', '', ''], 'S'); add('A', [L.A.map((x, i) => `${i + 1}. ${lpTx(x)}`).join('<br>'), 'สังเกตพฤติกรรม', 'แบบสังเกตพฤติกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
+  add('D', [`<b>คุณลักษณะอันพึงประสงค์</b><br>${L.D.map(x => '- ' + lpTx(x)).join('<br>')}`, 'สังเกตพฤติกรรม', 'แบบประเมินคุณลักษณะอันพึงประสงค์', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
+  add('C', [`<b>สมรรถนะสำคัญของผู้เรียน</b><br>${L.C.map(x => '- ' + lpTx(x)).join('<br>')}`, 'สังเกตพฤติกรรม', 'แบบประเมินสมรรถนะสำคัญของผู้เรียน', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
   return { rows, keys, rs };
 }
 function genRec(L) {
   const D = '.'.repeat(150), rows = [], keys = [], rs = {}; const add = (k, r, s) => { if (s) rs[rows.length] = s; rows.push(r); keys.push(k); };
-  const pf = x => `${esc(x)}<br><span class="tab">\t</span>​ผ่าน ร้อยละ ................<span class="tab">\t</span><span class="tab">\t</span>​ไม่ผ่าน ร้อยละ ................`;
-  const sum = x => `${esc(x)}<br>สรุป ผลการประเมินรวม ไม่ผ่าน (0) ...... คน ผ่าน (1) ...... คน ดี (2) ...... คน ดีเยี่ยม (3) ...... คน`;
+  const pf = x => `${lpTx(x)}<br><span class="tab">\t</span>​ผ่าน ร้อยละ ................<span class="tab">\t</span><span class="tab">\t</span>​ไม่ผ่าน ร้อยละ ................`;
+  const sum = x => `${lpTx(x)}<br>สรุป ผลการประเมินรวม ไม่ผ่าน (0) ...... คน ผ่าน (1) ...... คน ดี (2) ...... คน ดีเยี่ยม (3) ...... คน`;
   add('h', ['ผลหลังการจัดการเรียนรู้'], 'h');
-  add('sK', ['ด้านความรู้'], 'S'); L.K.forEach((x, i) => add('K' + i, [pf(`${i + 1}. ${x}`) + '<br>' + D]));
-  add('sP', ['ด้านทักษะและกระบวนการทางคณิตศาสตร์'], 'S'); add('P', [L.P.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>') + '<br>' + D]);
-  add('sA', ['ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์'], 'S'); add('A', [L.A.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>') + '<br>' + D]);
-  add('sD', ['คุณลักษณะอันพึงประสงค์ตามหลักสูตร'], 'S'); add('D', [L.D.map((x, i) => sum(`${i + 1}. ${x}`)).join('<br>') + '<br>' + D]);
-  add('sC', ['สมรรถนะสำคัญของผู้เรียนตามหลักสูตร'], 'S'); add('C', [L.C.map((x, i) => sum(`${i + 1}. ${x}`)).join('<br>') + '<br>' + D]);
-  add('hp', ['ปัญหา อุปสรรค และแนวทางแก้ไข'], 'h'); add('pp', [[D, D, D].join('<br>')]); add('hs', ['ข้อเสนอแนะ'], 'h'); add('ss', [[D, D].join('<br>')]);
+  add('sK', ['ด้านความรู้'], 'S'); L.K.forEach((x, i) => add('K' + i, [pf(`${i + 1}. ${x}`)]));
+  add('sP', ['ด้านทักษะและกระบวนการทางคณิตศาสตร์'], 'S'); add('P', [L.P.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>')]);
+  add('sA', ['ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์'], 'S'); add('A', [L.A.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>')]);
+  add('sD', ['คุณลักษณะอันพึงประสงค์ตามหลักสูตร'], 'S'); add('D', [L.D.map((x, i) => sum(`${i + 1}. ${x}`)).join('<br>')]);
+  add('sC', ['สมรรถนะสำคัญของผู้เรียนตามหลักสูตร'], 'S'); add('C', [L.C.map((x, i) => sum(`${i + 1}. ${x}`)).join('<br>')]);
+  add('hp', ['ปัญหา อุปสรรค และแนวทางแก้ไข'], 'h'); add('pp', [[D, D].join('<br>')]); add('hs', ['ข้อเสนอแนะ'], 'h'); add('ss', [[D, D].join('<br>')]);
   return { rows, keys, rs };
 }
 function genSheetK(L, old) {
@@ -6586,17 +6594,23 @@ function lpMerge(tb, g) {
   const changedAny = JSON.stringify(rows) !== JSON.stringify(oldRows);
   tb.rows = rows; tb.rs = g.rs; if (g.cw) tb.cw = g.cw; tb.gen = g.rows.map(r => r.slice()); tb.genKeys = g.keys; return changedAny;
 }
-let lpSig = '', lpTimer = null;
+let lpSigs = {}, lpTimer = null;
+// เอกสารหนึ่งมีได้หลายแผน: แยกเป็นช่วงตามหัวแผน (lphead) แล้วซิงก์แต่ละแผนแยกกัน
+function lpSegments() { const B = doc.blocks, out = []; B.forEach((b, i) => { if (b.t === 'lphead') out.push(i); }); return out.map((st, k) => ({ id: B[st].id, blocks: B.slice(st, k + 1 < out.length ? out[k + 1] : B.length) })); }
 function lpSync(force) {
-  const R = lpFind(); if (!R) return; const L = lpLists(R); const sig = JSON.stringify(L); if (!force && sig === lpSig) return; const first = !lpSig; lpSig = sig;
-  const upd = []; const T = R.tbl;
-  if (T.eval && lpMerge(T.eval, genEval(L, T.eval.rows))) upd.push(T.eval.id);
-  if (T.rec && lpMerge(T.rec, genRec(L))) upd.push(T.rec.id);
-  if (T.sheetK && lpMerge(T.sheetK, genSheetK(L, T.sheetK.rows))) upd.push(T.sheetK.id);
-  if (T.sheetA && lpMerge(T.sheetA, genLevel(L.D, T.sheetA.rows))) upd.push(T.sheetA.id);
-  if (T.sheetC && lpMerge(T.sheetC, genLevel(L.C, T.sheetC.rows))) upd.push(T.sheetC.id);
-  if (R.desc.K) { const h = `<b>คำชี้แจง :</b> ครูผู้ตรวจงานนักเรียน แล้วลงคะแนนในแต่ละข้อ<br>${L.K.map((x, i) => `<span class="tab">\t</span>​ข้อ ${i + 1}<span class="tab">\t</span>​${esc(x)} (K)`).join('<br>')}`; if (!first && R.desc.K.html !== h) { R.desc.K.html = h; upd.push(R.desc.K.id); } }
-  if (first || !upd.length) return;
+  const upd = [];
+  lpSegments().forEach(seg => {
+    const R = lpFind(seg.blocks); if (!R) return; const L = lpLists(R); const sig = JSON.stringify(L); if (!force && sig === lpSigs[seg.id]) return; const first = !(seg.id in lpSigs); lpSigs[seg.id] = sig;
+    const T = R.tbl; const u = [];
+    if (T.eval && lpMerge(T.eval, genEval(L, T.eval.rows))) u.push(T.eval.id);
+    if (T.rec && lpMerge(T.rec, genRec(L))) u.push(T.rec.id);
+    if (T.sheetK && lpMerge(T.sheetK, genSheetK(L, T.sheetK.rows))) u.push(T.sheetK.id);
+    if (T.sheetA && lpMerge(T.sheetA, genLevel(L.D, T.sheetA.rows))) u.push(T.sheetA.id);
+    if (T.sheetC && lpMerge(T.sheetC, genLevel(L.C, T.sheetC.rows))) u.push(T.sheetC.id);
+    if (R.desc.K) { const h = `<b>คำชี้แจง :</b> ครูผู้ตรวจงานนักเรียน แล้วลงคะแนนในแต่ละข้อ<br>${L.K.map((x, i) => `<span class="tab">\t</span>​ข้อ ${i + 1}<span class="tab">\t</span>​${lpTx(x)} (K)`).join('<br>')}`; if (!first && R.desc.K.html !== h) { R.desc.K.html = h; u.push(R.desc.K.id); } }
+    if (!first) upd.push(...u);
+  });
+  if (!upd.length) return;
   const act = document.activeElement; upd.forEach(id => { if (!act || !act.closest || !act.closest(`.blk[data-id="${id}"]`)) rerender(id); });
   changed(); toast('อัปเดตตารางวัดผล บันทึกหลังสอน และแบบประเมินตามจุดประสงค์แล้ว');
 }
@@ -7649,7 +7663,7 @@ const _changedCL = changed;
 changed = function (imm) {
   _changedCL(imm);
   if (CLD.loading) return;
-  if (!(doc && doc.cloud && doc.cloud.id)) { const st = $('#clStat'); if (st && st.style.display !== 'none') clStatus(''); return; }
+  if (!(doc && doc.cloud && doc.cloud.id)) { if (CLD.user) clStatus(NOT_IN); else { const st = $('#clStat'); if (st && st.style.display !== 'none') clStatus(''); } return; }
   CLD.seq = (CLD.seq || 0) + 1; doc.cloud.dirty = true;
   if (CLD.user) { clStatus(tokOk() ? 'ยังไม่บันทึก' : 'แตะเพื่อบันทึกลง Drive', !tokOk()); clearTimeout(CLD.timer); if (tokOk()) CLD.timer = setTimeout(() => clSave({ silent: true }), 12000); }
 };
@@ -7817,9 +7831,11 @@ function clMenu(btn, id) {
   m.onclick = ev => { const k = ev.target.dataset.m; if (!k) return; m.remove(); if (k === 'ren') clRename(id); else if (k === 'mv') clMoveAsk(id); else if (k === 'cp') clCopy(id); else if (k === 'tr') clTrash(id, true); };
 }
 /* ---------- สถานะบนแถบเครื่องมือ ---------- */
+const NOT_IN = 'ยังไม่อยู่ในคลัง · แตะเพื่อบันทึกลง Drive';
 function clStatus(t, warn) {
   const s = $('#clStat'); if (!s) return;
-  if (t === undefined) t = doc && doc.cloud && doc.cloud.id ? (doc.cloud.dirty ? 'ยังไม่บันทึก' : 'บันทึกแล้ว') : '';
+  if (t === undefined) t = doc && doc.cloud && doc.cloud.id ? (doc.cloud.dirty ? 'ยังไม่บันทึก' : 'บันทึกแล้ว') : (CLD.user ? NOT_IN : '');
+  if (t === NOT_IN) warn = true;
   const busy = /^กำลัง/.test(t || ''), ok = t === 'บันทึกแล้ว';
   s.innerHTML = t ? (busy ? '<i class="cl-spin"></i>' : ok ? '<b class="cl-ok">✓</b>' : '☁︎ ') + esc(t) : '';
   s.classList.toggle('warn', !!warn); s.classList.toggle('busy', busy); s.style.display = t ? '' : 'none';
@@ -7837,17 +7853,19 @@ function clStatus(t, warn) {
     else openCloud('save');
   };
   const st = document.createElement('span'); st.id = 'clStat'; st.style.display = 'none';
-  st.onclick = async () => { if (CLD.user && !tokOk()) { if (await clSignIn()) { if (isDirty()) clSave(); } return; } openCloud('open'); }; bSave.after(st);
+  st.onclick = async () => { if (CLD.user && !tokOk()) { if (await clSignIn()) { if (isDirty()) clSave(); } return; } openCloud(doc.cloud && doc.cloud.id ? 'open' : 'save'); }; bSave.after(st);
+  // ปุ่มเปิดไฟล์จากเครื่อง (ไฟล์ที่ยังไม่อยู่ในคลัง) — ยังเชื่อม Google Drive อยู่ กดบันทึกเพื่อเก็บเข้าคลังได้
+  const bFile = document.createElement('button'); bFile.className = 'tb'; bFile.id = 'bFile'; bFile.textContent = 'เปิดไฟล์'; bFile.title = 'เปิดไฟล์ .json จากเครื่อง (ไฟล์ที่ไม่ได้อยู่ในคลังงาน)'; bFile.onclick = () => $('#fileOpen').click(); bOpen.after(bFile);
   const nb = $('#bNew'); if (nb) { const o = nb.onclick; nb.onclick = async () => { if (isDirty() && CLD.user) await clSave({ silent: true }); return o(); }; }
   // ไฟล์ที่เปิดจากเครื่องไม่ผูกกับคลังงาน
-  const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { if (doc && doc.cloud) { delete doc.cloud; autosave(); clStatus(''); } }, 300));
+  const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { if (doc && doc.cloud) { delete doc.cloud; autosave(); } clStatus(); if (CLD.user) toast('เปิดไฟล์จากเครื่องแล้ว · กด “บันทึก” เพื่อเก็บเข้าคลังงานใน Google Drive', 4000); }, 300));
   let signedBefore = false; try { signedBefore = !!localStorage.getItem('np-cloud'); } catch (e) { }
   // โหลดระบบล็อกอินไว้ก่อน เพื่อให้กดปุ่มแล้วหน้าต่าง Google ขึ้นได้ทันที (Safari/iPad)
   fbLoad().then(() => { if (CLD.user && !tokOk()) clStatus('แตะเพื่อเชื่อม Drive', true); else clStatus(); }).catch(() => { if (signedBefore) clStatus('ออฟไลน์', true); });
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793875608';
+const NP_BUILD = '1793881268';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
