@@ -558,6 +558,9 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
 .b-scoresum td{padding:2px 12px;border-top:1px dashed #cdb9ad;height:1.9em}.b-scoresum tr:nth-child(2) td{border-top:0}.b-scoresum td+td{text-align:center}.b-scoresum tr.tot td{border-top:1.5px solid var(--brown);font-weight:700;background:color-mix(in srgb,var(--bar) 45%,#fff)}
 
 /* คลังงาน */
+#clStat .cl-spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;margin-right:6px;vertical-align:-1px;animation:clspin .8s linear infinite}@keyframes clspin{to{transform:rotate(360deg)}}
+#clStat.busy{color:#1f5f99;background:#e8f1fb;border-color:#bcd6f2}#clStat .cl-ok{margin-right:4px}#clStat.flash{animation:clflash 1.4s ease-out}@keyframes clflash{0%{transform:scale(1.18);background:#c9ecc4}100%{transform:scale(1)}}
+#bUpd .cl-spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:clspin .8s linear infinite}#bUpd.upd{background:#fff3e2;border-color:#e8a33d;color:#9a4b00;font-weight:700;animation:clflash 1.4s ease-out 2}
 #clStat{font-size:14px;color:#3d7a3a;background:#eef6ec;border:1px solid #cfe3cb;border-radius:20px;padding:2px 10px;cursor:pointer;white-space:nowrap}#clStat.warn{color:#9a4b00;background:#fff3e2;border-color:#f1d2a8}
 .cl-dlg{width:1020px;padding:12px 16px}.cl-top{display:flex;align-items:center;gap:10px}.cl-top h3{margin:0;flex:1}#clAcc{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ui-mute)}.cl-me{display:flex;align-items:center;gap:6px}.cl-me img{width:24px;height:24px;border-radius:50%}
 .cl-wrap{display:flex;gap:12px;margin-top:10px;min-height:min(560px,70vh)}.cl-side{width:230px;flex:none;border-right:1px solid var(--ui-line);padding-right:8px;overflow:auto;max-height:72vh}
@@ -7776,7 +7779,11 @@ function clMenu(btn, id) {
 function clStatus(t, warn) {
   const s = $('#clStat'); if (!s) return;
   if (t === undefined) t = doc && doc.cloud && doc.cloud.id ? (doc.cloud.dirty ? 'ยังไม่บันทึก' : 'บันทึกแล้ว') : '';
-  s.textContent = t ? '☁︎ ' + t : ''; s.classList.toggle('warn', !!warn); s.style.display = t ? '' : 'none';
+  const busy = /^กำลัง/.test(t || ''), ok = t === 'บันทึกแล้ว';
+  s.innerHTML = t ? (busy ? '<i class="cl-spin"></i>' : ok ? '<b class="cl-ok">✓</b>' : '☁︎ ') + esc(t) : '';
+  s.classList.toggle('warn', !!warn); s.classList.toggle('busy', busy); s.style.display = t ? '' : 'none';
+  if (ok && s._was === 'busy') { s.classList.remove('flash'); void s.offsetWidth; s.classList.add('flash'); }
+  s._was = busy ? 'busy' : '';
   s.title = doc && doc.cloud && doc.cloud.id ? 'งานนี้อยู่ใน Google Drive: ' + ['Newton Press'].concat(fPath(doc.cloud.folder || '')).join(' › ') + ' · บันทึกอัตโนมัติ' : '';
 }
 (function initCloud() {
@@ -7796,6 +7803,25 @@ function clStatus(t, warn) {
   let signedBefore = false; try { signedBefore = !!localStorage.getItem('np-cloud'); } catch (e) { }
   // โหลดระบบล็อกอินไว้ก่อน เพื่อให้กดปุ่มแล้วหน้าต่าง Google ขึ้นได้ทันที (Safari/iPad)
   fbLoad().then(() => { if (CLD.user && !tokOk()) clStatus('แตะเพื่อเชื่อม Drive', true); else clStatus(); }).catch(() => { if (signedBefore) clStatus('ออฟไลน์', true); });
+})();
+
+/* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
+const NP_BUILD = '1793864525';
+(function initUpdate() {
+  const bSave = $('#bSave'); if (!bSave) return;
+  const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
+  b.onclick = async () => {
+    if (isDirty() && CLD.user && tokOk()) { await clSave({ silent: true }); }
+    autosave(); b.innerHTML = '<i class="cl-spin"></i>'; location.replace(location.pathname + '?u=' + Date.now());
+  };
+  async function check() {
+    try {
+      const t = await (await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' })).text();
+      const m = /const NP_BUILD = '(\d+)'/.exec(t);
+      if (m && m[1] !== NP_BUILD && !/%%/.test(NP_BUILD)) { b.classList.add('upd'); b.textContent = '⟳ มีอัปเดต'; b.title = 'มีเวอร์ชันใหม่ กดเพื่ออัปเดตแอป (งานที่ทำอยู่จะบันทึกก่อน)'; }
+    } catch (e) { }
+  }
+  if (location.protocol.startsWith('http')) { setTimeout(check, 5000); setInterval(check, 10 * 60e3); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); }); }
 })();
 </script>
 </body>
