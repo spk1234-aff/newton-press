@@ -374,7 +374,7 @@ table.dv{border-collapse:collapse}
 #ppList{max-height:58vh;overflow:auto;border:1px solid var(--ui-line);border-radius:8px;padding:4px 8px;background:#fff}
 .ppr{border-bottom:1px solid #f0ebe5;margin:0!important;padding:4px 0}.ppr .pptx{flex:1;min-width:0;color:var(--ui-mute);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.75}.ppr select{font-size:16px}
 .nw{white-space:nowrap;background:linear-gradient(transparent 88%,rgba(59,130,246,.35) 88%)}
-.exporting .nw{background:none}
+.exporting .nw{background:none}.nw.a{background:none}
 .ec-subj,.ct,.st-title,.cv-title,.b-section,.b-subsection{text-wrap:balance}
 .hd2{font-size:16px;color:var(--ui-mute);margin:10px 0 2px;border-top:1px solid var(--ui-line);padding-top:6px}
 #asSecs .row,#ebParts .row{gap:6px;margin:4px 0}#asSecs input,#asSecs select,#ebParts input,#ebParts select{font-size:16px}
@@ -6223,13 +6223,13 @@ function openSyllabus() {
     // ตารางโครงสร้าง
     add('pagebreak'); head('กำหนดการจัดการเรียนรู้ (Course Syllabus)');
     const U = lnz(V('units')).map(l => l.split('|').map(x => x.trim()));
-    const R = [['สัปดาห์ที่', 'ชื่อหน่วยการเรียนรู้', IND ? 'รหัสตัวชี้วัด' : 'ผลการเรียนรู้', 'จุดประสงค์การเรียนรู้', 'ภาระงาน/ชิ้นงาน', 'เวลา (ชั่วโมง)', 'น้ำหนักคะแนน', '', '', ''], ['', '', '', '', '', '', 'ก่อน', 'กลาง', 'หลัง', 'ปลาย']], rs = { 0: 'L', 1: 'L' }, mg = { '0,0': [2, 1], '0,1': [2, 1], '0,2': [2, 1], '0,3': [2, 1], '0,4': [2, 1], '0,5': [2, 1], '0,6': [1, 4] };
+    const R = [['สัปดาห์ที่', 'ชื่อหน่วย<br>การเรียนรู้', IND ? 'รหัส<br>ตัวชี้วัด' : 'ผลการ<br>เรียนรู้', 'จุดประสงค์การเรียนรู้', 'ภาระงาน/<br>ชิ้นงาน', 'เวลา<br>(ชม.)', 'น้ำหนักคะแนน', '', '', ''], ['', '', '', '', '', '', 'ก่อน', 'กลาง', 'หลัง', 'ปลาย']], rs = { 0: 'L', 1: 'L' }, mg = { '0,0': [2, 1], '0,1': [2, 1], '0,2': [2, 1], '0,3': [2, 1], '0,4': [2, 1], '0,5': [2, 1], '0,6': [1, 4] };
     const half = Math.ceil(U.length / 2); let tot = 0; const exh = (V('ex') || '').split('/').map(x => x.trim()); const exN = k => /^\d+$/.test(exh[k] || '') ? +exh[k] : null; const exS = k => exN(k) === null ? '–' : String(exN(k));
-    const urow = (u, i) => { tot += +u[2] || 0; R.push([esc(u[0] || ''), `<b>${esc(u[1] || '')}</b>`, esc(u[3] || ''), esc(u[4] || ''), '1. แบบทดสอบเก็บคะแนน<br>2. แบบฝึกหัด', esc(u[2] || ''), i < half ? (i === 0 ? String(sc[0]) : '') : '', '', i >= half ? (i === half ? String(sc[2]) : '') : '', '']); };
+    const urow = (u, i) => { tot += +u[2] || 0; R.push([esc(u[0] || ''), `<b>${esc(u[1] || '')}</b>`, esc(u[3] || ''), esc(u[4] || ''), '1. แบบทดสอบ<br>เก็บคะแนน<br>2. แบบฝึกหัด', esc(u[2] || ''), i < half ? (i === 0 ? String(sc[0]) : '') : '', '', i >= half ? (i === half ? String(sc[2]) : '') : '', '']); };
     const tr = (t, h, a, s) => { const i = R.length; R.push([`<b>${t}</b>`, '', '', '', '', String(h), ...a]); rs[i] = s || 'L'; mg[`${i},0`] = [1, 5]; return i; };
     U.slice(0, half).forEach((u, i) => urow(u, i)); tr('สอบกลางภาคเรียน', exS(0), ['', String(sc[1]), '', ''], 'L'); U.slice(half).forEach((u, i) => urow(u, half + i));
     const i1 = tr('รวมระหว่างเรียน', tot + (exN(0) || 0), [String(sc[0] + sc[1] + sc[2]), '', '', '']); mg[`${i1},6`] = [1, 3]; tr('สอบปลายภาค', exS(1), ['', '', '', String(sc[3])]); const i3 = tr('รวม', tot + (exN(0) || 0) + (exN(1) || 0), [String(sc.reduce((a, x) => a + x, 0)), '', '', '']); mg[`${i3},6`] = [1, 4];
-    add('table', { rows: R, rs, mg, full: true, compact: true, cw: '7,11,19,19,14,6,6,6,6,6' });
+    add('table', { rows: R, rs, mg, full: true, compact: true, cw: '9,12,10,21,12,8,7,7,7,7' });
     // ทักษะ คุณลักษณะ
     add('pagebreak'); const ls = (h, L, lead) => { add('pjsec', { html: h }); add('lptext', { html: `${lead}<ol>${L.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` }); };
     ls('ทักษะและกระบวนการทางคณิตศาสตร์', SKILLS.p, `ทั้งหมด ${SKILLS.p.length} ข้อ`); ls('คุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์', SKILLS.a, `ทั้งหมด ${SKILLS.a.length} ข้อ`); ls('สมรรถนะที่สำคัญของผู้เรียนตามหลักสูตร', SKILLS.c, 'สมรรถนะสำคัญ 5 ประการ'); ls('คุณลักษณะอันพึงประสงค์ของผู้เรียนตามหลักสูตร', SKILLS.d, `ทั้งหมด ${SKILLS.d.length} ข้อ`);
@@ -7113,13 +7113,34 @@ async function elemPNG(el, scale = 3) {
   const cs = getComputedStyle(el.closest('#flow') || el);
   const xml = new XMLSerializer().serializeToString(el.cloneNode(true));
   const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="exporting" style="${vars};width:${w}px;height:${h}px;background:#fff;font-family:THS;font-size:${cs.fontSize};line-height:${cs.lineHeight};color:#222;padding:2px;box-sizing:border-box"><style>${allCSS()}</style>${xml}</div>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${html}</foreignObject></svg>`;
+  const svg = foSVG(html, w, h, scale, await foMode(scale));
   const img = new Image();
   await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
   await new Promise(r => setTimeout(r, 30));
   const cv = document.createElement('canvas'); cv.width = w * scale; cv.height = h * scale;
   const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
   return { data: cv.toDataURL('image/png').split(',')[1], w, h };
+}
+/* Safari/iPad ไม่ขยาย foreignObject ตาม viewBox (ได้ภาพเล็กชิดมุมซ้ายบน) → ตรวจว่าเบราว์เซอร์รองรับวิธีไหน แล้วเลือกใช้ */
+const FO_MODE = {};
+function foSVG(html, w, h, s, mode) {
+  if (mode === 'tf') return `<svg xmlns="http://www.w3.org/2000/svg" width="${w * s}" height="${h * s}"><foreignObject x="0" y="0" width="${w * s}" height="${h * s}"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;transform:scale(${s});transform-origin:0 0">${html}</div></foreignObject></svg>`;
+  if (mode === 'one') return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${html}</foreignObject></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w * s}" height="${h * s}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${html}</foreignObject></svg>`;
+}
+async function foProbe(mode, s) {
+  const w = 100, h = 140, html = '<div xmlns="http://www.w3.org/1999/xhtml" style="width:100px;height:140px;background:#f00;margin:0"></div>';
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(foSVG(html, w, h, s, mode)); });
+  await new Promise(r => setTimeout(r, 30));
+  const cv = document.createElement('canvas'); cv.width = w * s; cv.height = h * s; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+  const px = (x, y) => g.getImageData(x, y, 1, 1).data; const ok = p => p[0] > 200 && p[1] < 60 && p[2] < 60;
+  return ok(px(cv.width - 4, cv.height - 4)) && ok(px(4, 4)) && ok(px(cv.width >> 1, cv.height >> 1));
+}
+async function foMode(s) {
+  if (FO_MODE[s]) return FO_MODE[s];
+  for (const m of ['vb', 'tf']) { try { if (await foProbe(m, s)) return (FO_MODE[s] = m); } catch (e) { } }
+  return (FO_MODE[s] = 'one'); // วาดขนาดจริงแล้วให้ canvas ขยาย (คมน้อยลงแต่เต็มหน้า)
 }
 /* วาดหน้ากระดาษด้วยเอนจินของเบราว์เซอร์เอง (SVG foreignObject) — สมการ KaTeX ตรงกับบนจอทุกจุด */
 async function pageRenderer(scale = 2.5) {
@@ -7134,10 +7155,10 @@ async function pageRenderer(scale = 2.5) {
   $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
   $$('.tools,.wh,.grip,.band,.dropline', st).forEach(e => e.remove()); $$('.msel', st).forEach(e => e.classList.remove('msel'));
   const xml = new XMLSerializer().serializeToString(st);
-  const P = PAGE_H + PAGE_G;
+  const P = PAGE_H + PAGE_G; const MODE = await foMode(scale);
   return async i => {
     const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.body.className} fo" style="${vars};width:794px;height:${PAGE_H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${css.replace(/<\/style/gi, '')}</style><div style="position:absolute;left:0;top:${-i * P}px">${xml}</div></div>`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${794 * scale}" height="${PAGE_H * scale}" viewBox="0 0 794 ${PAGE_H}"><foreignObject x="0" y="0" width="794" height="${PAGE_H}">${html}</foreignObject></svg>`;
+    const svg = foSVG(html, 794, PAGE_H, scale, MODE);
     const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     try {
       const img = new Image(); img.decoding = 'sync';
@@ -7870,7 +7891,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793883877';
+const NP_BUILD = '1793886974';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
