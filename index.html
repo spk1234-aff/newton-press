@@ -7472,7 +7472,7 @@ function fbLoad() {
   const s = src => new Promise((ok, no) => { const e = document.createElement('script'); e.src = src; e.onload = ok; e.onerror = () => no(new Error('โหลด ' + src + ' ไม่ได้')); document.head.appendChild(e); });
   const B = `https://www.gstatic.com/firebasejs/${FB_V}/`;
   CLD.ready = s(B + 'firebase-app-compat.js').then(() => Promise.all([s(B + 'firebase-auth-compat.js'), s(B + 'firebase-firestore-compat.js')])).then(() => {
-    firebase.initializeApp(JSON.parse(FB_CFG)); CLD.db = firebase.firestore();
+    firebase.initializeApp(JSON.parse(FB_CFG)); CLD.db = firebase.firestore(); try { CLD.db.settings({ ignoreUndefinedProperties: true, merge: true }); } catch (e) { }
     return new Promise(ok => { let first = true; firebase.auth().onAuthStateChanged(u => { CLD.user = u; clStatus(); if (u) clListen(); if (first) { first = false; ok(); } }); });
   }).catch(e => { CLD.ready = null; throw e; });
   return CLD.ready;
@@ -7509,7 +7509,7 @@ async function clRead(id) {
   if (arr.length < m.n || arr.slice(0, m.n).some(p => !p || p.rev !== m.rev)) throw new Error('ข้อมูลกำลังบันทึกจากอีกเครื่อง ลองใหม่อีกครั้ง');
   return { meta: m, data: JSON.parse(arr.slice(0, m.n).map(p => p.d).join('')) };
 }
-function pagesNow() { return $$('#flow .page, .page').length || undefined; }
+function pagesNow() { const s = $('#sheets'); return (s && s.childElementCount) || 0; }
 /* ---------- บันทึก ---------- */
 async function clSave(opts = {}) {
   if (!CLD.user) { openCloud('save'); return false; }
