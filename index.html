@@ -102,7 +102,7 @@ body.nonav #nav{display:none}
 .menu .cpick{display:flex;align-items:center;gap:8px;padding:6px 4px 2px;font-size:16px;color:var(--ui-mute)}
 #zoomwrap{margin:0 auto;width:max-content}
 #stage{position:relative;width:794px}
-.sheet{position:absolute;left:0;width:794px;height:1123px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08);font-family:'THS';color:var(--dark)}
+.sheet{position:absolute;left:0;width:794px;height:1123px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08);font-family:var(--dfont,'THS');color:var(--dark)}
 .sheet .hw{position:absolute;top:34px;display:flex;gap:12px;align-items:baseline;font-size:14px}.sheet .hwl{left:68px}.sheet .hwr{right:64px}.sheet .hwc{left:0;right:0;justify-content:center;top:56px}
 .sheet .hl,.sheet .hr{text-decoration:underline}.sheet .hr{font-style:italic}
 .sheet .pn{font-weight:700;font-size:12.7px;text-decoration:none;font-style:normal}
@@ -113,7 +113,7 @@ body.nonav #nav{display:none}
 .sheet .logo{position:absolute;top:18px;left:50%;transform:translateX(-50%);height:34px}
 .sheet .hline{position:absolute;top:60px;left:68px;right:64px;border-top:1px dashed var(--sep)}
 
-#flow{position:relative;z-index:2;margin-left:68px;width:658px;padding-top:98px;font-family:'THS';font-size:13.13px;line-height:1.7;color:var(--ink)}
+#flow{position:relative;z-index:2;margin-left:68px;width:658px;padding-top:98px;font-family:var(--dfont,'THS');font-size:13.13px;line-height:1.7;color:var(--ink)}
 body.exam #flow{font-size:15.7px}
 
 /* ---------- บล็อก ---------- */
@@ -541,7 +541,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
 .tzghost{position:absolute;border:2px dashed var(--ui-accent);background:rgba(184,134,11,.06);z-index:8;pointer-events:none}.tzghost::after{content:attr(data-lab);position:absolute;right:0;bottom:-26px;background:var(--ui-accent);color:#fff;font-size:14px;padding:1px 8px;border-radius:6px;white-space:nowrap}
 .tmenu{position:fixed;z-index:9999;background:#fff;border:1px solid var(--ui-line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:5px;display:flex;flex-direction:column;min-width:210px;font-size:16px}.tmenu button{border:0;background:none;text-align:left;padding:4px 10px;border-radius:6px;font:inherit;cursor:pointer}.tmenu button:hover{background:#f5efe9}.tmenu button.on{color:var(--ui-accent);font-weight:700}.tmenu hr{border:0;border-top:1px solid var(--ui-line);margin:4px 2px}.tmenu .tmh{font-size:13px;color:var(--ui-mute);padding:2px 10px}
 #mxPrev .mxcur{display:inline-block;border-left:2px solid #1f6feb;margin:0 1px;animation:mxblink 1.05s steps(1) infinite}@keyframes mxblink{50%{opacity:0}}
-.katex .text,.katex .text .mord{font-family:'THS','KaTeX_Main',serif}.katex .text{font-size:.952em;line-height:1}
+.katex .text,.katex .text .mord{font-family:var(--dfont,'THS'),'KaTeX_Main',serif}.katex .text{font-size:.952em;line-height:1}
 .cwgrid{display:flex;flex-direction:column;gap:3px;margin:4px 0}.cwc{display:flex;align-items:center;gap:4px}.cwc span{width:34px;color:var(--ui-mute)}.cwc input{width:56px}.cwc .tb{min-width:28px;padding:0 6px}
 @media (pointer:coarse){.tzc,.tzw{width:22px;margin-left:-7px;background:linear-gradient(90deg,transparent 9px,rgba(31,60,230,.35) 9px,rgba(31,60,230,.35) 12px,transparent 12px)}.tzr{height:18px;margin-top:-6px;background:linear-gradient(180deg,transparent 7px,rgba(31,60,230,.35) 7px,rgba(31,60,230,.35) 10px,transparent 10px)}.tzct{height:16px;margin-top:-4px}.tzrt{width:16px;margin-left:-4px}.tzplus{width:30px;height:30px;font-size:20px}.tzcorner{width:18px;height:18px}}
 .tzc,.tzw,.tzr,.tzcorner{touch-action:none}
@@ -7106,7 +7106,7 @@ async function exportPDF() {
 }
 /* แปลงส่วนหนึ่งของหน้า (เช่น การหาร) เป็นรูป PNG สำหรับไฟล์ Word */
 let CSS_CACHE = null;
-function allCSS() { if (CSS_CACHE) return CSS_CACHE; let css = ''; for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) css += r.cssText + '\n'; } catch (e) { } } return (CSS_CACHE = css); }
+function allCSS() { if (CSS_CACHE) return CSS_CACHE; let css = ''; for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) if (typeof fontCssKeep !== 'function' || fontCssKeep(r.cssText)) css += r.cssText + '\n'; } catch (e) { } } return (CSS_CACHE = css); }
 async function elemPNG(el, scale = 3) {
   const w = Math.ceil(el.scrollWidth) + 4, h = Math.ceil(el.scrollHeight) + 4;
   const vars = document.documentElement.getAttribute('style') || '';
@@ -7145,7 +7145,7 @@ async function foMode(s) {
 /* วาดหน้ากระดาษด้วยเอนจินของเบราว์เซอร์เอง (SVG foreignObject) — สมการ KaTeX ตรงกับบนจอทุกจุด */
 async function pageRenderer(scale = 2.5) {
   let css = '';
-  for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) css += r.cssText + '\n'; } catch (e) { } }
+  for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) if (typeof fontCssKeep !== 'function' || fontCssKeep(r.cssText)) css += r.cssText + '\n'; } catch (e) { } }
   const vars = document.documentElement.getAttribute('style') || '';
   const st = $('#stage').cloneNode(true);
   // ล็อกความสูงทุกกล่องตามที่จัดหน้าไว้ ไม่ให้ตำแหน่งเลื่อนสะสมถ้าฟอนต์ในภาพโหลดช้า
@@ -7211,7 +7211,8 @@ let DX = null; // บริบทระหว่างสร้างไฟล�
 function rpr(f) {
   const sz = Math.round((f.size || DX.base) * (f.noScale ? 1 : (DX.sc || 1)) * 2);
   const col = f.color || DX.fg;
-  let x = `<w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:cs="TH Sarabun New" w:eastAsia="TH Sarabun New"/>`;
+  const fn = xesc(f.font || DX.font || 'TH Sarabun New');
+  let x = `<w:rFonts w:ascii="${fn}" w:hAnsi="${fn}" w:cs="${fn}" w:eastAsia="${fn}"/>`;
   if (f.b) x += '<w:b/><w:bCs/>';
   if (f.i) x += '<w:i/><w:iCs/>';
   if (f.s) x += '<w:strike/>';
@@ -7265,6 +7266,7 @@ function htmlParas(html, base = {}) {
       if (tag === 'sup' || n.style.verticalAlign === 'super') g.va = 'superscript';
       if (tag === 'sub' || n.style.verticalAlign === 'sub') g.va = 'subscript';
       if (n.style.backgroundColor && !/transparent|rgba\(0, 0, 0, 0\)/.test(n.style.backgroundColor)) g.hl = hex(n.style.backgroundColor);
+      if (n.dataset && n.dataset.font && typeof fontReal === 'function') g.font = n.dataset.font === 'THS' ? 'TH Sarabun New' : fontReal(n.dataset.font);
       if (n.style.fontSize) { const m = /([\d.]+)(pt|px|em)/.exec(n.style.fontSize); if (m) { g.size = m[2] === 'pt' ? +m[1] * 1.4 : m[2] === 'px' ? +m[1] * 0.75 * 1.4 : (f.size || DX.base) * +m[1]; g.noScale = true; } }
       if (tag === 'li') { if (paras[paras.length - 1].length) paras.push([]); const lst = n.parentElement; const ol = lst && lst.tagName === 'OL'; const k = [...lst.children].filter(c => c.tagName === 'LI').indexOf(n) + (+(lst.getAttribute('start') || 1)); let dep = 0; for (let a = lst.parentElement; a && a !== box; a = a.parentElement) if (/^(OL|UL)$/.test(a.tagName)) dep++; paras[paras.length - 1].push(run('\u2003'.repeat(dep * 2) + listMarker(lst.dataset.ls || (ol ? ['decimal', 'lower-alpha', 'lower-roman'][Math.min(dep, 2)] : dep > 0 ? 'circle' : 'disc'), k) + ' ', f)); walk(n, g); paras.push([]); return; }
       if (tag === 'font' && n.getAttribute('color')) g.color = hex(n.getAttribute('color'));
@@ -7505,6 +7507,7 @@ async function exportDOCX() {
   try {
     const s = doc.settings, th = themeOf(s);
     DX = { base: s.size === 'exam' ? 16 : 14, cw: Math.round((210 - 18 - 17) * TW), media: [], rels: [], pic: 10 };
+    DX.font = typeof fontReal === 'function' ? fontReal(s.font) : 'TH Sarabun New';
     // จัดกลุ่มเหมือนการจัดหน้าบนจอ: บล็อกในข้อเดียวกันให้อยู่หน้าเดียวกัน
     let body = '';
     const B = doc.blocks;
@@ -7541,7 +7544,7 @@ async function exportDOCX() {
     const sect = `<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:footerReference w:type="default" r:id="rIdF"/>${firstH && !anc ? '<w:headerReference w:type="first" r:id="rIdH1"/><w:footerReference w:type="first" r:id="rIdF1"/>' : ''}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${Math.round(26 * TW)}" w:right="${Math.round(17 * TW)}" w:bottom="${Math.round(20 * TW)}" w:left="${Math.round(18 * TW)}" w:header="${Math.round(8 * TW)}" w:footer="${Math.round(9 * TW)}" w:gutter="0"/><w:pgNumType w:fmt="${pgFmt}" w:start="${+s.pnStart || 1}"/>${firstH && !anc ? '<w:titlePg/>' : ''}</w:sectPr>`;
     if (anc) body = body.replace('%%SECT1%%', `<w:p><w:pPr><w:sectPr><w:headerReference w:type="default" r:id="rIdH1"/><w:footerReference w:type="default" r:id="rIdF1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${Math.round(26 * TW)}" w:right="${Math.round(17 * TW)}" w:bottom="${Math.round(20 * TW)}" w:left="${Math.round(18 * TW)}" w:header="${Math.round(8 * TW)}" w:footer="${Math.round(9 * TW)}" w:gutter="0"/></w:sectPr></w:pPr></w:p>`);
     const document_ = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${body}${sect}</w:body></w:document>`;
-    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:cs="TH Sarabun New" w:eastAsia="TH Sarabun New"/><w:sz w:val="${DX.base * 2}"/><w:szCs w:val="${DX.base * 2}"/><w:lang w:val="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="40" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:outlineLvl w:val="0"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:outlineLvl w:val="1"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:outlineLvl w:val="2"/></w:pPr></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${xesc(DX.font)}" w:hAnsi="${xesc(DX.font)}" w:cs="${xesc(DX.font)}" w:eastAsia="${xesc(DX.font)}"/><w:sz w:val="${DX.base * 2}"/><w:szCs w:val="${DX.base * 2}"/><w:lang w:val="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="40" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:outlineLvl w:val="0"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:outlineLvl w:val="1"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:outlineLvl w:val="2"/></w:pPr></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`;
     const settings = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`;
     const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdSet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rIdH" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${firstH ? '<Relationship Id="rIdH1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/><Relationship Id="rIdF1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer2.xml"/>' : ''}${DX.rels.join('')}</Relationships>`;
     const hrels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="${logoRid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/></Relationships>`;
@@ -7565,7 +7568,7 @@ const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/mai
 
 $('#bPdf').onclick = exportPDF;
 $('#bDocx').onclick = async () => {
-  const ok = await ask('ส่งออกเป็นไฟล์ Word', '<p>ในไฟล์ Word สมการจะพิมพ์เป็น LaTeX แบบ <b>$...$</b> ฟอนต์ TH Sarabun New ส่วนรูปวาดจะเป็นรูปภาพ</p><p style="font-size:16px;color:#7b746c">ต้องติดตั้งฟอนต์ TH Sarabun New ในเครื่องก่อนเปิดไฟล์</p>', 'สร้างไฟล์ Word');
+  const ok = await ask('ส่งออกเป็นไฟล์ Word', '<p>ในไฟล์ Word สมการจะพิมพ์เป็น LaTeX แบบ <b>$...$</b> ฟอนต์ตามที่ตั้งไว้ในเอกสาร ส่วนรูปวาดจะเป็นรูปภาพ</p><p style="font-size:16px;color:#7b746c">ต้องติดตั้งฟอนต์ TH Sarabun New ในเครื่องก่อนเปิดไฟล์</p>', 'สร้างไฟล์ Word');
   if (ok) exportDOCX();
 };
 
@@ -7916,7 +7919,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1793888869';
+const NP_BUILD = '1794095875';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -8170,6 +8173,235 @@ async function withBusy(msg, fn) {
     };
   }
 })();
+
+/* ---------- ฟอนต์: เลือกฟอนต์ของเอกสาร / ของข้อความ · เพิ่มฟอนต์ของตัวเอง · ฟอนต์ฟรีออนไลน์ ---------- */
+const FONT_CAT = [ // ฟอนต์ฟรี (SIL OFL) จาก Fontsource — โหลดครั้งแรกแล้วเก็บไว้ในเครื่อง
+  ['sarabun', 'Sarabun', 'ไม่มีหัว อ่านง่าย (คล้าย TH Sarabun)', [400, 700]],
+  ['noto-sans-thai', 'Noto Sans Thai', 'ไม่มีหัว ทันสมัย', [400, 700]],
+  ['noto-serif-thai', 'Noto Serif Thai', 'มีหัว แบบหนังสือ', [400, 700]],
+  ['anuphan', 'Anuphan', 'ไม่มีหัว เรียบ', [400, 700]],
+  ['ibm-plex-sans-thai', 'IBM Plex Sans Thai', 'ไม่มีหัว ทางการ', [400, 700]],
+  ['kanit', 'Kanit', 'หัวเรื่อง โปสเตอร์', [400, 700]],
+  ['prompt', 'Prompt', 'หัวเรื่อง กลม', [400, 700]],
+  ['mitr', 'Mitr', 'หัวเรื่อง หนา', [400, 700]],
+  ['chakra-petch', 'Chakra Petch', 'เหลี่ยม เทคโนโลยี', [400, 700]],
+  ['bai-jamjuree', 'Bai Jamjuree', 'เหลี่ยม ทันสมัย', [400, 700]],
+  ['k2d', 'K2D', 'ไม่มีหัว กว้าง', [400, 700]],
+  ['niramit', 'Niramit', 'กึ่งลายมือ', [400, 700]],
+  ['mali', 'Mali', 'ลายมือ น่ารัก', [400, 700]],
+  ['pridi', 'Pridi', 'มีหัว คลาสสิก', [400, 700]],
+  ['trirong', 'Trirong', 'มีหัว หนังสือพิมพ์', [400, 700]],
+  ['charmonman', 'Charmonman', 'ตัวเขียน ลายมือสวย', [400, 700]],
+  ['itim', 'Itim', 'ลายมือ กลม', [400]]
+];
+const FONT_ADJ = 78; // ฟอนต์สากลตัวใหญ่กว่าตระกูล TH → ย่อให้ขนาดใกล้เคียง TH Sarabun New
+const FT = { list: [], warned: {} };
+const fontStack = id => !id || id === 'THS' ? "'THS'" : `'NPF-${id}','THS'`;
+const fontById = id => FT.list.find(f => f.id === id);
+const fontLabel = id => !id || id === 'THS' ? 'TH Sarabun New' : (fontById(id) || {}).name || id;
+const fontReal = id => !id || id === 'THS' ? 'TH Sarabun New' : (fontById(id) || {}).real || fontLabel(id);
+async function fontsLoad() { try { FT.list = (await tabIdbGet('fonts')) || []; } catch (e) { FT.list = []; } fontsCSS(); }
+async function fontsSave() { try { await tabIdbSet('fonts', FT.list); } catch (e) { toast('บันทึกฟอนต์ในเครื่องไม่สำเร็จ'); } fontsCSS(); }
+function fontsCSS() {
+  let st = $('#npFonts'); if (!st) { st = document.createElement('style'); st.id = 'npFonts'; document.head.appendChild(st); }
+  st.textContent = FT.list.map(f => f.faces.map(x => `@font-face{font-family:'NPF-${f.id}';src:url(${x.data});font-weight:${x.w};font-style:${x.it ? 'italic' : 'normal'};${f.adj && f.adj !== 100 ? `size-adjust:${f.adj}%;` : ''}font-display:block}`).join('\n')).join('\n');
+  if (typeof CSS_CACHE !== 'undefined') CSS_CACHE = null;
+  fontSelFill();
+}
+/* ฟอนต์ที่เอกสารนี้ใช้จริง (ใช้ตอนส่งออก PDF เพื่อไม่ฝังฟอนต์ที่ไม่ได้ใช้) */
+function fontsUsed() { const s = new Set(); if (doc && doc.settings && doc.settings.font) s.add(doc.settings.font); const j = JSON.stringify(doc ? doc.blocks : []); (j.match(/data-font=\\"([^"\\]+)\\"/g) || []).forEach(m => s.add(m.replace(/^data-font=\\"|\\"$/g, ''))); return s; }
+function fontCssKeep(t) { if (!/^@font-face/.test(t) || !/NPF-/.test(t)) return true; const m = /NPF-([^'"]+)/.exec(t); return !!m && fontsUsed().has(m[1]); }
+
+/* ---- อ่านชื่อฟอนต์จากตาราง name ของไฟล์ TTF/OTF ---- */
+function fontNameInfo(buf) {
+  try {
+    const v = new DataView(buf), n = v.getUint16(4); let off = -1, os2 = -1;
+    for (let i = 0; i < n; i++) { const p = 12 + i * 16, tag = String.fromCharCode(v.getUint8(p), v.getUint8(p + 1), v.getUint8(p + 2), v.getUint8(p + 3)); if (tag === 'name') off = v.getUint32(p + 8); if (tag === 'OS/2') os2 = v.getUint32(p + 8); }
+    const out = {}; if (os2 >= 0) { out.w = v.getUint16(os2 + 4); out.it = !!(v.getUint16(os2 + 62) & 1); }
+    if (off < 0) return out;
+    const cnt = v.getUint16(off + 2), so = off + v.getUint16(off + 4);
+    for (let i = 0; i < cnt; i++) {
+      const r = off + 6 + i * 12, pid = v.getUint16(r), nid = v.getUint16(r + 6), len = v.getUint16(r + 8), o = v.getUint16(r + 10);
+      if (![1, 2, 4, 16, 17].includes(nid)) continue;
+      let s = '';
+      if (pid === 3 || pid === 0) { for (let k = 0; k < len; k += 2) s += String.fromCharCode(v.getUint16(so + o + k)); } else if (pid === 1) { for (let k = 0; k < len; k++) s += String.fromCharCode(v.getUint8(so + o + k)); } else continue;
+      const key = { 1: 'fam', 2: 'sub', 4: 'full', 16: 'tfam', 17: 'tsub' }[nid]; if (!out[key] || pid === 3) out[key] = s;
+    }
+    return out;
+  } catch (e) { return {}; }
+}
+const readBuf = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsArrayBuffer(f); });
+const bufURL = (buf, mime) => new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(new Blob([buf], { type: mime })); });
+const fontMime = n => /\.woff2$/i.test(n) ? 'font/woff2' : /\.woff$/i.test(n) ? 'font/woff' : /\.otf$/i.test(n) ? 'font/otf' : 'font/ttf';
+async function fontAddFiles(files) {
+  const groups = {};
+  for (const f of files) {
+    if (!/\.(ttf|otf|woff2?)$/i.test(f.name)) { toast('รองรับไฟล์ฟอนต์ .ttf .otf .woff .woff2'); continue; }
+    const buf = await readBuf(f), info = /\.(ttf|otf)$/i.test(f.name) ? fontNameInfo(buf) : {};
+    const base = f.name.replace(/\.[^.]+$/, '');
+    const sub = (info.tsub || info.sub || base).toLowerCase();
+    const num = +((/(?:^|[-_ ])([1-9]00)(?:[-_ ]|$)/.exec(base) || [])[1] || 0);
+    const bold = info.w ? info.w >= 600 : num ? num >= 600 : /bold|bd\b|หนา/i.test(sub + ' ' + base);
+    const it = info.it !== undefined ? info.it : /italic|oblique|เอียง/i.test(sub + ' ' + base);
+    const real = (info.tfam || info.fam || base.replace(/[-_ ](thai|latin-ext|latin|vietnamese)(?=[-_ ]|$)/gi, '').replace(/[-_ ][1-9]00(?=[-_ ]|$)/g, '').replace(/[\s_-]*(normal|bold\s*italic|bolditalic|bold|italic|regular|bd|it)$/i, '').replace(/[\s_-]*(normal|regular)$/i, '').replace(/[-_]+/g, ' ')).trim();
+    (groups[real] = groups[real] || []).push({ w: bold ? 700 : 400, it, data: await bufURL(buf, fontMime(f.name)) });
+  }
+  let added = [];
+  for (const [real, faces] of Object.entries(groups)) {
+    let f = FT.list.find(x => x.real === real);
+    if (!f) { f = { id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: real, real, src: 'file', adj: 100, faces: [] }; FT.list.push(f); }
+    faces.forEach(x => { f.faces = f.faces.filter(y => !(y.w === x.w && !!y.it === !!x.it)); f.faces.push(x); });
+    f.mod = Date.now(); f.synced = false; added.push(real);
+  }
+  if (added.length) { await fontsSave(); toast('เพิ่มฟอนต์ ' + added.join(', ') + ' แล้ว'); fontSyncUp(); }
+  return added;
+}
+async function fontAddCatalog(key) {
+  const c = FONT_CAT.find(x => x[0] === key); if (!c) return;
+  if (FT.list.find(f => f.src === 'cat' && f.key === key)) return fontById('c-' + key);
+  const url = (sub, w) => `https://cdn.jsdelivr.net/npm/@fontsource/${key}@5.3.0/files/${key}-${sub}-${w}-normal.woff2`;
+  const faces = [];
+  try {
+    await withBusy(`กำลังดาวน์โหลดฟอนต์ ${c[1]}…`, async () => {
+      for (const w of c[3]) for (const sub of ['thai', 'latin']) { const r = await fetch(url(sub, w)); if (!r.ok) throw new Error(r.status); faces.push({ w, it: false, sub, data: await bufURL(await r.arrayBuffer(), 'font/woff2') }); }
+    });
+  } catch (e) { toast('ดาวน์โหลดฟอนต์ไม่สำเร็จ (ต้องต่ออินเทอร์เน็ต)'); return null; }
+  const f = { id: 'c-' + key, key, name: c[1], real: c[1], src: 'cat', adj: FONT_ADJ, faces, mod: Date.now() };
+  FT.list = FT.list.filter(x => x.id !== f.id); FT.list.push(f); await fontsSave(); toast('ติดตั้งฟอนต์ ' + c[1] + ' แล้ว'); return f;
+}
+
+/* ---- ใช้ฟอนต์ ---- */
+function applyDocFont() { document.documentElement.style.setProperty('--dfont', fontStack(doc && doc.settings && doc.settings.font)); }
+const _applySetF = applySettings;
+applySettings = function () { _applySetF(); applyDocFont(); fontCheckMissing(); };
+function setDocFont(id) { if (id === 'THS') delete doc.settings.font; else doc.settings.font = id; applySettings(); renderAll(); changed(true); }
+function setTextFont(id) {
+  restoreSel(); const ed = curEditable(); if (!ed) { toast('เลือกข้อความที่จะเปลี่ยนฟอนต์ก่อน'); return; }
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) { toast('ลากเลือกข้อความก่อน แล้วค่อยเลือกฟอนต์'); return; }
+  document.execCommand('styleWithCSS', false, false);
+  document.execCommand('fontName', false, 'NPTMPFONT');
+  $$('font[face="NPTMPFONT"]', ed).forEach(f => { const sp = document.createElement('span'); if (id !== 'DOC') { sp.dataset.font = id; sp.style.fontFamily = fontStack(id).replace(/'/g, '"'); } sp.innerHTML = f.innerHTML; f.replaceWith(sp); });
+  $$('span[style*="NPTMPFONT"]', ed).forEach(sp => { sp.style.fontFamily = id === 'DOC' ? '' : fontStack(id).replace(/'/g, '"'); if (id === 'DOC') delete sp.dataset.font; else sp.dataset.font = id; });
+  if (id === 'DOC') $$('span[data-font]', ed).forEach(sp => { if (sel.containsNode(sp, true)) { sp.style.fontFamily = ''; delete sp.dataset.font; } });
+  syncFrom(ed);
+}
+function fontSelFill() {
+  const s = $('#fFont'); if (!s) return;
+  s.innerHTML = '<option value="">ฟอนต์</option><option value="DOC">ฟอนต์ของเอกสาร</option><option value="THS">TH Sarabun New</option>' + FT.list.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('') + '<option value="MANAGE">＋ เพิ่ม / จัดการฟอนต์…</option>';
+}
+function fontCheckMissing() {
+  if (!doc) return; const miss = [...fontsUsed()].filter(id => id !== 'THS' && !fontById(id) && !FT.warned[id]); if (!miss.length) return;
+  miss.forEach(id => FT.warned[id] = 1);
+  const cat = miss.filter(id => /^c-/.test(id)).map(id => id.slice(2));
+  cat.forEach(k => fontAddCatalog(k).then(f => { if (f) { applyDocFont(); schedulePaginate(); } }));
+  const own = miss.filter(id => !/^c-/.test(id));
+  if (own.length) setTimeout(() => toast('เอกสารนี้ใช้ฟอนต์ที่เพิ่มจากเครื่องอื่น · เข้าสู่ระบบ Drive เพื่อซิงก์ฟอนต์ หรือเพิ่มไฟล์ฟอนต์ในเครื่องนี้ (ตอนนี้แสดงเป็น TH Sarabun New)', 5000), 1500);
+}
+
+/* ---- ซิงก์ฟอนต์ที่เพิ่มเองผ่าน Google Drive (ใช้ได้ทุกเครื่องที่ล็อกอินบัญชีเดียวกัน) ---- */
+async function fontSyncUp() {
+  if (typeof CLD === 'undefined' || !CLD.user || !tokOk()) return;
+  try {
+    const root = await ensureRoot();
+    for (const f of FT.list.filter(x => x.src === 'file' && !x.synced)) {
+      const md = { name: 'ฟอนต์ ' + f.name + '.npfont', mimeType: 'application/json', appProperties: { np: 'font', fid: f.id, mod: String(f.mod || 0) } };
+      if (!f.drive) md.parents = [root];
+      const bd = 'np' + Math.random().toString(36).slice(2);
+      const body = new Blob([`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(md)}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n`, JSON.stringify(f), `\r\n--${bd}--`]);
+      const r = await gd((f.drive ? DUP + '/' + f.drive : DUP) + '?uploadType=multipart&fields=id', { method: f.drive ? 'PATCH' : 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + bd }, body });
+      f.drive = r.id; f.synced = true;
+    }
+    await tabIdbSet('fonts', FT.list);
+  } catch (e) { console.warn('font sync up', e); }
+}
+async function fontSyncDown() {
+  if (typeof CLD === 'undefined' || !CLD.user || !tokOk()) return;
+  try {
+    const r = await gd(DRIVE + '?' + gq({ q: "appProperties has { key='np' and value='font' } and trashed=false", fields: 'files(id,appProperties)', spaces: 'drive' }));
+    let got = 0;
+    for (const x of r.files || []) {
+      const a = x.appProperties || {}, have = FT.list.find(f => f.id === a.fid);
+      if (have && (have.mod || 0) >= (+a.mod || 0)) { if (!have.drive) { have.drive = x.id; have.synced = true; } continue; }
+      const f = await gd(DRIVE + '/' + x.id + '?alt=media'); if (!f || !f.faces) continue;
+      f.drive = x.id; f.synced = true; FT.list = FT.list.filter(y => y.id !== f.id); FT.list.push(f); got++;
+    }
+    if (got) { await fontsSave(); applyDocFont(); schedulePaginate(); toast('ซิงก์ฟอนต์จาก Drive แล้ว ' + got + ' ฟอนต์'); }
+    await fontSyncUp();
+  } catch (e) { console.warn('font sync down', e); }
+}
+async function fontDelete(id) {
+  const f = fontById(id); if (!f) return;
+  if (!(await ask('ลบฟอนต์', `<p>ลบฟอนต์ “${esc(f.name)}” ออกจากเครื่องนี้${f.drive ? 'และจาก Drive' : ''}ไหม</p><p>เอกสารที่ใช้ฟอนต์นี้จะแสดงเป็น TH Sarabun New แทน</p>`, 'ลบฟอนต์'))) return;
+  FT.list = FT.list.filter(x => x.id !== id); await fontsSave();
+  if (f.drive && typeof CLD !== 'undefined' && CLD.user && tokOk()) { try { await gd(DRIVE + '/' + f.drive, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); } catch (e) { } }
+  applyDocFont(); schedulePaginate(); openFonts();
+}
+
+/* ---- หน้าต่างจัดการฟอนต์ ---- */
+function openFonts(onPick) {
+  let d = $('#dFonts');
+  if (!d) {
+    d = document.createElement('div'); d.className = 'dlg-back'; d.id = 'dFonts';
+    d.innerHTML = `<div class="dlg" style="width:760px;max-height:92vh;overflow:auto"><h3>ฟอนต์</h3><div id="fnBody"></div><div class="actions"><button class="tb primary" id="fnOk">เสร็จ</button></div></div>`;
+    document.body.appendChild(d); $('#fnOk').onclick = () => closeDlg('#dFonts');
+    const css = document.createElement('style');
+    css.textContent = `#fnBody h4{margin:12px 0 6px}#fnBody .fn-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--ui-line);border-radius:9px;margin-bottom:6px;background:#fff}
+#fnBody .fn-row.on{border-color:var(--ui-accent);box-shadow:0 0 0 2px #7a3e1022}#fnBody .fn-n{width:190px;flex:none;font-size:17px}#fnBody .fn-n small{display:block;color:#8a8178;font-size:13px}
+#fnBody .fn-pv{flex:1;min-width:0;font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#fnBody .fn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+#fnBody .fn-cat{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 10px;border:1px dashed var(--ui-line);border-radius:9px;font-size:16px}#fnBody .fn-cat small{display:block;color:#8a8178;font-size:13px}
+#fnBody .fn-drop{border:2px dashed var(--ui-line);border-radius:12px;padding:14px;text-align:center;color:#6b6259;background:#fbf8f4}#fnBody .fn-drop.hov{border-color:var(--ui-accent);background:#f6eee5}`;
+    document.head.appendChild(css);
+  }
+  const cur = doc.settings.font || 'THS', PV = 'กขฃค ฎฏ ปี่ป้า ๑๒๓ ABC 123';
+  const row = (id, name, sub, x) => `<div class="fn-row${cur === id ? ' on' : ''}"><div class="fn-n">${esc(name)}<small>${sub}</small></div><div class="fn-pv" style="font-family:${fontStack(id).replace(/'/g, '&quot;')}">${PV}</div>
+    <button class="tb" data-doc="${id}">${cur === id ? '✓ ใช้ทั้งเอกสาร' : 'ใช้ทั้งเอกสาร'}</button>${x || ''}</div>`;
+  const own = FT.list.map(f => row(f.id, f.name, f.src === 'cat' ? 'ฟอนต์ฟรีออนไลน์' : (f.faces.some(z => z.w >= 600) ? 'ปกติ + ตัวหนา' : 'ตัวปกติเท่านั้น') + (f.src === 'file' ? (f.synced ? ' · ซิงก์ Drive แล้ว' : ' · เฉพาะเครื่องนี้') : ''),
+    `<label class="tb" title="ปรับขนาดให้ใกล้เคียงฟอนต์อื่น">ขนาด <input type="number" min="50" max="150" step="2" value="${f.adj || 100}" data-adj="${f.id}" style="width:56px">%</label><button class="tb" data-del="${f.id}" title="ลบฟอนต์">🗑</button>`)).join('');
+  const cat = FONT_CAT.filter(c => !fontById('c-' + c[0])).map(c => `<div class="fn-cat"><span>${c[1]}<small>${c[2]}</small></span><button class="tb" data-cat="${c[0]}">ติดตั้ง</button></div>`).join('');
+  $('#fnBody').innerHTML = `<h4>ฟอนต์ในเครื่องนี้</h4>${row('THS', 'TH Sarabun New', 'ฟอนต์มาตรฐานของแอป')}${own}
+    <h4>เพิ่มฟอนต์ของตัวเอง (เช่น TH SarabunIT๙, TH Niramit AS, TH Charm of AU)</h4>
+    <div class="fn-drop" id="fnDrop">ลากไฟล์ฟอนต์มาวางที่นี่ หรือ <label class="tb primary" style="display:inline-flex">เลือกไฟล์ฟอนต์…<input type="file" id="fnFile" accept=".ttf,.otf,.woff,.woff2" multiple hidden></label>
+      <div style="font-size:14px;margin-top:6px">เลือกได้หลายไฟล์พร้อมกัน (ตัวปกติ ตัวหนา ตัวเอียง) · แอปอ่านชื่อฟอนต์และน้ำหนักจากไฟล์ให้เอง${typeof CLD !== 'undefined' && CLD.user ? ' · ซิงก์ไปเครื่องอื่นผ่าน Google Drive อัตโนมัติ' : ' · ล็อกอิน Drive เพื่อให้ใช้ได้ทุกเครื่อง'}</div></div>
+    ${cat ? `<h4>ฟอนต์ฟรีออนไลน์ (ดาวน์โหลดครั้งเดียว ใช้ออฟไลน์ได้)</h4><div class="fn-grid">${cat}</div>` : ''}
+    <p style="font-size:14px;color:#8a8178;margin:10px 0 0">เปลี่ยนฟอนต์เฉพาะบางคำ: ลากเลือกข้อความ แล้วเลือกจากช่อง “ฟอนต์” บนแถบจัดรูปแบบ · ไฟล์ Word จะใช้ชื่อฟอนต์เดียวกัน (เครื่องที่เปิดต้องมีฟอนต์นั้น)</p>`;
+  const B = $('#fnBody');
+  B.onclick = async e => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.doc) { setDocFont(t.dataset.doc); if (onPick) onPick(t.dataset.doc); openFonts(onPick); }
+    else if (t.dataset.del) fontDelete(t.dataset.del);
+    else if (t.dataset.cat) { const f = await fontAddCatalog(t.dataset.cat); openFonts(onPick); }
+  };
+  $$('[data-adj]', B).forEach(i => i.onchange = async () => { const f = fontById(i.dataset.adj); if (!f) return; f.adj = Math.max(50, Math.min(150, +i.value || 100)); f.mod = Date.now(); f.synced = f.src !== 'file'; await fontsSave(); schedulePaginate(); fontSyncUp(); });
+  $('#fnFile').onchange = async e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) { await fontAddFiles(fs); openFonts(onPick); } };
+  const dp = $('#fnDrop');
+  dp.ondragover = e => { e.preventDefault(); dp.classList.add('hov'); }; dp.ondragleave = () => dp.classList.remove('hov');
+  dp.ondrop = async e => { e.preventDefault(); dp.classList.remove('hov'); const fs = [...e.dataTransfer.files]; if (fs.length) { await fontAddFiles(fs); openFonts(onPick); } };
+  openDlg('#dFonts');
+}
+
+(async function fontsInit() {
+  // ช่องเลือกฟอนต์บนแถบจัดรูปแบบ
+  const fsz = $('#fSize');
+  if (fsz && !$('#fFont')) {
+    const s = document.createElement('select'); s.id = 'fFont'; s.title = 'ฟอนต์ของข้อความที่เลือก'; s.style.maxWidth = '150px'; fsz.before(s);
+    s.addEventListener('mousedown', () => { const ed = curEditable(); if (ed && getSelection().rangeCount) lastRange = getSelection().getRangeAt(0).cloneRange(); });
+    s.onchange = () => { const v = s.value; s.value = ''; if (!v) return; if (v === 'MANAGE') { openFonts(); return; } setTextFont(v); };
+  }
+  // ปุ่มในหน้าตั้งค่าเอกสาร
+  const sz = $('#sSize');
+  if (sz && !$('#sFontRow')) {
+    const r = document.createElement('div'); r.className = 'row'; r.id = 'sFontRow';
+    r.innerHTML = '<label style="width:140px">ฟอนต์ของเอกสาร</label><span id="sFontName" style="font-weight:700;min-width:150px"></span><button class="tb" id="sFontBtn">เลือก / เพิ่มฟอนต์…</button>';
+    sz.closest('.row').before(r);
+    $('#sFontBtn').onclick = () => openFonts(() => { $('#sFontName').textContent = fontLabel(doc.settings.font); });
+    const _os = openSettings; openSettings = function () { _os(); $('#sFontName').textContent = fontLabel(doc.settings.font); };
+  }
+  await fontsLoad(); applyDocFont(); schedulePaginate(); fontCheckMissing();
+  // ล็อกอิน Drive แล้ว → ซิงก์ฟอนต์
+  if (typeof clRefresh === 'function') { const _r = clRefresh; clRefresh = async function () { const x = await _r.apply(this, arguments); fontSyncDown(); return x; }; }
+  if (typeof CLD !== 'undefined' && CLD.loaded) fontSyncDown();
+})();
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => schedulePaginate());
 </script>
 </body>
 </html>
