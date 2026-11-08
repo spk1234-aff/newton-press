@@ -7070,6 +7070,9 @@ buildExam = function (c) { const B = _buildExamSB(c); if (!c.xc) return B; const
 /* ===================== ส่งออก PDF และ Word ===================== */
 function busy(on, msg) { document.body.style.cursor = on ? 'progress' : ''; status(on ? msg : ''); if (!on) schedulePaginate(); }
 
+/* พักให้หน้าจออัปเดต — ใช้ MessageChannel เพราะไม่ถูกเบราว์เซอร์หน่วงเวลาเมื่อสลับไปแท็บ/แอปอื่น (setTimeout/rAF จะช้าหรือหยุด) */
+const npYield = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });
+const cvJPEG = (cv, q) => new Promise(ok => { if (cv.toBlob) cv.toBlob(b => { if (!b) return ok(cv.toDataURL('image/jpeg', q)); b.arrayBuffer().then(a => ok(new Uint8Array(a))); }, 'image/jpeg', q); else ok(cv.toDataURL('image/jpeg', q)); });
 /* ---------- PDF: ถ่ายภาพทีละหน้าแล้วรวมเป็น PDF ---------- */
 async function exportPDF() {
   if (!window.jspdf) { toast('ยังโหลดตัวสร้าง PDF ไม่เสร็จ ลองใหม่อีกครั้ง'); return; }
@@ -7082,7 +7085,7 @@ async function exportPDF() {
   const pdf = new jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true });
   try {
     let render = null;
-    try { render = await pageRenderer(); await render(0); } catch (e) { console.warn('foreignObject failed', e); render = null; }
+    try { render = await pageRenderer(2.2); await render(0); } catch (e) { console.warn('foreignObject failed', e); render = null; }
     for (let i = 0; i < n; i++) {
       busy(true, `กำลังสร้าง PDF หน้า ${i + 1}/${n}`);
       let cv;
@@ -7090,7 +7093,8 @@ async function exportPDF() {
       else cv = await html2canvas($('#stage'), { scale: 2, backgroundColor: '#ffffff', x: 0, y: i * P, width: 794, height: PAGE_H, scrollX: 0, scrollY: 0, windowWidth: 1000, windowHeight: 1200, logging: false,
         onclone: d => { const s2 = d.getElementById('stage'), b = d.body; b.innerHTML = ''; b.style.margin = '0'; b.style.overflow = 'visible'; b.style.height = 'auto'; d.documentElement.style.overflow = 'visible'; b.appendChild(s2); s2.style.position = 'absolute'; s2.style.left = '0'; s2.style.top = '0'; } });
       if (i) pdf.addPage();
-      pdf.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, 210, 297);
+      pdf.addImage(await cvJPEG(cv, 0.85), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      cv.width = cv.height = 0; await npYield();
     }
     // บุ๊กมาร์กใน PDF จากหัวบท หัวข้อ หัวข้อย่อย และหัวกิจกรรม (ข้อความไทยเข้ารหัส UTF-16)
     try {
@@ -7098,7 +7102,7 @@ async function exportPDF() {
       const par = [];
       outline().forEach(x => { let p = null; for (let l = x.lv - 1; l >= 0; l--) if (par[l]) { p = par[l]; break; } const node = pdf.outline.add(p, x.title, { pageNumber: Math.min(x.page, n) }); par[x.lv] = node; for (let l = x.lv + 1; l < 6; l++) par[l] = null; });
     } catch (e) { console.warn('outline', e); }
-    busy(true, 'กำลังรวมไฟล์ PDF…'); await new Promise(r => setTimeout(r, 0));
+    busy(true, 'กำลังรวมไฟล์ PDF…'); await npYield();
     const blob = pdf.output('blob');
     await saveFile(fname('pdf'), blob);
   } catch (e) { console.error(e); toast('สร้าง PDF ไม่สำเร็จ: ' + e.message); }
@@ -7157,20 +7161,21 @@ async function pageRenderer(scale = 2.5) {
   const P = PAGE_H + PAGE_G;
   // ใส่เฉพาะเนื้อหาของหน้าที่กำลังวาด (กล่องอื่นเว้นว่างแต่คงความสูงไว้) — ไฟล์ภาพเล็กลงมาก และ Safari ไม่ทิ้งรูปภาพ
   const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });
-  const sh = $$('#sheets > *', st), full = cl.map(e => e.innerHTML), shFull = sh.map(e => e.innerHTML); let curPg = -1;
+  const sh = $$('#sheets > *', st), full = cl.map(e => e.innerHTML), shFull = sh.map(e => e.innerHTML); let curPg = -1; const stOn = cl.map(() => true), shOn = sh.map(() => true);
   const xmlFor = i => {
     if (curPg !== i) {
-      cl.forEach((e, k) => { const on = rng[k] && i >= rng[k][0] - 0 && i <= rng[k][1]; const want = on ? full[k] : ''; if (e.innerHTML !== want) e.innerHTML = want; });
-      sh.forEach((e, k) => { const want = k === i ? shFull[k] : ''; if (e.innerHTML !== want) e.innerHTML = want; });
+      cl.forEach((e, k) => { const on = !!(rng[k] && i >= rng[k][0] && i <= rng[k][1]); if (stOn[k] !== on) { e.innerHTML = on ? full[k] : ''; stOn[k] = on; } });
+      sh.forEach((e, k) => { const on = k === i; if (shOn[k] !== on) { e.innerHTML = on ? shFull[k] : ''; shOn[k] = on; } });
       curPg = i;
     }
     return new XMLSerializer().serializeToString(st);
   };
   const SAFARI = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+  let checked = false;
   const draw = async (i, mode) => {
     const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.body.className} fo" style="${vars};width:794px;height:${PAGE_H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${css.replace(/<\/style/gi, '')}</style><div style="position:absolute;left:0;top:${-i * P}px">${xmlFor(i)}</div></div>`;
     const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(foSVG(html, 794, PAGE_H, scale, mode));
-    const load = async () => { const img = new Image(); img.decoding = 'sync'; await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg load')); img.src = url; }); try { await img.decode(); } catch (e) { } await new Promise(r => setTimeout(r, 30)); return img; };
+    const load = async () => { const img = new Image(); img.decoding = 'sync'; await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg load')); img.src = url; }); try { await img.decode(); } catch (e) { } await npYield(); return img; };
     let img = await load();
     const cv = document.createElement('canvas'); cv.width = 794 * scale; cv.height = PAGE_H * scale;
     const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
@@ -7181,7 +7186,7 @@ async function pageRenderer(scale = 2.5) {
       for (const im of $$('#stage img')) { if (!im.complete || !im.naturalWidth) continue; const r = im.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
         const x = r.left - S0.left, y = r.top - S0.top - i * P; if (y + r.height <= 0 || y >= PAGE_H) continue;
         try { g.drawImage(im, x * scale, y * scale, r.width * scale, r.height * scale); } catch (e) { } } }
-    cv.toDataURL('image/jpeg', 0.5); // ตรวจว่าไม่ติด taint
+    if (!checked) { cv.toDataURL('image/jpeg', 0.5); checked = true; } // ตรวจว่าไม่ติด taint (ครั้งแรกครั้งเดียว)
     return cv;
   };
   // ขอบเขตหมึกบนหน้า (สัดส่วน 0–1) ใช้เทียบว่าภาพที่ได้เต็มหน้าจริง
@@ -7919,7 +7924,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794100690';
+const NP_BUILD = '1794128350';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -8104,7 +8109,10 @@ function tabBar() {
 
 /* ---------- หน้าต่างแจ้งสถานะงานที่ใช้เวลานาน (ส่งออก เปิดไฟล์ สลับแท็บ) ---------- */
 const BZ = { on: false, t0: 0, tick: null, saved: false };
-const paintNow = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 0))));
+// แสดงผลก่อนเริ่มงานหนัก · ถ้าแท็บถูกซ่อน rAF จะไม่ทำงาน จึงใช้ MessageChannel แทน (ไม่ค้าง)
+const paintNow = () => new Promise(r => { if (document.hidden) { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); return; } let done = false; const fin = () => { if (!done) { done = true; r(); } }; requestAnimationFrame(() => requestAnimationFrame(() => fin())); setTimeout(fin, 120); });
+const BZ_TITLE = { base: '' };
+function bzTitle(t) { if (!BZ_TITLE.base) BZ_TITLE.base = document.title.replace(/^[(⏳✓].*?[)] /, ''); document.title = t ? t + ' ' + BZ_TITLE.base : BZ_TITLE.base; }
 function bzEl() {
   let el = $('#bzBox'); if (el) return el;
   const css = document.createElement('style');
@@ -8136,11 +8144,13 @@ busy = function (on, msg) {
     const m = String(msg || 'กำลังทำงาน…'), p = m.match(/(\d+)\s*\/\s*(\d+)/);
     el.querySelector('.bz-m').textContent = p ? m.replace(/\s*(หน้า|ส่วนที่)?\s*\d+\s*\/\s*\d+\s*$/, '') : m;
     const bar = el.querySelector('.bz-bar');
+    bzTitle(p ? `(⏳ ${Math.round(+p[1] / +p[2] * 100)}%)` : '(⏳)');
     if (p) { const a = +p[1], b = +p[2]; bar.style.display = 'block'; bar.firstChild.style.width = Math.round(a / b * 100) + '%'; el.querySelector('.bz-n').textContent = (/หน้า/.test(m) ? 'หน้า ' : 'ส่วนที่ ') + a + ' จาก ' + b + ' (' + Math.round(a / b * 100) + '%)'; }
     else { bar.style.display = 'none'; el.querySelector('.bz-n').textContent = 'กรุณารอสักครู่ อย่าเพิ่งปิดหรือสลับหน้านี้'; }
     bzTime();
   } else {
     if (!BZ.on) return; BZ.on = false; clearInterval(BZ.tick); schedulePaginate();
+    if (BZ.saved) { bzTitle('(✓ เสร็จ)'); setTimeout(() => bzTitle(''), document.hidden ? 60000 : 4000); if (document.hidden) { const back = () => { document.removeEventListener('visibilitychange', back); setTimeout(() => bzTitle(''), 4000); }; document.addEventListener('visibilitychange', back); } } else bzTitle('');
     if (BZ.saved) { el.classList.add('done'); el.querySelector('.bz-m').textContent = BZ.saved; el.querySelector('.bz-bar').style.display = 'none'; el.querySelector('.bz-n').textContent = 'ใช้เวลา ' + Math.max(1, Math.round((Date.now() - BZ.t0) / 1000)) + ' วินาที'; el.querySelector('.bz-t').textContent = ''; BZ.hide = setTimeout(() => el.classList.remove('on', 'done'), 1500); }
     else el.classList.remove('on', 'done');
   }
