@@ -7149,7 +7149,9 @@ async function foMode(s) {
 /* วาดหน้ากระดาษด้วยเอนจินของเบราว์เซอร์เอง (SVG foreignObject) — สมการ KaTeX ตรงกับบนจอทุกจุด */
 async function pageRenderer(scale = 2.5) {
   let css = '';
-  for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) if (typeof fontCssKeep !== 'function' || fontCssKeep(r.cssText)) css += r.cssText + '\n'; } catch (e) { } }
+  let cssK = ''; // ฟอนต์ KaTeX แยกไว้ ใส่เฉพาะหน้าที่มีสมการ (ไฟล์เล็กลงครึ่งหนึ่ง วาดเร็วขึ้นมากบน Safari)
+  for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) { const t = r.cssText; if (typeof fontCssKeep === 'function' && !fontCssKeep(t)) continue; if (/^@font-face/.test(t) && /KaTeX_/.test(t)) cssK += t + '\n'; else css += t + '\n'; } } catch (e) { } }
+  css = css.replace(/<\/style/gi, ''); cssK = cssK.replace(/<\/style/gi, '');
   const vars = document.documentElement.getAttribute('style') || '';
   const st = $('#stage').cloneNode(true);
   // ล็อกความสูงทุกกล่องตามที่จัดหน้าไว้ ไม่ให้ตำแหน่งเลื่อนสะสมถ้าฟอนต์ในภาพโหลดช้า
@@ -7173,14 +7175,17 @@ async function pageRenderer(scale = 2.5) {
   const SAFARI = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
   let checked = false;
   const draw = async (i, mode) => {
-    const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.body.className} fo" style="${vars};width:794px;height:${PAGE_H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${css.replace(/<\/style/gi, '')}</style><div style="position:absolute;left:0;top:${-i * P}px">${xmlFor(i)}</div></div>`;
-    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(foSVG(html, 794, PAGE_H, scale, mode));
+    const body = xmlFor(i), hasMath = /class="katex/.test(body);
+    const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.body.className} fo" style="${vars};width:794px;height:${PAGE_H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${hasMath ? cssK : ''}${css}</style><div style="position:absolute;left:0;top:${-i * P}px">${body}</div></div>`;
+    const svgStr = foSVG(html, 794, PAGE_H, scale, mode), hasImg = /<img/i.test(body);
+    // base64 ผ่าน FileReader (เร็วและเล็กกว่า encodeURIComponent มากสำหรับข้อความภาษาไทย)
+    const url = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(new Blob([svgStr], { type: 'image/svg+xml' })); });
     const load = async () => { const img = new Image(); img.decoding = 'sync'; await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('svg load')); img.src = url; }); try { await img.decode(); } catch (e) { } await npYield(); return img; };
     let img = await load();
     const cv = document.createElement('canvas'); cv.width = 794 * scale; cv.height = PAGE_H * scale;
     const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
     // Safari มักยังไม่ถอดรหัสรูปภาพข้างในในรอบแรก → โหลดซ้ำแล้ววาดทับอีกรอบ
-    if (SAFARI && url.includes('%3Cimg')) { await new Promise(r => setTimeout(r, 120)); img = await load(); g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height); }
+    // (Safari: รูปภาพในหน้าจะถูกวาดทับด้านล่างอยู่แล้ว จึงไม่ต้องโหลดซ้ำ)
     // กันพลาด: วาดรูปภาพทับลงตำแหน่งจริงบนหน้า (Safari บางรุ่นไม่วาดรูปที่อยู่ใน SVG เลย)
     if (SAFARI) { const S0 = $('#stage').getBoundingClientRect();
       for (const im of $$('#stage img')) { if (!im.complete || !im.naturalWidth) continue; const r = im.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
@@ -7193,11 +7198,11 @@ async function pageRenderer(scale = 2.5) {
   const inkBox = cv => { const W = 80, H = 113, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(cv, 0, 0, W, H); const d = g.getImageData(0, 0, W, H).data; let r = 0, b = 0, l = W, t = H;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const k = (y * W + x) * 4; if (d[k] + d[k + 1] + d[k + 2] < 690) { if (x > r) r = x; if (y > b) b = y; if (x < l) l = x; if (y < t) t = y; } }
     return r ? { r: r / W, b: b / H, l: l / W, t: t / H } : null; };
-  let MODE = FO_MODE.page;
+  let MODE = FO_MODE.page; try { if (!MODE) MODE = FO_MODE.page = localStorage.getItem('np-fomode') || ''; } catch (e) { }
   if (!MODE) {
     const ref = inkBox(await draw(0, 'one')); MODE = 'one';
     if (ref) for (const m of ['vb', 'tf']) { try { const q = inkBox(await draw(0, m)); if (q && Math.abs(q.r - ref.r) < 0.06 && Math.abs(q.b - ref.b) < 0.06 && Math.abs(q.l - ref.l) < 0.06) { MODE = m; break; } } catch (e) { } }
-    FO_MODE.page = MODE; console.log('PDF render mode', MODE);
+    FO_MODE.page = MODE; try { localStorage.setItem('np-fomode', MODE); } catch (e) { } console.log('PDF render mode', MODE);
   }
   return i => draw(i, MODE);
 }
@@ -7924,7 +7929,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794128350';
+const NP_BUILD = '1794128883';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
