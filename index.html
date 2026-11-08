@@ -6538,9 +6538,9 @@ extInspector = function (b) {
 const liTexts = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return $$('li', d).map(li => { $$('.mx', li).forEach(s => s.textContent = '$' + s.dataset.tex + '$'); return li.textContent.replace(/\s+/g, ' ').trim(); }).filter(Boolean); };
 function lpFind(B) {
   B = B || doc.blocks; if (!B.some(b => b.t === 'lphead')) return null;
-  const R = { src: {}, tbl: {}, desc: {} }; let sec = '';
+  const R = { src: {}, tbl: {}, desc: {}, lab: {} }; let sec = '';
   B.forEach((b, i) => {
-    if (b.t === 'lpsec') { sec = plainText(b.html || ''); return; }
+    if (b.t === 'lpsec') { sec = plainText(b.html || ''); const m = /^3\.([23])\s*(.+?)\s*\((P|A)\)\s*$/.exec(sec); if (m && !R.lab[m[3]]) R.lab[m[3]] = m[2]; return; }
     if (b.t === 'lptext') {
       const k = /^3\.1/.test(sec) ? 'K' : /^3\.2/.test(sec) ? 'P' : /^3\.3/.test(sec) ? 'A' : /^4\./.test(sec) ? 'C' : /^5\./.test(sec) ? 'D' : /แบบประเมินผลด้านความรู้/.test(sec) ? 'descK' : null;
       if (k === 'descK') R.desc.K = b; else if (k && !R.src[k]) R.src[k] = b; return;
@@ -6549,7 +6549,7 @@ function lpFind(B) {
   });
   return R;
 }
-function lpLists(R) { const L = {}; ['K', 'P', 'A', 'C', 'D'].forEach(k => L[k] = R.src[k] ? liTexts(R.src[k].html) : []); L.C = L.C.map(x => /^ความสามารถใน/.test(x) ? x : 'ความสามารถใน' + x); return L; }
+function lpLists(R) { const L = { labP: R.lab && R.lab.P, labA: R.lab && R.lab.A }; ['K', 'P', 'A', 'C', 'D'].forEach(k => L[k] = R.src[k] ? liTexts(R.src[k].html) : []); L.C = L.C.map(x => /^ความสามารถใน/.test(x) ? x : 'ความสามารถใน' + x); return L; }
 const lpStrip = h => plainText(h || '');
 // ข้อความที่มี $...$ → HTML ที่มีสมการ
 const lpTx = x => String(x).split(/(\$[^$]+\$)/).map(p => /^\$[^$]+\$$/.test(p) ? `<span class="mx" contenteditable="false" data-tex="${esc(p.slice(1, -1))}"></span>` : esc(p)).join('');
@@ -6558,8 +6558,8 @@ function genEval(L, old) {
   const rows = [], keys = [], rs = {}; const add = (k, r, s) => { if (s) rs[rows.length] = s; rows.push(r); keys.push(k); };
   add('h', ['จุดประสงค์การเรียนรู้', 'วิธีการวัดผล', 'เครื่องมือวัดผล', 'เกณฑ์การประเมิน'], 'H');
   add('sK', ['ด้านความรู้', '', '', ''], 'S'); L.K.forEach((x, i) => add('K' + i, [`${i + 1}. ${lpTx(x)} (K)`, tool0, tool1, crit]));
-  add('sP', ['ด้านทักษะและกระบวนการทางคณิตศาสตร์', '', '', ''], 'S'); add('P', [`นักเรียนมีความสามารถ<br>${L.P.map((x, i) => `${i + 1}. ${lpTx(x)}`).join('<br>')}`, 'ตรวจใบกิจกรรม', 'ใบกิจกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
-  add('sA', ['ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์', '', '', ''], 'S'); add('A', [L.A.map((x, i) => `${i + 1}. ${lpTx(x)}`).join('<br>'), 'สังเกตพฤติกรรม', 'แบบสังเกตพฤติกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
+  add('sP', [L.labP || 'ด้านทักษะและกระบวนการทางคณิตศาสตร์', '', '', ''], 'S'); add('P', [`นักเรียนมีความสามารถ<br>${L.P.map((x, i) => `${i + 1}. ${lpTx(x)}`).join('<br>')}`, 'ตรวจใบกิจกรรม', 'ใบกิจกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
+  add('sA', [L.labA || 'ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์', '', '', ''], 'S'); add('A', [L.A.map((x, i) => `${i + 1}. ${lpTx(x)}`).join('<br>'), 'สังเกตพฤติกรรม', 'แบบสังเกตพฤติกรรม', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
   add('D', [`<b>คุณลักษณะอันพึงประสงค์</b><br>${L.D.map(x => '- ' + lpTx(x)).join('<br>')}`, 'สังเกตพฤติกรรม', 'แบบประเมินคุณลักษณะอันพึงประสงค์', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
   add('C', [`<b>สมรรถนะสำคัญของผู้เรียน</b><br>${L.C.map(x => '- ' + lpTx(x)).join('<br>')}`, 'สังเกตพฤติกรรม', 'แบบประเมินสมรรถนะสำคัญของผู้เรียน', 'นักเรียนที่มีผลระดับคุณภาพ ดี ขึ้นไปผ่านเกณฑ์']);
   return { rows, keys, rs };
@@ -6570,8 +6570,8 @@ function genRec(L) {
   const sum = x => `${lpTx(x)}<br>สรุป ผลการประเมินรวม ไม่ผ่าน (0) ...... คน ผ่าน (1) ...... คน ดี (2) ...... คน ดีเยี่ยม (3) ...... คน`;
   add('h', ['ผลหลังการจัดการเรียนรู้'], 'h');
   add('sK', ['ด้านความรู้'], 'S'); L.K.forEach((x, i) => add('K' + i, [pf(`${i + 1}. ${x}`)]));
-  add('sP', ['ด้านทักษะและกระบวนการทางคณิตศาสตร์'], 'S'); add('P', [L.P.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>')]);
-  add('sA', ['ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์'], 'S'); add('A', [L.A.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>')]);
+  add('sP', [L.labP || 'ด้านทักษะและกระบวนการทางคณิตศาสตร์'], 'S'); add('P', [L.P.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>')]);
+  add('sA', [L.labA || 'ด้านคุณลักษณะอันพึงประสงค์ในการเรียนคณิตศาสตร์'], 'S'); add('A', [L.A.map((x, i) => pf(`${i + 1}. ${x}`)).join('<br>')]);
   add('sD', ['คุณลักษณะอันพึงประสงค์ตามหลักสูตร'], 'S'); add('D', [L.D.map((x, i) => sum(`${i + 1}. ${x}`)).join('<br>')]);
   add('sC', ['สมรรถนะสำคัญของผู้เรียนตามหลักสูตร'], 'S'); add('C', [L.C.map((x, i) => sum(`${i + 1}. ${x}`)).join('<br>')]);
   add('hp', ['ปัญหา อุปสรรค และแนวทางแก้ไข'], 'h'); add('pp', [[D, D].join('<br>')]); add('hs', ['ข้อเสนอแนะ'], 'h'); add('ss', [[D, D].join('<br>')]);
@@ -7919,7 +7919,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794095875';
+const NP_BUILD = '1794100690';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
