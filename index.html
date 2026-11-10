@@ -7942,7 +7942,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794331547';
+const NP_BUILD = '1794332661';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -8533,7 +8533,7 @@ applyBlockStyle = function (el, b) {
 };
 // ไม่บันทึกกรอบเลือกรูปลงไฟล์
 const _chPg = cleanHTML;
-cleanHTML = function (el) { return _chPg(el).replace(/(<img[^>]*?class="[^"]*?)\s+isel(?=[\s"])/g, '$1'); };
+cleanHTML = function (el) { return _chPg(el).replace(/(<img[^>]*?class="[^"]*?)\s+isel(?=[\s"])/g, '$1').split(/(<[^>]*>)/).map((x, i) => i % 2 ? x : x.replace(/\r?\n/g, '<br>')).join(''); };
 
 /* ---------- เลือกรูป + ที่จับ + แถบเครื่องมือ ---------- */
 function pgEls() {
@@ -9055,6 +9055,146 @@ addEventListener('contextmenu', e => {
     const tip = document.createElement('div'); tip.className = 'tmh'; tip.textContent = 'ทิป: ลากคลุมหลายช่อง แล้วกด “ผสานเซลล์”'; tmenu.appendChild(tip);
   }, 0);
 });
+
+/* ===================== พิมพ์แบบ Pages (รอบ 2) =====================
+   · Enter = ย่อหน้าใหม่ทันที (แยกที่เคอร์เซอร์) · Shift+Enter = ขึ้นบรรทัดใหม่ในย่อหน้าเดิม
+   · เว้นวรรคได้ตามจริง (เคาะกี่ครั้งก็เว้นเท่านั้น) · ระยะ Tab ตั้งได้
+   · ลากเลือกข้อความข้ามหลายย่อหน้า → ลบ / พิมพ์ทับ / คัดลอก / ตัด ได้ */
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `#flow [contenteditable="true"]{white-space:pre-wrap}
+#flow .mx,#flow .katex{white-space:normal}
+#flow .tab{tab-size:var(--tabw,8);-moz-tab-size:var(--tabw,8)}
+::highlight(npx){background-color:rgba(47,125,225,.28)}
+#flow .blk.xsel-f{background:rgba(47,125,225,.10)}
+.xsmode #flow,.xsmode #flow *{user-select:none;-webkit-user-select:none}
+#flow .grip,#flow .tools,#flow .vgrip,#flow .gapph{user-select:none;-webkit-user-select:none}`;
+  document.head.appendChild(s);
+})();
+// ระยะ Tab ทั้งเอกสาร (ซม.)
+function pgTabApply() { const f = $('#flow'); if (!f) return; const v = doc && doc.settings && +doc.settings.tabw; if (v) f.style.setProperty('--tabw', (v * PG_PX_CM).toFixed(1) + 'px'); else f.style.removeProperty('--tabw'); }
+(function () { const _as = applySettings; applySettings = function () { const r = _as.apply(this, arguments); pgTabApply(); return r; }; setTimeout(pgTabApply, 0); })();
+(function () {
+  const _ex = extInspector;
+  extInspector = function (b) {
+    let h = _ex(b);
+    if (PG_TXT.has(b.t) || ['box', 'idea', 'check', 'caution', 'solution', 'question', 'answer'].includes(b.t)) {
+      const v = (doc.settings && doc.settings.tabw) || '';
+      h += `<div class="ir"><label>ระยะ Tab (ทั้งเอกสาร)</label>${sel('data-pgtab', [['', 'เดิม (~0.8 ซม.)'], ['0.5', '0.5 ซม.'], ['1', '1 ซม.'], ['1.27', '1.27 ซม.'], ['1.5', '1.5 ซม.'], ['2', '2 ซม.'], ['2.5', '2.5 ซม.']], String(v))}</div>`;
+    }
+    return h;
+  };
+  document.addEventListener('change', e => { const t = e.target; if (!t.dataset || t.dataset.pgtab === undefined) return; e.stopImmediatePropagation(); if (t.value) doc.settings.tabw = +t.value; else delete doc.settings.tabw; pgTabApply(); changed(true); schedulePaginate(); }, true);
+})();
+
+/* ---------- Enter = ย่อหน้าใหม่ ---------- */
+function pgSplitAt(t, blk) {
+  const s = getSelection(); if (!s.rangeCount) return; if (!s.isCollapsed) s.getRangeAt(0).deleteContents();
+  const r = s.getRangeAt(0), tail = document.createRange(); tail.selectNodeContents(t); tail.setStart(r.endContainer, r.endOffset);
+  const box = document.createElement('div'); box.appendChild(tail.extractContents());
+  let html = cleanHTML(box).replace(/^(<br>\s*)+/, ''); if (!box.textContent.replace(/[​\s]/g, '') && !box.querySelector('img,.mx,.ic')) html = '';
+  t.innerHTML = t.innerHTML.replace(/(<br>\s*)+$/, ''); syncFrom(t);
+  const b = byId(blk.dataset.id), heading = ['section', 'subsection', 'h3'].includes(b.t) || b.ps === 'title';
+  const nt = heading && !html ? 'para' : b.t, nb = newBlock(nt, { html });
+  if (b.st && !(heading && !html)) nb.st = JSON.parse(JSON.stringify(b.st)); if (b.ps && html) nb.ps = b.ps;
+  doc.blocks.splice(idx(b.id) + 1, 0, nb); const ne = makeEl(nb); blk.after(ne); changed(true); schedulePaginate();
+  selectBlock(nb.id); caretToStart(edsOf(ne)[0]);
+}
+addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing || e.altKey || e.metaKey || e.ctrlKey || e.shiftKey || (typeof dlgOpen === 'function' && dlgOpen())) return;
+  if (PG.xs) return;
+  const t = e.target.closest && e.target.closest('#flow [contenteditable="true"]'); if (!t) return;
+  const blk = t.closest('.blk'); if (!blk || !pgOne(blk) || t.closest('li') || t.dataset.cell || t.dataset.pf) return;
+  e.preventDefault(); e.stopImmediatePropagation(); pgSplitAt(t, blk);
+}, true);
+
+/* ---------- เลือกข้อความข้ามย่อหน้า ---------- */
+PG.xs = null;
+function pgXsPaint() {
+  $$('#flow .blk.xsel-f').forEach(x => x.classList.remove('xsel-f'));
+  const X = PG.xs; if (!X) { if (window.CSS && CSS.highlights) CSS.highlights.delete('npx'); return; }
+  if (window.CSS && CSS.highlights && window.Highlight) CSS.highlights.set('npx', new Highlight(...pgXsEds().map(o => o.r)));
+  else { // เบราว์เซอร์เก่า: ระบายทั้งกล่องที่อยู่ในช่วง
+    let on = false; $$('#flow > .blk').forEach(el => { if (el === X.a) on = true; if (on) el.classList.add('xsel-f'); if (el === X.b) on = false; });
+  }
+}
+function pgXsClear() { if (!PG.xs) return; PG.xs = null; pgXsPaint(); document.body.classList.remove('xsmode'); }
+function pgXsSet(r0, r1) { // r0, r1 = จุด (Range ยุบ) สองจุด อยู่คนละกล่อง
+  const ed0 = pgEdOf(r0.startContainer), ed1 = pgEdOf(r1.startContainer); if (!ed0 || !ed1) return false;
+  let A = { n: r0.startContainer, o: r0.startOffset, ed: ed0 }, B = { n: r1.startContainer, o: r1.startOffset, ed: ed1 };
+  const cmp = r0.compareBoundaryPoints(Range.START_TO_START, r1); if (cmp > 0) [A, B] = [B, A];
+  const snap = P => { if (P.n.nodeType !== 3 || !window.Intl || !Intl.Segmenter) return; const t = P.n.nodeValue; let best = 0; for (const g of new Intl.Segmenter('th', { granularity: 'grapheme' }).segment(t)) { if (g.index <= P.o) best = g.index; else { if (g.index - P.o < P.o - best) best = g.index; break; } } if (P.o >= t.length) best = t.length; P.o = best; };
+  snap(A); snap(B);
+  const r = document.createRange(); r.setStart(A.n, A.o); r.setEnd(B.n, B.o);
+  PG.xs = { r, A, B, a: A.ed.closest('.blk'), b: B.ed.closest('.blk') }; pgXsPaint(); return true;
+}
+// ข้อความ / HTML ในช่วงที่เลือก (คงสมการเป็น LaTeX)
+function pgXsText() {
+  const X = PG.xs; if (!X) return ''; const out = [];
+  pgXsEds().forEach(({ ed, r }) => { const d = document.createElement('div'); d.appendChild(r.cloneContents()); $$('.mx', d).forEach(m => m.replaceWith('$' + (m.dataset.tex || '') + '$')); $$('br', d).forEach(b => b.replaceWith('\n')); out.push(d.textContent.replace(/​/g, '')); });
+  return out.join('\n');
+}
+function pgXsHTML() { const out = []; pgXsEds().forEach(({ r }) => { const d = document.createElement('div'); d.appendChild(r.cloneContents()); out.push('<p>' + cleanHTML(d) + '</p>'); }); return out.join(''); }
+// ช่องพิมพ์ทุกช่องที่อยู่ในช่วง พร้อมช่วงย่อยภายในแต่ละช่อง
+function pgXsEds() {
+  const X = PG.xs, res = []; if (!X) return res;
+  $$('#flow [contenteditable="true"]').forEach(ed => {
+    if (!X.r.intersectsNode(ed)) return; const r = document.createRange(); r.selectNodeContents(ed);
+    if (ed === X.A.ed) r.setStart(X.A.n, X.A.o); if (ed === X.B.ed) r.setEnd(X.B.n, X.B.o); res.push({ ed, r });
+  });
+  return res;
+}
+function pgXsDelete() {
+  const X = PG.xs; if (!X) return; pgXsClear();
+  const els = $$('#flow > .blk'), ia = els.indexOf(X.a), ib = els.indexOf(X.b);
+  // กล่องที่อยู่ระหว่างกลางทั้งกล่อง → ลบออก
+  for (let k = ib - 1; k > ia; k--) { const el = els[k], id = el.dataset.id, j = idx(id); if (j >= 0) doc.blocks.splice(j, 1); el.remove(); }
+  // ลบข้อความเฉพาะส่วนที่เลือกในกล่องแรก/กล่องสุดท้าย (รวมช่องย่อยที่อยู่ระหว่างกลาง)
+  const eds = pgXsEdsOf(X);
+  eds.forEach(({ ed, r }) => { r.deleteContents(); });
+  eds.forEach(({ ed }) => { if (ed.isConnected) syncFrom(ed); });
+  const aId = X.a.dataset.id, bId = X.b.dataset.id;
+  if (X.a !== X.b && pgOne(X.a) && pgOne(X.b)) { pgMerge(aId, bId); return; }
+  changed(true); schedulePaginate(); const ed = X.A.ed; ed.focus({ preventScroll: true });
+  const rr = document.createRange(); try { rr.setStart(X.A.n, Math.min(X.A.o, X.A.n.nodeType === 3 ? X.A.n.length : X.A.n.childNodes.length)); } catch (err) { rr.selectNodeContents(ed); rr.collapse(false); } rr.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(rr);
+}
+function pgXsEdsOf(X) { const keep = PG.xs; PG.xs = X; const r = pgXsEds(); PG.xs = keep; return r; }
+let pgXd = null;
+document.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  const ed = pgEdOf(e.target); const inCell = e.target.closest && e.target.closest('td[data-cell]');
+  if (PG.xs) { if (e.shiftKey && ed && !inCell) { const p = pgCaretAt(e.clientX, e.clientY); if (p) { e.preventDefault(); pgXsSet(PG.xs.anchor || (() => { const q = document.createRange(); q.setStart(PG.xs.A.n, PG.xs.A.o); return q; })(), p); return; } } pgXsClear(); }
+  if (!ed || inCell || (e.target.closest && e.target.closest('img,.mx,.grip,.tools'))) { pgXd = null; return; }
+  // Shift+คลิกในอีกย่อหน้า → เลือกข้ามย่อหน้า
+  if (e.shiftKey) { const s = getSelection(); if (s.rangeCount) { const cur = s.getRangeAt(0), ced = pgEdOf(cur.startContainer); if (ced && ced.closest('.blk') !== ed.closest('.blk')) { const p = pgCaretAt(e.clientX, e.clientY); if (p) { e.preventDefault(); const a = document.createRange(); a.setStart(cur.startContainer, cur.startOffset); if (pgXsSet(a, p)) PG.xs.anchor = a; return; } } } }
+  const p = pgCaretAt(e.clientX, e.clientY); pgXd = p ? { a: p, ed, x: e.clientX, y: e.clientY } : null;
+}, true);
+document.addEventListener('pointermove', e => {
+  if (!pgXd || !(e.buttons & 1)) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY); const ed = pgEdOf(el);
+  if (!ed || ed === pgXd.ed && !PG.xs) return;
+  if (ed.closest('.blk') === pgXd.ed.closest('.blk') && ed === pgXd.ed) { if (PG.xs) { pgXsClear(); } return; }
+  const p = pgCaretAt(e.clientX, e.clientY); if (!p) return;
+  document.body.classList.add('xsmode'); getSelection().removeAllRanges();
+  if (pgXsSet(pgXd.a, p)) PG.xs.anchor = pgXd.a;
+  const sc = $('#scroller'), cr = sc.getBoundingClientRect(); if (e.clientY > cr.bottom - 30) sc.scrollTop += 16; else if (e.clientY < cr.top + 30) sc.scrollTop -= 16;
+}, true);
+document.addEventListener('pointerup', () => { if (pgXd && PG.xs) { document.body.classList.remove('xsmode'); const ed = PG.xs.A.ed; ed.focus({ preventScroll: true }); getSelection().removeAllRanges(); } pgXd = null; }, true);
+addEventListener('keydown', e => {
+  const X = PG.xs; if (!X || e.isComposing) return;
+  const M = e.metaKey || e.ctrlKey;
+  if (/^(Shift|Meta|Control|Alt|CapsLock)$/.test(e.key)) return;
+  if (M && /^[cxa]$/i.test(e.key) || M && e.code === 'KeyC' || M && e.code === 'KeyX') { if (e.code === 'KeyA') { pgXsClear(); } return; } // ให้ระบบส่ง copy/cut
+  if (M && (e.key === 'z' || e.key === 'Z')) { pgXsClear(); return; }
+  if (e.key === 'Escape' || /^Arrow/.test(e.key)) { e.preventDefault(); const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? X.A : X.B; pgXsClear(); const ed = back.ed; ed.focus({ preventScroll: true }); const r = document.createRange(); r.setStart(back.n, back.o); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return; }
+  if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); e.stopImmediatePropagation(); pgXsDelete(); return; }
+  if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); pgXsDelete(); setTimeout(() => { const s = getSelection(); const t = s.rangeCount && pgEdOf(s.getRangeAt(0).startContainer); const blk = t && t.closest('.blk'); if (t && blk && pgOne(blk)) pgSplitAt(t, blk); }, 30); return; }
+  if (e.key.length === 1 && !M) { e.preventDefault(); e.stopImmediatePropagation(); pgXsDelete(); setTimeout(() => { document.execCommand('insertText', false, e.key); const s = getSelection(); const t = s.rangeCount && pgEdOf(s.getRangeAt(0).startContainer); if (t) syncFrom(t); }, 30); return; }
+  if (e.key === 'Tab') { e.preventDefault(); pgXsClear(); }
+}, true);
+document.addEventListener('copy', e => { if (!PG.xs) return; e.preventDefault(); e.stopImmediatePropagation(); e.clipboardData.setData('text/plain', pgXsText()); e.clipboardData.setData('text/html', pgXsHTML()); toast('คัดลอกข้อความที่เลือกแล้ว'); }, true);
+document.addEventListener('cut', e => { if (!PG.xs) return; e.preventDefault(); e.stopImmediatePropagation(); e.clipboardData.setData('text/plain', pgXsText()); e.clipboardData.setData('text/html', pgXsHTML()); pgXsDelete(); }, true);
+document.addEventListener('paste', e => { if (!PG.xs) return; pgXsDelete(); }, true);
 
 /* ===================== PDF แบบเวกเตอร์ (ผ่านหน้าต่างพิมพ์) + ตรวจการจัดหน้า ===================== */
 (function lyCSS() {
