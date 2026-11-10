@@ -5961,7 +5961,7 @@ const GARUDA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAL4AAAC8CAYAAADGvB
 /* ===================== เล่มโครงงาน · บันทึกข้อความ · ปกแผน · กำหนดการสอน ===================== */
 Object.assign(TYPES, { pjcover: 'หน้าปก (โครงงาน / แผน / กำหนดการ)', pjch: 'หัวบท / หัวหน้า (กึ่งกลาง)', pjsec: 'หัวข้อ 1.1 (ตัวหนา)', pjtext: 'ย่อหน้า (เยื้องบรรทัดแรก)', pjinfo: 'ตารางข้อมูล (ชื่อโครงงาน ผู้จัดทำ ...)', toc: 'สารบัญอัตโนมัติ', memohead: 'หัวบันทึกข้อความ (ครุฑ)', memocmt: 'ช่องความเห็น / ลงนาม', cshead: 'หัวรายวิชา (รหัส ชั้น เวลา หน่วยกิต)', signln: 'บรรทัดลงชื่อ (ลงชื่อ ...... ตำแหน่ง)' });
 FULLPAGE.add('pjcover'); OUT_LV.pjch = 1; OUT_LV.pjsec = 2; OUT_LV.memohead = 1; OUT_LV.pjcover = 0; ['pjch', 'pjsec'].forEach(t => HEADINGS.add(t));
-const SCHOOL = 'โรงเรียนโซ่พิสัยพิทยาคม', AMPHOE = 'อำเภอโซ่พิสัย จังหวัดบึงกาฬ', AFF = 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาบึงกาฬ';
+let SCHOOL = 'โรงเรียนโซ่พิสัยพิทยาคม', AMPHOE = 'อำเภอโซ่พิสัย จังหวัดบึงกาฬ', AFF = 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาบึงกาฬ';
 const PPL = { me: ['นายศาสตราวุฒิ อาชนะชัย', 'ครู'], head: ['นางสาวอำไพ จิตวิขาม', 'หัวหน้ากลุ่มสาระการเรียนรู้คณิตศาสตร์'], acad: ['นางพานิชย์ ปัดถาทุม', 'หัวหน้ากลุ่มงานบริหารงานวิชาการ'], dep: ['นายทรงศักดิ์ สิงหนสาย', 'รองผู้อำนวยการกลุ่มบริหารวิชาการ'], hr: ['นางประภัสสร จันทร์เภา', 'รองผู้อำนวยการกลุ่มบริหารงานบุคคล'], dir: ['นายโชคชัย ชินโณ', 'ผู้อำนวยการ' + SCHOOL] };
 const TAB = '<span class="tab">\t</span>​';
 const logoOf = v => !v ? '' : v.startsWith('data:') ? v : (LOGOS[v] || '');
@@ -7942,7 +7942,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794332661';
+const NP_BUILD = '1794352140';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9450,6 +9450,219 @@ const CX_OFF = 'ออฟไลน์ · บันทึกไว้ในเค
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e)); });
   }
+})();
+
+/* ===================== แม่แบบของฉัน + ข้อมูลประจำแบบฟอร์ม =====================
+   · บันทึกงานที่เปิดอยู่เป็นแม่แบบ (เก็บในเครื่อง + ซิงก์ Google Drive) · ใช้/เปลี่ยนชื่อ/แทนที่/ลบ
+   · ข้อมูลที่กรอกซ้ำทุกครั้ง (โรงเรียน ครู หัวหน้ากลุ่มสาระ รองฯ ผอ. รายวิชา ปีการศึกษา) ตั้งครั้งเดียว ทุกแบบฟอร์มดึงไปใช้ */
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `.tplmine .tplc{position:relative}.tplmine .tplm{position:absolute;top:6px;right:6px;border:1px solid var(--ui-line);background:#fff;border-radius:7px;width:28px;height:26px;cursor:pointer;font-size:15px;line-height:1}
+.tplbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.tplempty{color:var(--ui-mute);font-size:15px;padding:6px 2px}
+#fpBody h4{margin:12px 0 6px;color:var(--ui-accent)}#fpBody .fpg{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}#fpBody label{display:flex;flex-direction:column;font-size:14px;color:var(--ui-mute)}
+#fpBody input{font:inherit;font-size:16px;color:var(--ui-ink);padding:4px 8px;border:1px solid var(--ui-line);border-radius:7px}#fpBody .w{grid-column:1/-1}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- ข้อมูลประจำแบบฟอร์ม ---------- */
+const FP_FIELDS = [
+  ['h', 'โรงเรียน'], ['school', 'ชื่อโรงเรียน'], ['amphoe', 'อำเภอ จังหวัด'], ['aff', 'สังกัด', 1], ['memoNo', 'เลขที่หนังสือ (ช่อง “ที่”) เช่น ศธ ๐๔๓๑๒.๐๓/'],
+  ['h', 'ครูผู้สอน (ผู้ลงนาม)'], ['meName', 'ชื่อ–สกุล'], ['mePos', 'ตำแหน่ง'], ['group', 'กลุ่มสาระการเรียนรู้', 1],
+  ['h', 'ผู้ลงนามความเห็น'], ['headName', 'หัวหน้ากลุ่มสาระ: ชื่อ'], ['headPos', 'หัวหน้ากลุ่มสาระ: ตำแหน่ง'],
+  ['acadName', 'หัวหน้างานวิชาการ: ชื่อ'], ['acadPos', 'หัวหน้างานวิชาการ: ตำแหน่ง'], ['measName', 'หัวหน้างานวัดผล: ชื่อ'], ['measPos', 'หัวหน้างานวัดผล: ตำแหน่ง'],
+  ['depName', 'รองฯ ฝ่ายวิชาการ: ชื่อ'], ['depPos', 'รองฯ ฝ่ายวิชาการ: ตำแหน่ง'], ['hrName', 'รองฯ ฝ่ายบุคคล: ชื่อ'], ['hrPos', 'รองฯ ฝ่ายบุคคล: ตำแหน่ง'],
+  ['dirName', 'ผู้อำนวยการ: ชื่อ'], ['dirPos', 'ผู้อำนวยการ: ตำแหน่ง'],
+  ['h', 'ค่าเริ่มต้นรายวิชา'], ['subj', 'รายวิชา'], ['code', 'รหัสวิชา'], ['en', 'ชื่อภาษาอังกฤษ + รหัส', 1], ['grade', 'ชั้น'], ['term', 'ภาคเรียน'], ['year', 'ปีการศึกษา'],
+];
+const FP_DEF = (() => { const c = id => (COURSE_F.find(f => f[0] === id) || [])[2] || ''; return {
+  school: SCHOOL, amphoe: AMPHOE, aff: AFF, memoNo: 'ศธ ๐๔๓๑๒.๐๓/', meName: PPL.me[0], mePos: PPL.me[1], group: c('group'),
+  headName: PPL.head[0], headPos: PPL.head[1], acadName: PPL.acad[0], acadPos: PPL.acad[1], measName: PPL.meas[0], measPos: PPL.meas[1],
+  depName: PPL.dep[0], depPos: PPL.dep[1], hrName: PPL.hr[0], hrPos: PPL.hr[1], dirName: PPL.dir[0], dirPos: PPL.dir[1],
+  subj: c('subj'), code: c('code'), en: c('en'), grade: c('grade'), term: c('term'), year: c('year') }; })();
+let FP = (() => { try { return JSON.parse(localStorage.getItem('np-fprof') || 'null'); } catch (e) { return null; } })();
+const fp = k => (FP && FP[k] !== undefined && FP[k] !== '' ? FP[k] : FP_DEF[k]);
+function fpApply() {
+  SCHOOL = fp('school'); AMPHOE = fp('amphoe'); AFF = fp('aff');
+  PPL.me = [fp('meName'), fp('mePos')]; PPL.head = [fp('headName'), fp('headPos')]; PPL.acad = [fp('acadName'), fp('acadPos')]; PPL.acad2 = [fp('acadName'), PPL.acad2 ? PPL.acad2[1] : fp('acadPos')];
+  PPL.meas = [fp('measName'), fp('measPos')]; PPL.dep = [fp('depName'), fp('depPos')]; PPL.hr = [fp('hrName'), fp('hrPos')]; PPL.dir = [fp('dirName'), fp('dirPos')];
+  const map = { subj: 'subj', code: 'code', en: 'en', grade: 'grade', term: 'term', year: 'year', teacher: 'meName', pos: 'mePos', group: 'group' };
+  COURSE_F.forEach(f => { if (map[f[0]]) f[2] = fp(map[f[0]]); });
+  const d = $('#dLP'); if (d) d.remove(); // ตัวสร้างแผนจะสร้างใหม่พร้อมค่าใหม่
+}
+fpApply();
+// ช่อง “ที่” ในบันทึกข้อความ + เลขหนังสือในหัวบันทึกที่สร้าง
+(function () {
+  const _dd = docDlg;
+  docDlg = function (title, fields, build, note) {
+    const F = fields.map(f => f[0] === 'no' && typeof f[2] === 'string' ? [f[0], f[1], f[2].replace('ศธ ๐๔๓๑๒.๐๓/', fp('memoNo')), ...f.slice(3)] : f);
+    const B = V => { const r = build(V); (r && r.blocks || []).forEach(b => { if (b.t === 'memohead' && typeof b.no === 'string') b.no = b.no.replace('ศธ ๐๔๓๑๒.๐๓/', esc(fp('memoNo'))); }); return r; };
+    const r = _dd(title, F, B, note);
+    const act = $('#dDoc .actions'); if (act && !$('#ddProf')) { const x = document.createElement('button'); x.className = 'tb'; x.id = 'ddProf'; x.style.marginRight = 'auto'; x.textContent = '⚙︎ ตั้งค่าข้อมูลแบบฟอร์ม'; x.title = 'ชื่อโรงเรียน ครู ผู้ลงนาม ค่าเริ่มต้นรายวิชา'; x.onclick = () => { closeDlg('#dDoc'); openFormProfile(); }; act.prepend(x); }
+    return r;
+  };
+  // ตัวสร้างแผนการจัดการเรียนรู้: ค่าเริ่มต้น + ชื่อผู้ลงนามความเห็น
+  const _lpd = lpDlg;
+  lpDlg = function () {
+    const had = !!$('#dLP'); const r = _lpd.apply(this, arguments); if (had) return r;
+    const set = (id, v) => { const e = $('#' + id); if (e && v) e.value = v; };
+    set('lpSubj', fp('subj')); set('lpGrade', fp('grade')); set('lpTerm', fp('term')); set('lpYear', fp('year')); set('lpTeacher', fp('meName')); set('lpPos', fp('mePos'));
+    const act = $('#dLP .actions'); if (act) { const x = document.createElement('button'); x.className = 'tb'; x.style.marginRight = 'auto'; x.textContent = '⚙︎ ตั้งค่าข้อมูลแบบฟอร์ม'; x.onclick = () => { closeDlg('#dLP'); openFormProfile(); }; act.prepend(x); }
+    return r;
+  };
+  const _lb = lpBuild;
+  lpBuild = function (fresh) {
+    const keep = new Set(fresh ? [] : doc.blocks.map(b => b.id)); const r = _lb.apply(this, arguments);
+    if (!FP) return r; let n = 0;
+    doc.blocks.forEach(b => {
+      if (keep.has(b.id) || b.t !== 'lpsign' || !/^\(\.+\)$/.test(b.name || '')) return;
+      if (/^หัวหน้ากลุ่มสาระ/.test(b.pos || '')) { b.name = `(${esc(fp('headName'))})`; b.pos = esc(fp('headPos')); n++; }
+      else if (/^ผู้อำนวยการ/.test(b.pos || '')) { b.name = `(${esc(fp('dirName'))})`; b.pos = esc(fp('dirPos')); n++; }
+    });
+    if (n) { renderAll(); changed(true); }
+    return r;
+  };
+})();
+function openFormProfile() {
+  let d = $('#dFP');
+  if (!d) { d = document.createElement('div'); d.className = 'dlg-back'; d.id = 'dFP'; d.innerHTML = `<div class="dlg" style="width:760px;max-height:92vh;overflow:auto"><h3>ข้อมูลประจำแบบฟอร์ม</h3><p class="hint" style="margin:-4px 0 4px">กรอกครั้งเดียว แบบฟอร์มทุกชนิด (แผนการสอน ปกแผน กำหนดการ บันทึกข้อความ โครงงาน ข้อสอบ) จะเติมค่าเหล่านี้ให้อัตโนมัติ · ซิงก์ผ่าน Google Drive ใช้ได้ทุกเครื่อง</p><div id="fpBody"></div>
+<div class="actions"><button class="tb" id="fpReset" style="margin-right:auto">คืนค่าเดิมของแอป</button><button class="tb" id="fpNo">ยกเลิก</button><button class="tb primary" id="fpOk">บันทึก</button></div></div>`; document.body.appendChild(d);
+    $('#fpNo').onclick = () => closeDlg('#dFP');
+    $('#fpReset').onclick = async () => { if (!(await ask('คืนค่าเดิม', '<p>ล้างข้อมูลแบบฟอร์มที่ตั้งไว้ กลับไปใช้ค่าเดิมของแอปใช่ไหม?</p>', 'คืนค่าเดิม'))) return; FP = null; fpSave(); fpApply(); fpFill(); toast('คืนค่าเดิมแล้ว'); };
+    $('#fpOk').onclick = () => { const o = {}; FP_FIELDS.forEach(([k]) => { if (k === 'h') return; const v = $('#fp_' + k).value.trim(); if (v && v !== FP_DEF[k]) o[k] = v; }); o.mod = Date.now(); FP = o; fpSave(); fpApply(); closeDlg('#dFP'); toast('บันทึกข้อมูลแบบฟอร์มแล้ว · แบบฟอร์มที่เปิดครั้งถัดไปจะใช้ค่าใหม่'); };
+  }
+  fpFill(); openDlg('#dFP');
+}
+function fpFill() {
+  let h = '', open = false;
+  FP_FIELDS.forEach(([k, lab, w]) => { if (k === 'h') { if (open) h += '</div>'; h += `<h4>${lab}</h4><div class="fpg">`; open = true; return; } h += `<label class="${w ? 'w' : ''}">${lab}<input id="fp_${k}" value="${esc(fp(k))}"></label>`; });
+  $('#fpBody').innerHTML = h + (open ? '</div>' : '');
+}
+function fpSave() { try { if (FP) localStorage.setItem('np-fprof', JSON.stringify(FP)); else localStorage.removeItem('np-fprof'); } catch (e) { } tpSyncProfileUp(); }
+
+/* ---------- แม่แบบของฉัน ---------- */
+const TP = { list: [], loaded: false };
+async function tpLoad() { if (TP.loaded) return; try { TP.list = (await tabIdbGet('mytpl')) || []; } catch (e) { TP.list = []; } TP.loaded = true; }
+async function tpStore() { try { await tabIdbSet('mytpl', TP.list); } catch (e) { toast('บันทึกแม่แบบในเครื่องไม่สำเร็จ: ' + (e.message || e)); } }
+function tpSnapshot() { const d = JSON.parse(JSON.stringify({ settings: doc.settings, blocks: doc.blocks })); delete d.settings.cloud; return d; }
+async function tpSaveCurrent(replaceId) {
+  await tpLoad(); const old = replaceId && TP.list.find(t => t.id === replaceId);
+  if (!old) {
+    const ok = await ask('บันทึกเป็นแม่แบบของฉัน', `<div class="row"><label for="tpName" style="width:90px">ชื่อแม่แบบ</label><input type="text" id="tpName" style="flex:1" value="${esc(doc.settings.name || 'แม่แบบของฉัน')}"></div>
+<div class="row"><label for="tpDesc" style="width:90px">คำอธิบาย</label><input type="text" id="tpDesc" style="flex:1" placeholder="เช่น ใบงานคาบเรียน ม.5 แบบมีตาราง"></div>
+<p class="hint">เก็บทั้งหน้าตา ตั้งค่าหน้า หัว/ท้ายกระดาษ และเนื้อหาทั้งหมดของงานนี้ · ลบหรือแก้ข้อความตัวอย่างออกก่อนบันทึกได้</p>`, 'บันทึกแม่แบบ');
+    if (!ok) return; const name = ($('#tpName').value || '').trim() || 'แม่แบบของฉัน', desc = ($('#tpDesc').value || '').trim();
+    TP.list.unshift({ id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, desc, mod: Date.now(), doc: tpSnapshot() });
+    toast(`บันทึกแม่แบบ “${name}” แล้ว · เลือกใช้ได้ที่ “ใหม่ → แม่แบบของฉัน”`);
+  } else {
+    if (!(await ask('แทนที่แม่แบบ', `<p>แทนที่แม่แบบ “${esc(old.name)}” ด้วยงานที่เปิดอยู่ตอนนี้ใช่ไหม?</p>`, 'แทนที่'))) return;
+    old.doc = tpSnapshot(); old.mod = Date.now(); old.synced = false; toast('อัปเดตแม่แบบแล้ว');
+  }
+  await tpStore(); tpSyncUp(); if ($('#dTpl.open')) openTemplates();
+}
+function tpUse(t) {
+  let s = JSON.stringify(t.doc); const ids = (t.doc.blocks || []).map(b => b.id).filter(Boolean);
+  ids.forEach(id => { s = s.split('"' + id + '"').join('"' + uid() + '"'); });
+  const d = JSON.parse(s); closeDlg('#dTpl');
+  doc = { app: 'en-editor', v: 2, settings: Object.assign(sampleDoc().settings, d.settings || {}, { name: t.name }), blocks: d.blocks || [] };
+  curId = null; applySettings(); renderAll(); changed(true); refreshInspector(); $('#scroller').scrollTop = 0;
+  if (typeof clStatus === 'function') clStatus(); toast(`สร้างงานใหม่จากแม่แบบ “${t.name}” แล้ว`);
+}
+function tpMenu(btn, t) {
+  $$('.cl-menu').forEach(m => m.remove()); const m = document.createElement('div'); m.className = 'cl-menu';
+  m.innerHTML = [['use', '▶ ใช้แม่แบบนี้'], ['ren', '✎ เปลี่ยนชื่อ / คำอธิบาย'], ['rep', '⟳ แทนที่ด้วยงานที่เปิดอยู่'], ['del', '🗑 ลบแม่แบบ']].map(([k, x]) => `<button data-m="${k}">${x}</button>`).join('');
+  document.body.appendChild(m); const r = btn.getBoundingClientRect(); m.style.top = Math.min(innerHeight - 180, r.bottom + 4) + 'px'; m.style.left = Math.max(8, r.right - 220) + 'px'; m.style.zIndex = 10000;
+  const off = ev => { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('pointerdown', off, true); } }; setTimeout(() => document.addEventListener('pointerdown', off, true), 0);
+  m.onclick = async ev => {
+    const k = ev.target.dataset.m; if (!k) return; m.remove();
+    if (k === 'use') tpUse(t);
+    if (k === 'rep') tpSaveCurrent(t.id);
+    if (k === 'ren') { const ok = await ask('แก้ไขแม่แบบ', `<div class="row"><label for="tpName" style="width:90px">ชื่อ</label><input type="text" id="tpName" style="flex:1" value="${esc(t.name)}"></div><div class="row"><label for="tpDesc" style="width:90px">คำอธิบาย</label><input type="text" id="tpDesc" style="flex:1" value="${esc(t.desc || '')}"></div>`, 'บันทึก'); if (!ok) { openDlg('#dTpl'); return; } t.name = ($('#tpName').value || '').trim() || t.name; t.desc = ($('#tpDesc').value || '').trim(); t.mod = Date.now(); t.synced = false; await tpStore(); tpSyncUp(); openTemplates(); }
+    if (k === 'del') { const ok = await ask('ลบแม่แบบ', `<p>ลบแม่แบบ “${esc(t.name)}” ใช่ไหม?</p><p class="hint">งานที่เคยสร้างจากแม่แบบนี้ไม่ได้รับผลกระทบ${t.drive ? ' · ไฟล์ใน Google Drive จะถูกย้ายไปถังขยะ (กู้คืนได้ภายใน 30 วัน)' : ''}</p>`, 'ลบ'); if (!ok) { openDlg('#dTpl'); return; } TP.list = TP.list.filter(x => x !== t); await tpStore(); if (t.drive && CLD.user && tokOk()) { try { await gd(DRIVE + '/' + t.drive, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); } catch (e) { } } openTemplates(); toast('ลบแม่แบบแล้ว'); }
+  };
+}
+(function () {
+  const _ot = openTemplates;
+  openTemplates = function () {
+    _ot.apply(this, arguments);
+    const box = $('#tplList'); if (!box) return;
+    const sec = document.createElement('div'); sec.className = 'tplg tplmine';
+    const render = () => {
+      const L = TP.list;
+      sec.innerHTML = `<div class="tplgh"><b>แม่แบบของฉัน</b><span>งานที่บันทึกไว้เป็นแม่แบบ · ซิงก์ทุกเครื่องผ่าน Google Drive</span></div>
+<div class="tplbar"><button class="tb" data-tp="save">＋ บันทึกงานที่เปิดอยู่เป็นแม่แบบ</button><button class="tb" data-tp="prof">⚙︎ ตั้งค่าข้อมูลแบบฟอร์ม (โรงเรียน ครู ผู้ลงนาม)</button></div>
+${L.length ? `<div class="tplgrid">${L.map((t, i) => `<button class="tplc" data-my="${i}">${tplThumb('blank')}<div class="tpltx"><b>${esc(t.name)}</b><span>${esc(t.desc || ((t.doc.blocks || []).length + ' ส่วน'))}</span></div><span class="tplm" data-tpm="${i}" title="จัดการแม่แบบ">⋯</span></button>`).join('')}</div>` : '<div class="tplempty">ยังไม่มี · จัดหน้างานให้ถูกใจ แล้วกด “บันทึกงานที่เปิดอยู่เป็นแม่แบบ”</div>'}`;
+    };
+    render(); box.prepend(sec);
+    tpLoad().then(() => { render(); tpSyncDown().then(n => { if (n) render(); }); });
+    sec.addEventListener('click', e => {
+      e.stopPropagation();
+      const a = e.target.closest('[data-tp]'); if (a) { if (a.dataset.tp === 'save') { closeDlg('#dTpl'); tpSaveCurrent(); } else { closeDlg('#dTpl'); openFormProfile(); } return; }
+      const mm = e.target.closest('[data-tpm]'); if (mm) { tpMenu(mm, TP.list[+mm.dataset.tpm]); return; }
+      const c = e.target.closest('[data-my]'); if (c) tpUse(TP.list[+c.dataset.my]);
+    });
+  };
+})();
+
+/* ---------- ซิงก์ผ่าน Google Drive ---------- */
+const tpOn = () => typeof CLD !== 'undefined' && CLD.user && tokOk() && navigator.onLine;
+async function tpUpload(driveId, md, obj) {
+  const bd = 'np' + Math.random().toString(36).slice(2);
+  const body = new Blob([`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(md)}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n`, JSON.stringify(obj), `\r\n--${bd}--`]);
+  return gd((driveId ? DUP + '/' + driveId : DUP) + '?uploadType=multipart&fields=id', { method: driveId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + bd }, body });
+}
+async function tpSyncUp() {
+  if (!tpOn()) return; await tpLoad();
+  try {
+    const root = await ensureRoot(); let ch = false;
+    for (const t of TP.list.filter(x => !x.synced)) {
+      const md = { name: 'แม่แบบ ' + t.name + '.nptpl', mimeType: 'application/json', appProperties: { np: 'tpl', tid: t.id, mod: String(t.mod || 0) } }; if (!t.drive) md.parents = [root];
+      const o = Object.assign({}, t); delete o.drive; delete o.synced;
+      const r = await tpUpload(t.drive, md, o); t.drive = r.id; t.synced = true; ch = true;
+    }
+    if (ch) await tpStore();
+  } catch (e) { console.warn('tpl sync up', e); }
+}
+async function tpSyncDown() {
+  if (!tpOn()) return 0; await tpLoad(); let got = 0;
+  try {
+    const r = await gd(DRIVE + '?' + gq({ q: "appProperties has { key='np' and value='tpl' } and trashed=false", fields: 'files(id,appProperties)', spaces: 'drive', pageSize: 200 }));
+    const files = r.files || [], seen = new Set(files.map(f => f.id));
+    // แม่แบบที่ถูกลบจากอีกเครื่อง
+    const before = TP.list.length; TP.list = TP.list.filter(t => !t.drive || seen.has(t.drive) || !t.synced); if (TP.list.length !== before) got++;
+    for (const f of files) {
+      const a = f.appProperties || {}; const have = TP.list.find(t => t.id === a.tid);
+      if (have && (have.mod || 0) >= (+a.mod || 0)) { if (!have.drive) { have.drive = f.id; have.synced = true; } continue; }
+      const t = await gd(DRIVE + '/' + f.id + '?alt=media'); if (!t || !t.doc) continue;
+      t.drive = f.id; t.synced = true; TP.list = TP.list.filter(x => x.id !== t.id); TP.list.push(t); got++;
+    }
+    TP.list.sort((x, y) => (y.mod || 0) - (x.mod || 0)); if (got) await tpStore();
+    tpSyncUp();
+  } catch (e) { console.warn('tpl sync down', e); }
+  return got;
+}
+async function tpSyncProfileUp() {
+  if (!tpOn()) return;
+  try {
+    const r = await gd(DRIVE + '?' + gq({ q: "appProperties has { key='np' and value='prof' } and trashed=false", fields: 'files(id)', spaces: 'drive' }));
+    const id = r.files && r.files[0] && r.files[0].id; const md = { name: 'ข้อมูลแบบฟอร์ม.npprof', mimeType: 'application/json', appProperties: { np: 'prof', mod: String((FP && FP.mod) || Date.now()) } };
+    if (!id) md.parents = [await ensureRoot()];
+    await tpUpload(id, md, FP || { mod: Date.now(), reset: true });
+  } catch (e) { console.warn('prof sync', e); }
+}
+async function tpSyncProfileDown() {
+  if (!tpOn()) return;
+  try {
+    const r = await gd(DRIVE + '?' + gq({ q: "appProperties has { key='np' and value='prof' } and trashed=false", fields: 'files(id,appProperties)', spaces: 'drive' }));
+    const f = r.files && r.files[0]; if (!f) { if (FP) tpSyncProfileUp(); return; }
+    const m = +(f.appProperties || {}).mod || 0; if (FP && (FP.mod || 0) >= m) { if ((FP.mod || 0) > m) tpSyncProfileUp(); return; }
+    const p = await gd(DRIVE + '/' + f.id + '?alt=media'); FP = p && !p.reset ? p : null;
+    try { if (FP) localStorage.setItem('np-fprof', JSON.stringify(FP)); else localStorage.removeItem('np-fprof'); } catch (e) { }
+    fpApply();
+  } catch (e) { console.warn('prof sync down', e); }
+}
+(function () {
+  if (typeof clRefresh === 'function') { const _r = clRefresh; clRefresh = async function () { const x = await _r.apply(this, arguments); tpSyncProfileDown(); tpSyncDown(); return x; }; }
+  if (typeof CLD !== 'undefined' && CLD.loaded) { tpSyncProfileDown(); tpSyncDown(); }
 })();
 </script>
 </body>
