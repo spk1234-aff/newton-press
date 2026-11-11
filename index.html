@@ -7943,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794389901';
+const NP_BUILD = '1794390422';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10311,6 +10311,67 @@ function lyAutoFlow() {
   return n;
 }
 ['exportPDF', 'exportPrintPDF'].forEach(k => { const f = window[k]; if (typeof f !== 'function') return; window[k] = function () { lyAutoFlow(); return f.apply(this, arguments); }; });
+
+/* ===== PDF แบบภาพ: ล็อกการตัดบรรทัดให้ตรงกับบนจอทุกบรรทัด =====
+   ภาพ SVG วาดตัวอักษรกว้าง/แคบต่างจากจอเล็กน้อย ทำให้คำท้ายบรรทัดเด้งขึ้น/ลง → ใส่ตัวขึ้นบรรทัด ณ ตำแหน่งเดียวกับจอ แล้วห้ามตัดบรรทัดเอง */
+function npFreezeLines() {
+  const flow = $('#flow'); if (!flow) return () => { };
+  const BLK = /^(DIV|LI|TD|TH|P|OL|UL|TR|TABLE|TBODY|H\d|BLOCKQUOTE|FIGURE)$/;
+  const marks = [], conts = new Map();
+  let prevB = null, prevCont = null;
+  const contOf = n => { let e = n.nodeType === 3 ? n.parentElement : n.parentElement; while (e && e !== flow && !BLK.test(e.tagName)) e = e.parentElement; return e; };
+  const plan = []; // [node, offset] หรือ [element, -1] = ใส่ก่อน element
+  const R = document.createRange();
+  const atom = (node, top, bot, cont, off) => {
+    if (prevB !== null && cont === prevCont && top >= prevB) plan.push([node, off, cont]);
+    prevB = (top + bot) / 2; prevCont = cont;
+  };
+  const walk = el => {
+    for (let c = el.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 3) { if (c.nodeValue.length) handleText(c); continue; }
+      if (c.nodeType !== 1) continue;
+      if (c.matches('.tools,.grip,.wh,.band,.dropline,svg,canvas,style,script')) continue;
+      if (c.tagName === 'BR') { prevB = null; continue; }
+      if (c.matches('.mx,.katex,img')) { const r = c.getBoundingClientRect(); if (r.height) atom(c, r.top, r.bottom, contOf(c), -1); continue; }
+      if (BLK.test(c.tagName)) { prevB = null; walk(c); prevB = null; continue; }
+      walk(c);
+    }
+  };
+  $$('#flow > .blk').forEach(b => { prevB = null; walk(b); });
+  function handleText(t) {
+    const len = t.nodeValue.length; R.selectNodeContents(t); const rs = [...R.getClientRects()].filter(r => r.height > 0); if (!rs.length) return;
+    const cont = contOf(t);
+    const ct = i => { R.setStart(t, i); R.setEnd(t, Math.min(len, i + 1)); const q = [...R.getClientRects()].filter(r => r.height > 0); return q.length ? q[q.length - 1] : null; };
+    // จุดเริ่ม
+    const f = ct(0) || rs[0]; atom(t, f.top, f.bottom, cont, 0);
+    let lo0 = 1;
+    for (let k = 1; k < rs.length; k++) {
+      if (rs[k].top < (rs[k - 1].top + rs[k - 1].bottom) / 2) continue; // ชิ้นบนบรรทัดเดียวกัน
+      let lo = lo0, hi = len - 1, ans = -1;
+      while (lo <= hi) { const m = (lo + hi) >> 1, r = ct(m); if (r && r.top >= (rs[k - 1].top + rs[k - 1].bottom) / 2) { ans = m; hi = m - 1; } else lo = m + 1; }
+      if (ans > 0) { plan.push([t, ans, cont]); lo0 = ans + 1; }
+    }
+    const l = ct(len - 1) || rs[rs.length - 1]; prevB = (l.top + l.bottom) / 2; prevCont = cont;
+  }
+  // ใส่ <br> จากท้ายไปต้น (offset ไม่เพี้ยน)
+  for (let i = plan.length - 1; i >= 0; i--) {
+    const [node, off, cont] = plan[i]; const br = document.createElement('br'); br.className = 'npfx';
+    try {
+      if (off <= 0) node.parentNode.insertBefore(br, node);
+      else { const rest = node.splitText(off); rest.parentNode.insertBefore(br, rest); }
+      marks.push(br); if (cont && !conts.has(cont)) conts.set(cont, cont.style.whiteSpace);
+    } catch (e) { }
+  }
+  conts.forEach((v, c) => { c.style.whiteSpace = 'pre'; });
+  return () => {
+    const par = new Set(); marks.forEach(b => { if (b.parentNode) { par.add(b.parentNode); b.remove(); } });
+    par.forEach(p => p.normalize()); conts.forEach((v, c) => { c.style.whiteSpace = v; if (!c.getAttribute('style')) c.removeAttribute('style'); });
+  };
+}
+if (typeof pageRenderer === 'function') {
+  const _pr = pageRenderer;
+  pageRenderer = function () { let undo = () => { }; try { undo = npFreezeLines(); } catch (e) { console.warn('freeze', e); } let p; try { p = _pr.apply(this, arguments); } finally { undo(); } return p; };
+}
 </script>
 </body>
 </html>
