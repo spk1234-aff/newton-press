@@ -7943,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794385639';
+const NP_BUILD = '1794388252';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10283,6 +10283,24 @@ insertAfterSel = function (blocks) {
   const go = () => { const el = $(`.blk[data-id="${blocks[blocks.length - 1].id}"]`); if (!el) return; const sc = $('#scroller'), r = el.getBoundingClientRect(), cr = sc.getBoundingClientRect(); if (r.bottom > cr.bottom - 20) sc.scrollTop += r.bottom - cr.bottom + 40; else if (r.top < cr.top + 20) sc.scrollTop -= cr.top - r.top + 40; };
   setTimeout(go, 180);
 };
+
+/* ===== Enter ในช่องตาราง = ขึ้นบรรทัดใหม่ในช่องเดิม (ไม่กระโดดออก ไม่เลื่อนหน้า) · Tab = ไปช่องถัดไป ===== */
+addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing || e.altKey || e.metaKey || e.ctrlKey) return;
+  const td = e.target.closest && e.target.closest('#flow td[data-cell][contenteditable="true"]'); if (!td) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const sc = $('#scroller'), y = sc ? sc.scrollTop : 0;
+  if (!document.execCommand('insertLineBreak')) {
+    const s = getSelection(); if (!s.rangeCount) return; const r = s.getRangeAt(0); r.deleteContents();
+    const br = document.createElement('br'); r.insertNode(br);
+    if (!br.nextSibling || (br.nextSibling.nodeType === 3 && !br.nextSibling.nodeValue)) br.after(document.createElement('br'));
+    r.setStartAfter(br); r.collapse(true); s.removeAllRanges(); s.addRange(r); td.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  const keep = () => { if (!sc) return; const s = getSelection(); const rc = s.rangeCount && s.getRangeAt(0).getBoundingClientRect(); const box = sc.getBoundingClientRect();
+    if (Math.abs(sc.scrollTop - y) > 2) { const old = sc.scrollTop; sc.scrollTop = y; const r2 = s.rangeCount && s.getRangeAt(0).getBoundingClientRect(); if (r2 && r2.height && (r2.bottom > box.bottom - 10 || r2.top < box.top)) sc.scrollTop = old; }
+    else if (rc && rc.height && rc.bottom > box.bottom - 10) sc.scrollTop += rc.bottom - box.bottom + 40; };
+  requestAnimationFrame(keep); setTimeout(keep, 120); setTimeout(keep, 450);
+}, true);
 </script>
 </body>
 </html>
