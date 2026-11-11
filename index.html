@@ -1015,7 +1015,7 @@ function layoutChoices(el, b) {
   g.style.justifyContent = 'start';
 }
 function buildTable(el, b) {
-  if (typeof buildTableX === 'function' && (b.rs || b.full || b.cw || b.al || b.mg || b.nob || b.tw || b.rh || b.rha || b.pad || b.tfs)) return buildTableX(el, b);
+  if (typeof buildTableX === 'function' && (b.rs || b.full || b.cw || b.al || b.mg || b.bd || b.nob || b.tw || b.rh || b.rha || b.pad || b.tfs)) return buildTableX(el, b);
   const w = $('.b-table', el);
   const rows = b.rows || [['', ''], ['', '']];
   w.innerHTML = '<table>' + rows.map((r, i) => '<tr>' + r.map((c, j) => `<td contenteditable="true" data-cell="${i},${j}"></td>`).join('') + '</tr>').join('') + '</table>';
@@ -6029,7 +6029,7 @@ buildTableX = function (el, b) {
 };
 const _tXMLp = tableXML;
 tableXML = function (b, C, keep) {
-  if ((!b.mg || !Object.keys(b.mg).length) && !b.nob && !b.tw && !b.rh && !b.rha && !b.pad && !b.tfs) return _tXMLp(b, C, keep); if (typeof cOver === 'function') C = cOver(b, C);
+  if ((!b.mg || !Object.keys(b.mg).length) && !b.bd && !b.nob && !b.tw && !b.rh && !b.rha && !b.pad && !b.tfs) return _tXMLp(b, C, keep); if (typeof cOver === 'function') C = cOver(b, C);
   // สร้างจากตารางเดิมแล้วแทนที่เซลล์ที่ถูกรวม
   const rows = b.rows || []; const n = Math.max(...rows.map(r => r.length)); const rs = b.rs || { 0: 'L' }; const W = b.full ? DX.cw : b.tw ? DX.cw * Math.min(100, +b.tw) / 100 : Math.min(DX.cw, n * 1700); const cw = cwOf(b); const fs = +b.tfs || 1, PAD = { s: [10, 20, 60], l: [80, 100, 180] }[b.pad] || [40, 60, 140];
   const cols = cw ? Array.from({ length: n }, (_, j) => (cw[j] || cw[cw.length - 1])).map((x, _, a) => W * x / a.reduce((s, y) => s + y, 0)) : Array(n).fill(W / n);
@@ -6041,7 +6041,7 @@ tableXML = function (b, C, keep) {
     const cells = []; for (let j = 0; j < n; j++) { const k = `${i},${j}`;
       if (vOwner[k]) { const cs = vOwner[k]; cells.push(cell(para([]), Object.assign({ w: cols.slice(j, j + cs).reduce((a, x) => a + x, 0), span: cs > 1 ? cs : 0, vm: 'continue' }, o))); j += cs - 1; continue; }
       if (cover.has(k)) continue; const sp = span[k] || [1, 1];
-      cells.push(cell(htmlParas(r[j] || '', base).map(p => para(p.runs, { jc: st ? 'center' : jc(j), after: 0, keep })).join(''), Object.assign({ w: cols.slice(j, j + sp[1]).reduce((a, x) => a + x, 0), span: sp[1] > 1 ? sp[1] : 0, vm: sp[0] > 1 ? 'restart' : '' }, o))); j += sp[1] - 1; }
+      cells.push(cell(htmlParas(r[j] || '', base).map(p => para(p.runs, { jc: st ? 'center' : jc(j), after: 0, keep })).join(''), Object.assign({ w: cols.slice(j, j + sp[1]).reduce((a, x) => a + x, 0), span: sp[1] > 1 ? sp[1] : 0, vm: sp[0] > 1 ? 'restart' : '' }, o, typeof bdWordO === 'function' ? bdWordO(b, k, o) : {}))); j += sp[1] - 1; }
     return cells; });
   const rh = (b.rows || []).map((_, i) => ((b.rh || {})[i] || +b.rha || 0) * 56.7);
   return table(out, { w: W, cols, center: !b.full, hdr: docHdrN(b), rh });
@@ -7942,7 +7942,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794370177';
+const NP_BUILD = '1794377220';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9018,7 +9018,7 @@ document.addEventListener('pointerdown', e => {
   if (e.button !== 0) { return; }
   if (e.target.closest && e.target.closest('#tsbar')) return;
   const td = pgCellOf(e.target);
-  if (!td) { if (PG.ts) pgCellClear(); return; }
+  if (!td) { if (PG.ts && !(e.target.closest && e.target.closest('#insp'))) pgCellClear(); return; }
   const id = td.closest('.blk').dataset.id, ij = td.dataset.cell.split(',').map(Number);
   if (e.shiftKey && PG.ts && PG.ts.id === id) { e.preventDefault(); PG.ts.z = ij; pgPaintCells(); return; }
   PG.ts = { id, a: ij, z: null, down: true, td }; pgPaintCells();
@@ -9995,6 +9995,127 @@ async function flAddFiles(files) {
   extInspector = function (b) { let h = _ex(b); if (b.t === 'image' || b.t === 'figure') h += `<div class="ir"><button class="tb" data-flx="1" title="ลากไปวางตรงไหนก็ได้บนหน้ากระดาษ ไม่ดันข้อความ">✥ วางอิสระ (ลากไปไหนก็ได้)</button></div>`; return h; };
   document.addEventListener('click', e => { const x = e.target.closest && e.target.closest('[data-flx]'); if (!x || !curId) return; e.preventDefault(); flFromBlock(curId); }, true);
 })();
+
+/* ===================== เส้นขอบตารางแบบ Pages + บันทึกไฟล์ลงเครื่อง ===================== */
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `.bdg{display:grid;grid-template-columns:repeat(3,34px);gap:4px;padding:6px;border:1px solid var(--ui-line);border-radius:10px;background:#fff;width:max-content}
+.bdg button{width:34px;height:30px;border:1px solid transparent;border-radius:6px;background:none;cursor:pointer;padding:0;display:grid;place-items:center}.bdg button:hover{background:#f3ece4;border-color:var(--ui-line)}
+.bdrow{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}.bdopt{display:flex;flex-direction:column;gap:6px;min-width:150px;flex:1}.bdopt select,.bdopt input[type=number]{font:inherit;font-size:15px}
+.bdopt .bdc{display:flex;gap:4px;align-items:center;flex-wrap:wrap}.bdopt .bdc .sw{width:20px;height:20px;border-radius:50%;border:1px solid #0002;cursor:pointer;padding:0}.bdopt .bdc .sw.on{box-shadow:0 0 0 2px var(--ui-accent)}`;
+  document.head.appendChild(s);
+})();
+const BD = { st: 'solid', pt: 0.5, c: '#000000' };
+const BD_ST = [['solid', 'เส้นทึบ'], ['dashed', 'เส้นประ'], ['dotted', 'เส้นจุด'], ['double', 'เส้นคู่'], ['none', 'ไม่มีเส้น']];
+// ไอคอนปุ่มเลือกขอบ (ขอบที่จะถูกตั้ง = เส้นเข้ม)
+function bdIcon(k) {
+  const on = { all: 'tlbrvh', inner: 'vh', outer: 'tlbr', l: 'l', iv: 'v', r: 'r', t: 't', ih: 'h', b: 'b' }[k];
+  const L = (x1, y1, x2, y2, c) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${on.includes(c) ? '#222' : '#c9c1b9'}" stroke-width="${on.includes(c) ? 1.8 : 1}"/>`;
+  return `<svg width="22" height="22" viewBox="0 0 22 22">${L(2, 2, 20, 2, 't')}${L(2, 20, 20, 20, 'b')}${L(2, 2, 2, 20, 'l')}${L(20, 2, 20, 20, 'r')}${L(11, 2, 11, 20, 'v')}${L(2, 11, 20, 11, 'h')}</svg>`;
+}
+const BD_KEYS = [['all', 'ทุกเส้น'], ['inner', 'เส้นด้านใน'], ['outer', 'เส้นรอบนอก'], ['l', 'ขอบซ้าย'], ['iv', 'เส้นแนวตั้งด้านใน'], ['r', 'ขอบขวา'], ['t', 'ขอบบน'], ['ih', 'เส้นแนวนอนด้านใน'], ['b', 'ขอบล่าง']];
+(function () {
+  const _ex = extInspector;
+  extInspector = function (b) {
+    let h = _ex(b); if (b.t !== 'table') return h;
+    const sel = PG.ts && PG.ts.id === b.id && PG.ts.z && PG.ts.n > 1;
+    h += `<div class="sec">เส้นขอบ</div><div class="hint" style="margin:-2px 0 6px">${sel ? `ใช้กับช่องที่เลือก ${PG.ts.n} ช่อง` : 'ใช้กับทั้งตาราง · ลากคลุมช่องในตารางก่อน เพื่อตั้งเฉพาะบางช่อง'}</div>
+<div class="bdrow"><div class="bdg">${BD_KEYS.map(([k, t]) => `<button data-bdk="${k}" title="${t}">${bdIcon(k)}</button>`).join('')}</div>
+<div class="bdopt"><select data-bdo="st">${BD_ST.map(([v, t]) => `<option value="${v}"${BD.st === v ? ' selected' : ''}>${t}</option>`).join('')}</select>
+<label style="display:flex;gap:6px;align-items:center">ความหนา <input type="number" data-bdo="pt" min="0.25" max="6" step="0.25" value="${BD.pt}" style="width:70px"> pt</label>
+<div class="bdc">${['#000000', '#7a3e10', '#1f3864', '#2e8b57', '#c0392b', '#9a8576', '#ffffff'].map(c => `<button class="sw${BD.c === c ? ' on' : ''}" data-bdc="${c}" style="background:${c}" title="${c}"></button>`).join('')}<input type="color" data-bdo="c" value="${BD.c}" style="width:30px;height:24px;border:0;padding:0;background:none"></div>
+<button class="tb" data-bdx="1">ล้างเส้นที่ตั้งเอง${sel ? ' (ช่องที่เลือก)' : ''}</button></div></div>`;
+    return h;
+  };
+  document.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('.bdg, [data-bdc], [data-bdx]')) e.preventDefault(); }, true);
+  document.addEventListener('click', e => {
+    const t = e.target.closest && e.target.closest('[data-bdk], [data-bdc], [data-bdx]'); if (!t) return; const b = curId && byId(curId); if (!b || b.t !== 'table') return;
+    e.preventDefault(); e.stopPropagation();
+    if (t.dataset.bdc) { BD.c = t.dataset.bdc; $$('[data-bdc]').forEach(x => x.classList.toggle('on', x === t)); const ci = $('[data-bdo="c"]'); if (ci) ci.value = BD.c; return; }
+    if (t.dataset.bdx) { bdClear(b); return; }
+    bdApplyScope(b, t.dataset.bdk);
+  }, true);
+  document.addEventListener('change', e => { const d = e.target.dataset; if (!d || !d.bdo) return; e.stopImmediatePropagation(); BD[d.bdo] = d.bdo === 'pt' ? Math.max(0.25, +e.target.value || 0.5) : e.target.value; }, true);
+  document.addEventListener('input', e => { const d = e.target.dataset; if (d && d.bdo === 'c') BD.c = e.target.value; }, true);
+})();
+function bdGrid(b) { // เจ้าของช่อง (กรณีผสานเซลล์)
+  const rows = b.rows || [], n = Math.max(...rows.map(r => r.length)), own = {}; const { span } = tblSpans(b);
+  for (let i = 0; i < rows.length; i++) for (let j = 0; j < n; j++) own[i + ',' + j] = i + ',' + j;
+  Object.entries(span).forEach(([k, v]) => { const [i, j] = k.split(',').map(Number); for (let a = 0; a < v[0]; a++) for (let c = 0; c < v[1]; c++) own[(i + a) + ',' + (j + c)] = k; });
+  return { own, R: rows.length, C: n };
+}
+function bdRange(b) { const G = bdGrid(b); if (PG.ts && PG.ts.id === b.id && PG.ts.z && PG.ts.R) return Object.assign({}, PG.ts.R, { G }); return { r0: 0, r1: G.R - 1, c0: 0, c1: G.C - 1, G }; }
+function bdApplyScope(b, k) {
+  const X = bdRange(b), G = X.G, v = [BD.pt, BD.st, BD.c]; b.bd = b.bd || {}; let n = 0;
+  const S = { t: [-1, 0, 'b'], b: [1, 0, 't'], l: [0, -1, 'r'], r: [0, 1, 'l'] };
+  const inR = (i, j) => i >= X.r0 && i <= X.r1 && j >= X.c0 && j <= X.c1;
+  for (let i = X.r0; i <= X.r1; i++) for (let j = X.c0; j <= X.c1; j++) {
+    const me = G.own[i + ',' + j];
+    Object.entries(S).forEach(([side, [di, dj, opp]]) => {
+      const ni = i + di, nj = j + dj, nk = G.own[ni + ',' + nj]; if (nk === me) return; // ภายในช่องที่ผสาน
+      const outer = !inR(ni, nj) || nk === undefined, vert = side === 'l' || side === 'r';
+      const ok = k === 'all' || (k === 'outer' && outer) || (k === 'inner' && !outer) || (k === side && outer) || (k === 'iv' && !outer && vert) || (k === 'ih' && !outer && !vert); if (!ok) return;
+      (b.bd[me] = b.bd[me] || {})[side] = v; n++;
+      if (nk !== undefined) (b.bd[nk] = b.bd[nk] || {})[opp] = v;
+    });
+  }
+  if (!n) { toast('ไม่มีเส้นในตำแหน่งนี้ (เช่น เลือกช่องเดียวแล้วกดเส้นด้านใน)'); return; }
+  rerender(b.id); changed(true); schedulePaginate(); setTimeout(() => { if (PG.ts && PG.ts.id === b.id) pgPaintCells(); }, 30);
+}
+function bdClear(b) {
+  if (!b.bd) return; const X = bdRange(b), G = X.G, full = !(PG.ts && PG.ts.id === b.id && PG.ts.z);
+  if (full) delete b.bd; else { for (let i = X.r0; i <= X.r1; i++) for (let j = X.c0; j <= X.c1; j++) delete b.bd[G.own[i + ',' + j]]; if (!Object.keys(b.bd).length) delete b.bd; }
+  rerender(b.id); changed(true); toast('ล้างเส้นที่ตั้งเองแล้ว');
+}
+const bdCss = v => !v ? '' : v[1] === 'none' ? '0 none' : `${Math.max(v[1] === 'double' ? 3 : 0.5, v[0] * 1.3333).toFixed(2)}px ${v[1]} ${v[2]}`;
+const _btBd = buildTable;
+buildTable = function (el, b) {
+  const r = _btBd.apply(this, arguments); if (!b.bd) return r;
+  $$('td[data-cell]', el).forEach(td => { const o = b.bd[td.dataset.cell]; if (!o) return; if (o.t) td.style.borderTop = bdCss(o.t); if (o.b) td.style.borderBottom = bdCss(o.b); if (o.l) td.style.borderLeft = bdCss(o.l); if (o.r) td.style.borderRight = bdCss(o.r); });
+  return r;
+};
+// ส่งออก Word
+function bdWordO(b, k, o) {
+  const x = b.bd && b.bd[k]; if (!x) return {}; const def = side => b.nob ? `<w:${side} w:val="nil"/>` : `<w:${side} w:val="single" w:sz="4" w:color="${o.bc || 'CDB9AD'}"/>`;
+  const W = { solid: 'single', dashed: 'dashed', dotted: 'dotted', double: 'double', none: 'nil' };
+  const one = (side, v) => !v ? def(side) : v[1] === 'none' ? `<w:${side} w:val="nil"/>` : `<w:${side} w:val="${W[v[1]] || 'single'}" w:sz="${Math.max(2, Math.round(v[0] * 8))}" w:color="${String(v[2] || '#000').replace('#', '').toUpperCase()}"/>`;
+  return { border: one('top', x.t) + one('left', x.l) + one('bottom', x.b) + one('right', x.r) };
+}
+
+/* ---------- บันทึกไฟล์ลงเครื่อง (.json ของ Newton Press) ---------- */
+const LF = new WeakMap(); // เอกสาร → ไฟล์ในเครื่องที่บันทึกไว้ (Chrome เขียนทับไฟล์เดิมได้)
+async function saveLocal(asNew) {
+  const data = Object.assign({}, doc); delete data.cloud; const txt = JSON.stringify(data);
+  if (window.showSaveFilePicker) {
+    try {
+      let h = !asNew && LF.get(doc);
+      if (!h) { h = await showSaveFilePicker({ suggestedName: fname('json'), types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] }); LF.set(doc, h); const nm = (h.name || '').replace(/\.json$/i, ''); if (nm && nm !== doc.settings.name) { doc.settings.name = nm; changed(true); } }
+      const w = await h.createWritable(); await w.write(txt); await w.close();
+      toast(`บันทึกลงเครื่องแล้ว: ${h.name}`); return true;
+    } catch (e) { if (e && e.name === 'AbortError') return false; console.warn(e); }
+  }
+  return saveFile(fname('json'), txt); // Safari / iPad: ดาวน์โหลดไฟล์ (เลือกที่เก็บในแอปไฟล์)
+}
+(function () {
+  const bs = $('#bSave'); if (!bs) return;
+  const b = document.createElement('button'); b.className = 'tb'; b.id = 'bLocal'; b.textContent = '💾 ลงเครื่อง'; b.title = 'บันทึกเป็นไฟล์ลงเครื่อง (' + (IS_MAC ? '⌘⇧S' : 'Ctrl+Shift+S') + ') · กด Option/Alt ค้าง = บันทึกเป็นไฟล์ใหม่';
+  b.onclick = e => saveLocal(e.altKey); bs.after(b);
+  addEventListener('keydown', e => { if ((IS_MAC ? e.metaKey : e.ctrlKey) && e.shiftKey && e.code === 'KeyS') { e.preventDefault(); e.stopImmediatePropagation(); saveLocal(e.altKey); } }, true);
+  if (typeof scAdd === 'function') scAdd(IS_MAC ? '⌘⇧S' : 'Ctrl+Shift+S', 'บันทึกเป็นไฟล์ลงเครื่อง', 'ไฟล์', () => saveLocal(), () => false);
+  // เปิดไฟล์จากเครื่องผ่านหน้าต่างของ Chrome → จำไฟล์ไว้ บันทึกทับได้
+  if (window.showOpenFilePicker) {
+    const bf = $('#bFile');
+    if (bf) bf.onclick = async () => {
+      try {
+        const [h] = await showOpenFilePicker({ types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] }); const f = await h.getFile(); const data = JSON.parse(await f.text());
+        doc = data; doc.settings = Object.assign(sampleDoc().settings, data.settings || {}); doc.settings.name = doc.settings.name || f.name.replace(/\.json$/i, ''); delete doc.cloud; LF.set(doc, h);
+        curId = null; applySettings(); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); refreshInspector(); $('#scroller').scrollTop = 0; if (typeof clStatus === 'function') clStatus();
+        toast(`เปิด “${f.name}” แล้ว · กด 💾 ลงเครื่อง เพื่อบันทึกทับไฟล์นี้`);
+      } catch (e) { if (!(e && e.name === 'AbortError')) toast('เปิดไฟล์ไม่ได้: ' + (e.message || e)); }
+    };
+  }
+})();
+document.addEventListener('pointerup', () => { if (PG.ts && PG.ts.z && curId === PG.ts.id) setTimeout(() => { refreshInspector(); }, 20); });
 </script>
 </body>
 </html>
