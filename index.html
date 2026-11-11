@@ -7942,7 +7942,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794352140';
+const NP_BUILD = '1794369205';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9664,6 +9664,170 @@ async function tpSyncProfileDown() {
   if (typeof clRefresh === 'function') { const _r = clRefresh; clRefresh = async function () { const x = await _r.apply(this, arguments); tpSyncProfileDown(); tpSyncDown(); return x; }; }
   if (typeof CLD !== 'undefined' && CLD.loaded) { tpSyncProfileDown(); tpSyncDown(); }
 })();
+
+/* ===================== แทรกลายเซ็น =====================
+   · เซ็นด้วยเมาส์ / นิ้ว / Apple Pencil (รับแรงกด) หรือถ่ายรูปลายเซ็นบนกระดาษ → ตัดพื้นขาวออกอัตโนมัติ
+   · เก็บลายเซ็นไว้ใช้ซ้ำ (ในเครื่อง + ซิงก์ Google Drive)
+   · แทรกที่เคอร์เซอร์ · ถ้าอยู่บรรทัด “ลงชื่อ ......” จะวางทับเส้นจุดให้พอดี */
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `#flow .sigw{display:inline-block;width:0;height:1em;position:relative;vertical-align:baseline}
+#flow .sigw img.ii.sig{position:absolute;left:.4em;bottom:-.35em;max-width:none;z-index:2}
+#flow img.ii.sig{max-width:none}
+#sigBody{display:flex;gap:14px}#sigLib{width:190px;flex:none;max-height:420px;overflow:auto}#sigLib h4,#sigMain h4{margin:0 0 6px}
+#sigLib .sg{position:relative;border:1px solid var(--ui-line);border-radius:9px;padding:6px;margin-bottom:6px;background:#fff;cursor:pointer;text-align:center}
+#sigLib .sg:hover{border-color:var(--ui-accent)}#sigLib .sg.on{box-shadow:0 0 0 2px var(--ui-accent)}#sigLib .sg img{max-width:100%;max-height:60px}#sigLib .sg small{display:block;color:var(--ui-mute);font-size:13px}
+#sigLib .sg .x{position:absolute;top:2px;right:4px;border:0;background:none;color:#999;cursor:pointer;font-size:15px}
+#sigMain{flex:1;min-width:0}#sigTabs{display:flex;gap:6px;margin-bottom:8px}#sigTabs .tb.on{border-color:var(--ui-accent);color:var(--ui-accent);font-weight:700}
+#sigPad{width:100%;height:230px;border:1px dashed #b9aea5;border-radius:10px;background:#fff linear-gradient(transparent 74%,#e7ddd3 74%,#e7ddd3 74.6%,transparent 74.6%);touch-action:none;cursor:crosshair;display:block}
+#sigPrev{width:100%;height:230px;border:1px dashed #b9aea5;border-radius:10px;background:repeating-conic-gradient(#f3eee9 0 25%,#fff 0 50%) 0 0/16px 16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#sigPrev img{max-width:96%;max-height:96%}
+#sigMain .r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}#sigMain .r label{color:var(--ui-mute);font-size:15px}
+#sigMain .ink{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #0003;cursor:pointer}#sigMain .ink.on{box-shadow:0 0 0 2px var(--ui-accent)}`;
+  document.head.appendChild(s);
+})();
+const SG = { list: [], loaded: false, ink: '#1a1a1a', w: 2.6, strokes: [], cur: null, mode: 'draw', photo: null, pick: null, range: null, blkId: null };
+async function sgLoad() { if (SG.loaded) return; try { SG.list = (await tabIdbGet('sigs')) || []; } catch (e) { SG.list = []; } SG.loaded = true; }
+async function sgStore() { try { await tabIdbSet('sigs', SG.list); } catch (e) { } }
+
+/* ---------- วาดลายเซ็น ---------- */
+function sgPadInit() {
+  const cv = $('#sigPad'), r = cv.getBoundingClientRect(), k = 2; cv.width = Math.round(r.width * k); cv.height = Math.round(r.height * k);
+  sgRedraw();
+  cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); const p = sgPt(e); SG.cur = { ink: SG.ink, w: SG.w, pts: [p] }; SG.strokes.push(SG.cur); sgRedraw(); };
+  cv.onpointermove = e => { if (!SG.cur) return; const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; evs.forEach(x => SG.cur.pts.push(sgPt(x))); sgRedraw(); };
+  cv.onpointerup = cv.onpointercancel = () => { SG.cur = null; };
+}
+function sgPt(e) { const cv = $('#sigPad'), r = cv.getBoundingClientRect(); const pr = e.pointerType === 'mouse' || !e.pressure ? 0.5 : e.pressure; return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height, pr]; }
+function sgDrawStrokes(g, strokes, scale = 2) {
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  strokes.forEach(s => {
+    const P = s.pts; g.strokeStyle = s.ink; g.fillStyle = s.ink;
+    if (P.length === 1) { g.beginPath(); g.arc(P[0][0], P[0][1], s.w * scale * 0.6, 0, 7); g.fill(); return; }
+    for (let i = 1; i < P.length; i++) { // เส้นหนาบางตามแรงกด
+      const a = P[i - 1], b = P[i], m0 = i > 1 ? [(P[i - 2][0] + a[0]) / 2, (P[i - 2][1] + a[1]) / 2] : a, m1 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      g.lineWidth = s.w * scale * (0.55 + (a[2] + b[2]) * 0.6); g.beginPath(); g.moveTo(m0[0], m0[1]); g.quadraticCurveTo(a[0], a[1], m1[0], m1[1]); g.stroke();
+    }
+  });
+}
+function sgRedraw() { const cv = $('#sigPad'); if (!cv) return; const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); sgDrawStrokes(g, SG.strokes); }
+function sgCrop(cv, pad = 10) { // ตัดขอบว่างรอบลายเซ็น → PNG โปร่งใส
+  const g = cv.getContext('2d'), d = g.getImageData(0, 0, cv.width, cv.height).data; let l = cv.width, t = cv.height, r = -1, b = -1;
+  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) if (d[(y * cv.width + x) * 4 + 3] > 16) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y; }
+  if (r < 0) return null; l = Math.max(0, l - pad); t = Math.max(0, t - pad); r = Math.min(cv.width - 1, r + pad); b = Math.min(cv.height - 1, b + pad);
+  const o = document.createElement('canvas'); o.width = r - l + 1; o.height = b - t + 1; o.getContext('2d').drawImage(cv, l, t, o.width, o.height, 0, 0, o.width, o.height); return o.toDataURL('image/png');
+}
+/* ---------- ลายเซ็นจากรูปถ่าย: ตัดพื้นขาว ---------- */
+async function sgFromPhoto() {
+  const P = SG.photo; if (!P) return null; const im = P.img, k = Math.min(1, 1400 / Math.max(im.naturalWidth, im.naturalHeight));
+  const cv = document.createElement('canvas'); cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k); const g = cv.getContext('2d'); g.drawImage(im, 0, 0, cv.width, cv.height);
+  const D = g.getImageData(0, 0, cv.width, cv.height), d = D.data, th = +$('#sgTh').value, keep = $('#sgKeep').checked; const ink = SG.ink, ir = parseInt(ink.slice(1, 3), 16), ig = parseInt(ink.slice(3, 5), 16), ib = parseInt(ink.slice(5, 7), 16);
+  for (let i = 0; i < d.length; i += 4) {
+    const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    if (L >= th) { d[i + 3] = 0; continue; }
+    d[i + 3] = Math.min(255, Math.round((th - L) / Math.max(1, th - 40) * 255 * 1.4));
+    if (!keep) { d[i] = ir; d[i + 1] = ig; d[i + 2] = ib; }
+  }
+  g.putImageData(D, 0, 0); return sgCrop(cv, 6);
+}
+async function sgPhotoPrev() { const u = await sgFromPhoto(); $('#sigPrev').innerHTML = u ? `<img src="${u}">` : '<span class="hint">ไม่พบเส้นลายเซ็น ลองเลื่อนความไวของการตัดพื้น</span>'; SG.photoOut = u; }
+
+/* ---------- หน้าต่าง ---------- */
+async function openSignature() {
+  if (typeof pgRangeNow === 'function') SG.range = pgRangeNow(); SG.blkId = curId;
+  await sgLoad();
+  let d = $('#dSig');
+  if (!d) {
+    d = document.createElement('div'); d.className = 'dlg-back'; d.id = 'dSig';
+    d.innerHTML = `<div class="dlg" style="width:880px;max-width:96vw"><h3>แทรกลายเซ็น</h3><div id="sigBody"><div id="sigLib"></div><div id="sigMain">
+<div id="sigTabs"><button class="tb on" data-m="draw">✍ เซ็นบนจอ</button><button class="tb" data-m="photo">📷 จากรูปถ่ายลายเซ็น</button></div>
+<div id="sgDraw"><canvas id="sigPad"></canvas><div class="r"><label>สีหมึก</label>${['#1a1a1a', '#1f3fa8', '#0b2a6f'].map((c, i) => `<span class="ink${i ? '' : ' on'}" data-ink="${c}" style="background:${c}"></span>`).join('')}<label style="margin-left:10px">ความหนา</label><input type="range" id="sgW" min="1.2" max="5" step=".2" value="2.6"><button class="tb" id="sgUndo">↶ ย้อน</button><button class="tb" id="sgClr">ล้าง</button></div></div>
+<div id="sgPhoto" style="display:none"><div id="sigPrev"><span class="hint">เลือกรูปถ่ายลายเซ็นบนกระดาษขาว (ถ่ายตรง ๆ แสงสว่าง)</span></div><div class="r"><button class="tb" id="sgPick">เลือกรูป…</button><label>ความไวการตัดพื้น</label><input type="range" id="sgTh" min="90" max="235" value="170"><label><input type="checkbox" id="sgKeep"> ใช้สีหมึกจริงจากรูป</label></div><input type="file" id="sgFile" accept="image/*" hidden></div>
+<div class="r"><label>ชื่อลายเซ็น</label><input type="text" id="sgName" placeholder="เช่น ลายเซ็นของฉัน" style="flex:1;min-width:140px"><label><input type="checkbox" id="sgSave" checked> เก็บไว้ใช้ครั้งต่อไป</label></div>
+<div class="r"><label>ขนาด (กว้าง)</label><select id="sgSize"><option value="2.8">2.8 ซม.</option><option value="3.5" selected>3.5 ซม.</option><option value="4.5">4.5 ซม.</option><option value="6">6 ซม.</option></select><label><input type="checkbox" id="sgOver" checked> วางทับเส้น “ลงชื่อ ......” อัตโนมัติ</label></div>
+</div></div><div class="actions"><span class="hint" id="sgWhere" style="margin-right:auto"></span><button class="tb" id="sgNo">ยกเลิก</button><button class="tb primary" id="sgOk">แทรกลายเซ็น</button></div></div>`;
+    document.body.appendChild(d);
+    $('#sgNo').onclick = () => closeDlg('#dSig');
+    $('#sigTabs').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; SG.mode = b.dataset.m; SG.pick = null; sgLib(); $$('#sigTabs .tb').forEach(x => x.classList.toggle('on', x === b)); $('#sgDraw').style.display = SG.mode === 'draw' ? '' : 'none'; $('#sgPhoto').style.display = SG.mode === 'photo' ? '' : 'none'; if (SG.mode === 'draw') sgPadInit(); };
+    d.querySelector('#sgDraw .r').onclick = e => { const k = e.target.closest('[data-ink]'); if (!k) return; SG.ink = k.dataset.ink; $$('#dSig .ink').forEach(x => x.classList.toggle('on', x === k)); };
+    $('#sgW').oninput = e => { SG.w = +e.target.value; };
+    $('#sgUndo').onclick = () => { SG.strokes.pop(); sgRedraw(); }; $('#sgClr').onclick = () => { SG.strokes = []; sgRedraw(); };
+    $('#sgPick').onclick = () => $('#sgFile').click();
+    $('#sgFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const rd = new FileReader(); rd.onload = () => { const im = new Image(); im.onload = () => { SG.photo = { img: im }; sgPhotoPrev(); }; im.src = rd.result; }; rd.readAsDataURL(f); };
+    $('#sgTh').oninput = () => { clearTimeout(SG.tt); SG.tt = setTimeout(sgPhotoPrev, 120); }; $('#sgKeep').onchange = sgPhotoPrev;
+    d.querySelector('#sgPhoto').addEventListener('click', e => { if (e.target.closest('[data-ink]')) setTimeout(sgPhotoPrev, 0); });
+    $('#sgOk').onclick = sgInsertFromDlg;
+  }
+  SG.strokes = []; SG.pick = null; $('#sgName').value = ''; sgLib(); openDlg('#dSig'); setTimeout(sgPadInit, 30);
+  const blk = SG.blkId && byId(SG.blkId);
+  $('#sgWhere').textContent = SG.range ? 'จะแทรกตรงตำแหน่งเคอร์เซอร์' : blk && blk.t === 'lpsign' ? 'จะแทรกในช่องลงชื่อของกล่องที่เลือก' : 'จะแทรกเป็นรูปต่อจากส่วนที่เลือก (คลิกในข้อความก่อน เพื่อแทรกในบรรทัด)';
+  sgSyncDown().then(n => { if (n) sgLib(); });
+}
+function sgLib() {
+  const L = SG.list; $('#sigLib').innerHTML = `<h4>ลายเซ็นที่เก็บไว้</h4>` + (L.length ? L.map((s, i) => `<div class="sg${SG.pick === i ? ' on' : ''}" data-i="${i}"><button class="x" data-del="${i}" title="ลบ">✕</button><img src="${s.src}"><small>${esc(s.name || 'ลายเซ็น')}</small></div>`).join('') : '<p class="hint">ยังไม่มี · เซ็นทางขวาแล้วติ๊ก “เก็บไว้ใช้ครั้งต่อไป”</p>');
+  $('#sigLib').onclick = async e => {
+    const x = e.target.closest('[data-del]'); if (x) { e.stopPropagation(); const s = SG.list[+x.dataset.del]; if (!(await ask('ลบลายเซ็น', `<p>ลบลายเซ็น “${esc(s.name || 'ลายเซ็น')}” ออกจากรายการใช่ไหม?</p><p class="hint">ลายเซ็นที่แทรกในเอกสารแล้วไม่หายไป${s.drive ? ' · ไฟล์ใน Drive ย้ายไปถังขยะ (กู้คืนได้ 30 วัน)' : ''}</p>`, 'ลบ'))) { openDlg('#dSig'); return; } SG.list = SG.list.filter(y => y !== s); await sgStore(); if (s.drive && tpOn()) { try { await gd(DRIVE + '/' + s.drive, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); } catch (er) { } } SG.pick = null; openDlg('#dSig'); sgLib(); return; }
+    const c = e.target.closest('[data-i]'); if (!c) return; SG.pick = SG.pick === +c.dataset.i ? null : +c.dataset.i; sgLib();
+    if (SG.pick !== null) { $('#sgOk').textContent = 'แทรกลายเซ็นที่เลือก'; } else $('#sgOk').textContent = 'แทรกลายเซ็น';
+  };
+  $$('#sigLib .sg').forEach(el => el.addEventListener('dblclick', () => { SG.pick = +el.dataset.i; sgInsertFromDlg(); }));
+}
+async function sgInsertFromDlg() {
+  let src = null, name = $('#sgName').value.trim();
+  if (SG.pick !== null && SG.list[SG.pick]) src = SG.list[SG.pick].src;
+  else if (SG.mode === 'draw') { if (!SG.strokes.length) { toast('เซ็นในกรอบก่อน หรือเลือกลายเซ็นที่เก็บไว้'); return; } src = sgCrop($('#sigPad'), 10); }
+  else { src = SG.photoOut || null; if (!src) { toast('เลือกรูปถ่ายลายเซ็นก่อน'); return; } }
+  if (!src) return;
+  if (SG.pick === null && $('#sgSave').checked) { SG.list.unshift({ id: 's' + Date.now().toString(36), name: name || 'ลายเซ็น ' + (SG.list.length + 1), src, mod: Date.now() }); await sgStore(); sgSyncUp(); }
+  closeDlg('#dSig'); sgInsert(src, +$('#sgSize').value, $('#sgOver').checked);
+}
+/* ---------- แทรกลงเอกสาร ---------- */
+function sgImg(src, cm) { const im = document.createElement('img'); im.className = 'ii sig'; im.alt = 'ลายเซ็น'; im.src = src; im.draggable = false; im.style.width = Math.round(cm * PG_PX_CM) + 'px'; return im; }
+function sgInsert(src, cm, over) {
+  let r = SG.range && SG.range.startContainer.isConnected ? SG.range : null; let ed = r && pgEdOf(r.startContainer);
+  const blk0 = SG.blkId && byId(SG.blkId);
+  if (!ed && blk0 && blk0.t === 'lpsign') { const el = $(`.blk[data-id="${blk0.id}"] [data-f="l1"]`); if (el) { ed = el; r = document.createRange(); r.selectNodeContents(el); r.collapse(true); } }
+  if (ed && over && ed.closest('.b-lpsign') && ed.dataset.f !== 'l1') { const l1 = ed.closest('.blk').querySelector('[data-f="l1"]'); if (l1) { ed = l1; r = document.createRange(); r.selectNodeContents(l1); r.collapse(false); } }
+  if (!ed) { // ไม่มีเคอร์เซอร์ในข้อความ → เป็นรูปแยกบรรทัด
+    const nb = newBlock('image', { src, w: Math.round(cm * PG_PX_CM / 658 * 100) }); nb.st = { al: 'right' }; insertBlocks([nb]); toast('แทรกลายเซ็นแล้ว'); return;
+  }
+  const im = sgImg(src, cm);
+  // อยู่ในบรรทัดที่มี “ลงชื่อ” → วางหลังคำว่าลงชื่อ ทับเส้นจุด
+  const lineHasSign = /ลงชื่อ/.test(ed.textContent);
+  if (over && lineHasSign) {
+    const tw = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT); let n, done = false;
+    while ((n = tw.nextNode())) { const m = /ลงชื่อ\)?\s*/.exec(n.nodeValue); if (!m) continue; const rr = document.createRange(); rr.setStart(n, m.index + m[0].length); rr.collapse(true); const w = document.createElement('span'); w.className = 'sigw'; w.contentEditable = 'false'; w.appendChild(im); rr.insertNode(w); done = true; break; }
+    if (!done) { r.insertNode(im); }
+  } else { r.collapse(false); r.insertNode(im); }
+  syncFrom(ed); changed(true); schedulePaginate(); const b = ed.closest('.blk'); if (b) selectBlock(b.dataset.id);
+  setTimeout(() => { if (typeof pgSelect === 'function') pgSelect(im); }, 60);
+  toast('แทรกลายเซ็นแล้ว · ลากมุมเพื่อปรับขนาดได้');
+}
+// ปุ่มบนแถบเครื่องมือ
+(function () {
+  const bi = $('#bImg'); if (!bi) return;
+  const b = document.createElement('button'); b.className = 'tb'; b.id = 'bSig'; b.title = 'แทรกลายเซ็น (เซ็นบนจอ หรือจากรูปถ่าย)'; b.textContent = '✍ ลายเซ็น';
+  b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = openSignature; bi.after(b);
+})();
+/* ---------- ซิงก์ลายเซ็นผ่าน Google Drive ---------- */
+async function sgSyncUp() {
+  if (!tpOn()) return; await sgLoad();
+  try { const root = await ensureRoot(); let ch = false;
+    for (const s of SG.list.filter(x => !x.drive)) { const md = { name: 'ลายเซ็น ' + s.name + '.npsig', mimeType: 'application/json', parents: [root], appProperties: { np: 'sig', sid: s.id, mod: String(s.mod || 0) } }; const o = Object.assign({}, s); delete o.drive; const r = await tpUpload('', md, o); s.drive = r.id; ch = true; }
+    if (ch) await sgStore(); } catch (e) { console.warn('sig sync', e); }
+}
+async function sgSyncDown() {
+  if (!tpOn()) return 0; await sgLoad(); let got = 0;
+  try {
+    const r = await gd(DRIVE + '?' + gq({ q: "appProperties has { key='np' and value='sig' } and trashed=false", fields: 'files(id,appProperties)', spaces: 'drive', pageSize: 100 }));
+    const files = r.files || [], seen = new Set(files.map(f => f.id)); const n0 = SG.list.length;
+    SG.list = SG.list.filter(s => !s.drive || seen.has(s.drive)); if (SG.list.length !== n0) got++;
+    for (const f of files) { const a = f.appProperties || {}; const have = SG.list.find(s => s.id === a.sid); if (have) { have.drive = f.id; continue; } const s = await gd(DRIVE + '/' + f.id + '?alt=media'); if (!s || !s.src) continue; s.drive = f.id; SG.list.push(s); got++; }
+    if (got) { SG.list.sort((x, y) => (y.mod || 0) - (x.mod || 0)); await sgStore(); }
+    sgSyncUp();
+  } catch (e) { console.warn('sig sync down', e); }
+  return got;
+}
 </script>
 </body>
 </html>
