@@ -7943,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794390422';
+const NP_BUILD = '1794390579';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10372,6 +10372,42 @@ if (typeof pageRenderer === 'function') {
   const _pr = pageRenderer;
   pageRenderer = function () { let undo = () => { }; try { undo = npFreezeLines(); } catch (e) { console.warn('freeze', e); } let p; try { p = _pr.apply(this, arguments); } finally { undo(); } return p; };
 }
+
+/* ===== ลากคลุมข้ามย่อหน้า/ข้ามหน้า แล้วเปลี่ยนฟอนต์ ขนาด สี ตัวหนา ฯลฯ เฉพาะส่วนที่เลือก ===== */
+function xsOff(ed, node, off) { const r = document.createRange(); r.selectNodeContents(ed); try { r.setEnd(node, off); } catch (e) { return 0; } return r.toString().length; }
+function xsPoint(ed, n) {
+  const tw = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT); let t, last = null;
+  while ((t = tw.nextNode())) { if (t.parentElement && t.parentElement.closest('.katex')) continue; const L = t.nodeValue.length; if (n <= L) { const r = document.createRange(); r.setStart(t, n); r.collapse(true); return r; } n -= L; last = t; }
+  const r = document.createRange(); if (last) r.setStart(last, last.nodeValue.length); else r.setStart(ed, ed.childNodes.length); r.collapse(true); return r;
+}
+function xsApply(fn, args) {
+  const parts = pgXsEds().filter(p => !p.r.collapsed); if (!parts.length) return fn.apply(null, args);
+  const X = PG.xs, a = { ed: X.A.ed, o: xsOff(X.A.ed, X.A.n, X.A.o) }, b = { ed: X.B.ed, o: xsOff(X.B.ed, X.B.n, X.B.o) };
+  const sc = $('#scroller'), y = sc ? sc.scrollTop : 0; const s = getSelection();
+  PG.xs = null; document.body.classList.remove('xsmode'); // ให้ฟังก์ชันเดิมทำงานแบบเลือกปกติ
+  const TG = /^(bold|italic|underline|strikeThrough)$/.test(args[0]) && args[0]; let want = null;
+  parts.forEach((p, i) => { try { p.ed.focus({ preventScroll: true }); s.removeAllRanges(); s.addRange(p.r); lastRange = p.r.cloneRange();
+    if (TG) { document.execCommand('styleWithCSS', false, true); const st = document.queryCommandState(TG); if (want === null) want = !st; if (st === want) return; }
+    fn.apply(null, args); syncFrom(p.ed); } catch (e) { console.warn(e); } });
+  if (sc) sc.scrollTop = y;
+  try { if (a.ed.isConnected && b.ed.isConnected) { s.removeAllRanges(); if (document.activeElement) document.activeElement.blur(); if (pgXsSet(xsPoint(a.ed, a.o), xsPoint(b.ed, b.o))) document.body.classList.add('xsmode'); } } catch (e) { }
+  changed(true); schedulePaginate();
+}
+['exec', 'setFontSize', 'setTextFont', 'stepFont'].forEach(k => {
+  const f = window[k]; if (typeof f !== 'function') return;
+  window[k] = function () { if (PG.xs && !window.__xsIn) { window.__xsIn = true; try { return xsApply(f, [...arguments]); } finally { window.__xsIn = false; } } return f.apply(this, arguments); };
+});
+// คลิกแถบจัดรูปแบบ/เมนูสี ไม่ทำให้ส่วนที่เลือกข้ามย่อหน้าหายไป
+window.addEventListener('pointerdown', e => {
+  if (!PG.xs || !e.target.closest || !e.target.closest('#fbar,.menu,#mFg,#mHi,#mColor')) return;
+  const X = PG.xs; setTimeout(() => { if (!PG.xs) { PG.xs = X; document.body.classList.add('xsmode'); pgXsPaint(); } }, 0);
+}, true);
+// ⌘B ⌘I ⌘U ขณะเลือกข้ามย่อหน้า
+window.addEventListener('keydown', e => {
+  if (!PG.xs || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+  const c = { KeyB: 'bold', KeyI: 'italic', KeyU: 'underline' }[e.code]; if (!c) return;
+  e.preventDefault(); e.stopImmediatePropagation(); exec(c);
+}, true);
 </script>
 </body>
 </html>
