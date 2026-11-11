@@ -114,7 +114,7 @@ body.nonav #nav{display:none}
 .sheet .hline{position:absolute;top:60px;left:68px;right:64px;border-top:1px dashed var(--sep)}
 
 #flow{position:relative;z-index:2;margin-left:68px;width:658px;padding-top:98px;font-family:var(--dfont,'THS');font-size:13.13px;line-height:1.7;color:var(--ink)}
-body.exam #flow{font-size:15.7px}
+body.exam #flow,.fo.exam #flow,#npPrint.exam #flow{font-size:15.7px}
 
 /* ---------- บล็อก ---------- */
 .blk{position:relative;display:flow-root;border-radius:4px;outline:1px solid transparent;transition:outline-color .12s}
@@ -7942,7 +7942,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794377220';
+const NP_BUILD = '1794378348';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9308,7 +9308,7 @@ async function lyScan() {
   // 5) หน้าที่เหลือที่ว่างมาก (เพราะส่วนถัดไปถูกดันขึ้นหน้าใหม่)
   const used = {}; els.forEach(el => { const p = Math.floor(el.offsetTop / P); used[p] = Math.max(used[p] || 0, el.offsetTop + el.offsetHeight - p * P); });
   const n = $('#sheets').childElementCount;
-  for (let p = 0; p < n - 1; p++) { const u = (used[p] || TOP) - TOP; if (u < ROOM * 0.45 && used[p + 1]) { const first = els.find(el => Math.floor(el.offsetTop / P) === p + 1); const b = first && byId(first.dataset.id); if (b && !b.npg && !(els[els.indexOf(first) - 1] || {}).dataset?.t?.match(/pagebreak/)) out.push({ id: b.id, pg: p + 1, k: '▭', t: `หน้า ${p + 1} เหลือที่ว่างมาก (ใช้ไป ${Math.round(u / ROOM * 100)}%)`, d: 'เพราะส่วนถัดไปยาวเกินที่เหลือ · ลองย่อรูป/ตาราง หรือแยกข้อความเป็นหลายย่อหน้า', fix: null }); } }
+  for (let p = 0; p < n - 1; p++) { const u = (used[p] || TOP) - TOP; if (u < ROOM * 0.45 && used[p + 1]) { const first = els.find(el => Math.floor(el.offsetTop / P) === p + 1); const b = first && byId(first.dataset.id); if (b && !b.npg && !(els[els.indexOf(first) - 1] || {}).dataset?.t?.match(/pagebreak/)) out.push({ id: b.id, pg: p + 1, k: '▭', t: `หน้า ${p + 1} เหลือที่ว่างมาก (ใช้ไป ${Math.round(u / ROOM * 100)}%)`, d: 'เพราะส่วนถัดไปยาวเกินที่เหลือ · แก้: ให้ข้อความไหลต่อจากหน้านี้ (ทุกจุดในเอกสาร)', fix: () => { const n = lyFlowAll(); toast(n ? `ปรับให้ข้อความไหลต่อหน้าแล้ว ${n} จุด` : 'ส่วนที่ถูกดันเป็นตาราง/รูป ตัดข้ามหน้าไม่ได้'); } }); } }
   // 6) คำที่ถูกตัดกลางคำตอนขึ้นบรรทัดใหม่
   const W = lyWords(), re = new RegExp(W.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'); let cnt = 0, t0 = performance.now();
   for (const ed of $$('#flow [contenteditable="true"]')) {
@@ -9357,6 +9357,43 @@ async function lyRun() {
   const nf = LY.list.filter(x => x.fix).length;
   B.innerHTML = `<div class="hint" style="margin-bottom:6px">พบ ${LY.list.length} จุด · แก้อัตโนมัติได้ ${nf} จุด</div>` + LY.list.map((x, i) => `<div class="ly-row"><span class="ly-k">${x.k}</span><span class="ly-pg">หน้า ${x.pg}</span><span class="ly-t">${esc(x.t)}<small>${esc(x.d)}</small></span><button class="tb" data-a="go" data-i="${i}">ไปที่</button>${x.fix ? `<button class="tb primary" data-a="fix" data-i="${i}">แก้</button>` : ''}</div>`).join('');
 }
+
+/* ---------- ให้ย่อหน้ายาวไหลต่อหน้าถัดไป (แยกกล่องที่บรรทัดใหม่) แทนการดันทั้งก้อนขึ้นหน้าใหม่ ---------- */
+const LY_FLOW = new Set(['lptext', 'para', 'given', 'pjtext', 'lines']);
+function lyCands(ed) { // จุดที่ตัดได้: หลัง <br> ระดับบน หรือหลัง <li> ของรายการระดับบน
+  const out = [];
+  [...ed.childNodes].forEach(n => { if (n.nodeName === 'BR') out.push({ kind: 'br', n }); else if (n.nodeName === 'OL' || n.nodeName === 'UL') [...n.children].filter(x => x.nodeName === 'LI').forEach((li, m, A) => { if (m < A.length - 1) out.push({ kind: 'li', n: li, list: n, m }); }); });
+  return out;
+}
+function lySplit(b, ed, c) {
+  const box = document.createElement('div');
+  if (c.kind === 'br') { const r = document.createRange(); r.setStartAfter(c.n); r.setEnd(ed, ed.childNodes.length); box.appendChild(r.extractContents()); c.n.remove(); }
+  else {
+    const L = c.list, nl = L.cloneNode(false), lis = [...L.children].filter(x => x.nodeName === 'LI');
+    lis.slice(c.m + 1).forEach(x => nl.appendChild(x)); if (L.nodeName === 'OL') nl.setAttribute('start', String((+L.getAttribute('start') || 1) + c.m + 1));
+    const r = document.createRange(); r.setStartAfter(L); r.setEnd(ed, ed.childNodes.length); const rest = r.extractContents(); box.appendChild(nl); box.appendChild(rest);
+  }
+  const tail = cleanHTML(box).replace(/^(<br>\s*)+/, ''); if (!tail.replace(/<[^>]+>|​|\s/g, '') && !/class="mx|<img/.test(tail)) return null;
+  b.html = cleanHTML(ed).replace(/(<br>\s*)+$/, ''); const nb = JSON.parse(JSON.stringify(b)); nb.id = uid(); nb.html = tail; delete nb.npg; delete nb.sp; delete nb.fl;
+  doc.blocks.splice(idx(b.id) + 1, 0, nb); return nb;
+}
+function lyFlowOnce() {
+  paginate(); const P = PAGE_H + PAGE_G, els = $$('#flow > .blk');
+  for (let i = 1; i < els.length; i++) {
+    const el = els[i], mt = parseFloat(el.style.marginTop) || 0; if (mt < 60) continue;
+    const b0 = byId(el.dataset.id); if (!b0 || b0.npg) continue;
+    const prev = els[i - 1], prevBot = prev.offsetTop + prev.offsetHeight, p = Math.floor(prev.offsetTop / P), limit = p * P + PAGE_H - BOT; let avail = limit - prevBot - 6;
+    let tgt = el, tb = b0; if (HEADINGS.has(b0.t) && els[i + 1]) { avail -= el.offsetHeight; tgt = els[i + 1]; tb = byId(tgt.dataset.id); }
+    if (!tb || !LY_FLOW.has(tb.t) || avail < 50) continue;
+    const ed = $('[contenteditable="true"]', tgt); if (!ed) continue; const C = lyCands(ed); if (!C.length) continue;
+    const tr = tgt.getBoundingClientRect(), z = (tr.height / tgt.offsetHeight) || 1; let pick = null;
+    C.forEach(c => { let bot; if (c.kind === 'li') bot = c.n.getBoundingClientRect().bottom; else { const rr = document.createRange(); rr.setStartBefore(c.n); const q = rr.getClientRects(); bot = q.length ? q[q.length - 1].bottom : 1e9; } if ((bot - tr.top) / z + 4 <= avail) pick = c; });
+    if (!pick) continue;
+    if (!lySplit(tb, ed, pick)) continue; renderAll(); return true;
+  }
+  return false;
+}
+function lyFlowAll() { let n = 0; while (n < 60 && lyFlowOnce()) n++; if (n) { changed(true); schedulePaginate(); } return n; }
 
 /* ===================== ประวัติฉบับใน Google Drive + ใช้งานออฟไลน์ ===================== */
 (function cxCSS() {
