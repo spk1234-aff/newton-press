@@ -1730,7 +1730,7 @@ $('#fileOpen').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const rd = new FileReader();
   rd.onload = () => setTimeout(() => {
-    try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; delete d.cloud; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); toast('เปิด ' + f.name + ' แล้ว'); }
+    try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; delete d.cloud; delete d.lfid; d.lfl = 1; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); toast('เปิด ' + f.name + ' แล้ว'); }
     catch (err) { toast('เปิดไฟล์นี้ไม่ได้ ต้องเป็นไฟล์ .json ที่บันทึกจากโปรแกรมนี้'); }
     busy(false);
   }, 60);
@@ -7557,7 +7557,7 @@ function htmlParas(html, base = {}) {
       if (n.style.backgroundColor && !/transparent|rgba\(0, 0, 0, 0\)/.test(n.style.backgroundColor)) g.hl = hex(n.style.backgroundColor);
       if (n.dataset && n.dataset.font && typeof fontReal === 'function') g.font = n.dataset.font === 'THS' ? 'TH Sarabun New' : fontReal(n.dataset.font);
       if (n.style.fontSize) { const m = /([\d.]+)(pt|px|em)/.exec(n.style.fontSize); if (m) { g.size = m[2] === 'pt' ? +m[1] * 1.4 : m[2] === 'px' ? +m[1] * 0.75 * 1.4 : (f.size || DX.base) * +m[1]; g.noScale = true; } }
-      if (tag === 'li') { if (paras[paras.length - 1].length) paras.push([]); const lst = n.parentElement; const ol = lst && lst.tagName === 'OL'; const k = [...lst.children].filter(c => c.tagName === 'LI').indexOf(n) + (+(lst.getAttribute('start') || 1)); let dep = 0; for (let a = lst.parentElement; a && a !== box; a = a.parentElement) if (/^(OL|UL)$/.test(a.tagName)) dep++; paras[paras.length - 1].push(run('\u2003'.repeat(dep * 2) + listMarker(lst.dataset.ls || (ol ? ['decimal', 'lower-alpha', 'lower-roman'][Math.min(dep, 2)] : dep > 0 ? 'circle' : 'disc'), k) + ' ', f)); walk(n, g); paras.push([]); return; }
+      if (tag === 'li') { if (paras[paras.length - 1].length) paras.push([]); const lst = n.parentElement; const ol = lst && lst.tagName === 'OL'; const k = [...lst.children].filter(c => c.tagName === 'LI').indexOf(n) + (+(lst.getAttribute('start') || 1)); let dep = 0; for (let a = lst.parentElement; a && a !== box; a = a.parentElement) if (/^(OL|UL)$/.test(a.tagName)) dep++; paras[paras.length - 1].push(run('\u2003'.repeat(dep * 2) + (ol && lst.dataset.lf && typeof listMarkerOf === 'function' ? listMarkerOf(n) : listMarker(lst.dataset.ls || (ol ? ['decimal', 'lower-alpha', 'lower-roman'][Math.min(dep, 2)] : dep > 0 ? 'circle' : 'disc'), k)) + ' ', f)); walk(n, g); paras.push([]); return; }
       if (tag === 'font' && n.getAttribute('color')) g.color = hex(n.getAttribute('color'));
       const block = tag === 'div' || tag === 'p' || tag === 'ul' || tag === 'ol';
       if (block && paras[paras.length - 1].length) paras.push([]);
@@ -8208,7 +8208,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794407188';
+const NP_BUILD = '1794440218';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10508,7 +10508,7 @@ async function lfStore() { try { await tabIdbSet('lfiles', Object.fromEntries(LF
 function lfGet() { return lfKey() ? LFH.map.get(lfKey()) : null; }
 async function lfSet(h) { if (h) { if (!doc.lfid) doc.lfid = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); LFH.map.set(doc.lfid, h); } else if (doc.lfid) LFH.map.delete(doc.lfid); await lfStore(); lfBadge(); }
 function lfBadge() { const b = $('#bLocal'); if (!b) return; const h = lfGet(); b.textContent = h ? '💾 ' + h.name.replace(/\.json$/i, '').slice(0, 18) : '💾 ลงเครื่อง'; b.title = h ? `บันทึกทับไฟล์ “${h.name}” (${IS_MAC ? '⌘S' : 'Ctrl+S'}) · Option+คลิก = บันทึกเป็นไฟล์ใหม่` : 'บันทึกเป็นไฟล์ลงเครื่อง'; }
-const lfData = () => { const d = Object.assign({}, doc); if (d.cloud && d.cloud.id) d.cloud = { id: d.cloud.id, folder: d.cloud.folder || '' }; else delete d.cloud; return JSON.stringify(d); };
+let lfData = () => { const d = Object.assign({}, doc); if (d.cloud && d.cloud.id) d.cloud = { id: d.cloud.id, folder: d.cloud.folder || '' }; else delete d.cloud; return JSON.stringify(d); };
 async function saveLocal(asNew) {
   await lfLoad();
   if (!window.showSaveFilePicker) { // Safari / iPad / แอปจาก Dock: เขียนทับไม่ได้ → ดาวน์โหลดไฟล์
@@ -11559,8 +11559,7 @@ var LF_DIRTY = false;
 (function () {
   const _ch = changed; changed = function () { LF_DIRTY = true; return _ch.apply(this, arguments); };
   if (typeof saveLocal === 'function') { const _sl = saveLocal; saveLocal = async function () { const ok = await _sl.apply(this, arguments); if (ok) LF_DIRTY = false; return ok; }; }
-  setInterval(async () => { if (!LF_DIRTY || typeof lfGet !== 'function' || document.body.classList.contains('exporting')) return; const h = lfGet(); if (!h || !h.queryPermission) return;
-    try { if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') return; const w = await h.createWritable(); await w.write(lfData()); await w.close(); LF_DIRTY = false; } catch (e) { } }, 60000);
+  /* บันทึกอัตโนมัติย้ายไปอยู่ใน lfix.js */
 })();
 
 /* ---------- 7) งานครั้งก่อน ---------- */
@@ -11765,6 +11764,214 @@ function imlEnd() {
   addEventListener('focus', () => setTimeout(() => { if (!IML.n && !inp.files.length && $('#imlBox.on:not(.ok):not(.bad)')) { clearTimeout(IML.wait); IML.wait = setTimeout(() => { if (!IML.n) imlHide(); }, 6000); } }, 300));
   const _ch = inp.onchange;
   inp.onchange = async function (e) { clearTimeout(IML.wait); const fs = [...e.target.files]; if (fs.length && !fs.some(imlIsImg)) { imlShow('bad', 'ไฟล์ที่เลือกไม่ใช่รูปภาพ', fs.map(f => f.name).join(' · ')); e.target.value = ''; return; } try { return await _ch.call(this, e); } catch (err) { if (!err || !err.iml) { console.warn(err); imlShow('bad', 'แทรกรูปไม่สำเร็จ', String(err && err.message || err)); } e.target.value = ''; } };
+})();
+
+
+/* ---------- รายการแบบกำหนดเอง: หัวข้อย่อย 1.1 / 1.1.1 · A) a) (ก) · ข้อความนำหน้า/ต่อท้าย · เลขเริ่มต้น ---------- */
+const LX_NUM = [['decimal', '1 2 3'], ['lower-alpha', 'a b c'], ['upper-alpha', 'A B C'], ['thai-alpha', 'ก ข ค'], ['thai', '๑ ๒ ๓'], ['lower-roman', 'i ii iii'], ['upper-roman', 'I II III']];
+const LX_OLD = { 'decimal': ['decimal', '', '.'], 'dec-paren': ['decimal', '', ')'], 'paren-dec': ['decimal', '(', ')'], 'lower-alpha': ['lower-alpha', '', '.'], 'upper-alpha': ['upper-alpha', '', '.'], 'lower-roman': ['lower-roman', '', '.'], 'upper-roman': ['upper-roman', '', '.'], 'thai-alpha': ['thai-alpha', '', '.'], 'thai': ['thai', '', '.'] };
+function lxNum(ln, k) {
+  k = Math.max(1, k | 0);
+  const al = (s, n) => { let o = ''; while (n > 0) { n--; o = s[n % s.length] + o; n = Math.floor(n / s.length); } return o; };
+  switch (ln) {
+    case 'lower-alpha': return al('abcdefghijklmnopqrstuvwxyz', k); case 'upper-alpha': return al('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k);
+    case 'thai-alpha': return al(THAI_AL, k); case 'thai': return String(k).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+    case 'lower-roman': return toRoman(k); case 'upper-roman': return toRoman(k).toUpperCase(); default: return String(k);
+  }
+}
+function lxUnNum(ln, s) { // ข้อความเลข → ลำดับ
+  const al = (set) => { let n = 0; for (const ch of s) { const i = set.indexOf(ch); if (i < 0) return 0; n = n * set.length + i + 1; } return n; };
+  switch (ln) {
+    case 'lower-alpha': return al('abcdefghijklmnopqrstuvwxyz'); case 'upper-alpha': return al('ABCDEFGHIJKLMNOPQRSTUVWXYZ'); case 'thai-alpha': return al(THAI_AL);
+    case 'thai': return +s.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d)) || 0;
+    case 'lower-roman': case 'upper-roman': { const v = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 }; let n = 0; const t = s.toLowerCase(); for (let i = 0; i < t.length; i++) { const a = v[t[i]], b = v[t[i + 1]] || 0; if (!a) return 0; n += a < b ? -a : a; } return n; }
+    default: return +s || 0;
+  }
+}
+const lxDepth = lst => { let d = 0; for (let a = lst.parentElement; a; a = a.parentElement) if (/^(OL|UL)$/.test(a.tagName)) d++; return d; };
+const lxParentLi = lst => { const p = lst.parentElement; if (!p) return null; if (p.tagName === 'LI') return p; if (/^(OL|UL)$/.test(p.tagName)) { let s = lst.previousElementSibling; while (s && s.tagName !== 'LI') s = s.previousElementSibling; return s; } return null; };
+function lxSpec(lst) { // [ชนิดเลข, นำหน้า, ต่อท้าย]
+  const d = lst.dataset;
+  if (d.lf) return [d.ln || 'decimal', d.lm ? lxAutoPrefix(lst) : (d.lp || ''), d.lx || ''];
+  return LX_OLD[d.ls] || LX_OLD[['decimal', 'lower-alpha', 'lower-roman'][Math.min(lxDepth(lst), 2)]];
+}
+const lxIndex = li => { const lst = li.parentElement; return [...lst.children].filter(c => c.tagName === 'LI').indexOf(li) + (+(lst.getAttribute('start') || 1)); };
+function lxCore(li) { const lst = li.parentElement; if (!lst || lst.tagName !== 'OL') return ''; const s = lxSpec(lst); return s[1].replace(/^\(/, '') + lxNum(s[0], lxIndex(li)); }
+function lxAutoPrefix(lst) { const p = lxParentLi(lst); const c = p ? lxCore(p) : ''; return c ? c + '.' : ''; }
+function listMarkerOf(li) { const s = lxSpec(li.parentElement); return s[1] + lxNum(s[0], lxIndex(li)) + s[2]; }
+// ปรับรายการให้ถูกต้อง: รายการย่อยของแบบหลายระดับ → เลขตามหัวข้อแม่ · สร้างรูปแบบตัวนับ
+let LX_SIG = '';
+function lxFix(root) {
+  root = root || document;
+  $$('ol', root).forEach(lst => {
+    const d = lst.dataset; if (d.lf || d.ls) return; const pl = lxParentLi(lst), pp = pl && pl.parentElement; if (!pp || pp.tagName !== 'OL' || !pp.dataset.lf) return;
+    if ((pp.dataset.ln || 'decimal') === 'decimal' && (pp.dataset.lm || /\.$/.test(pp.dataset.lp || '')) && !(pp.dataset.lx || '')) { d.lf = '1'; d.ln = 'decimal'; d.lm = '1'; d.lx = ''; }
+  });
+  $$('ol[data-lf]', root).forEach(lst => { const d = lst.dataset; if (d.lm) { const p = lxAutoPrefix(lst); if (d.lp !== p) d.lp = p; } if (d.lp == null) d.lp = ''; if (d.lx == null) d.lx = ''; if (!d.ln) d.ln = 'decimal'; });
+  const keys = new Map(); $$('ol[data-lf]').forEach(lst => { const d = lst.dataset; keys.set(d.ln + '\u0001' + d.lp + '\u0001' + d.lx, [d.ln, d.lp, d.lx]); });
+  const sig = [...keys.keys()].sort().join('\u0002'); if (sig === LX_SIG) return; LX_SIG = sig;
+  let st = $('#lxCss'); if (!st) { st = document.createElement('style'); st.id = 'lxCss'; document.head.appendChild(st); }
+  const q = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ') + '"'; let css = '', i = 0;
+  keys.forEach(([ln, lp, lx]) => {
+    const nm = 'npl' + (i++); const w = [...(lp + lx)].length + (ln === 'decimal' || ln === 'thai' ? 2 : /roman/.test(ln) ? 3 : 1.6);
+    css += `@counter-style ${nm}{system:extends ${ln};prefix:${q(lp)};suffix:${q(lx + ' ')}}\n:is(#flow,html) ol[data-lf][data-ln=${q(ln)}][data-lp=${q(lp)}][data-lx=${q(lx)}]{list-style-type:${nm};padding-left:${Math.max(2, (w * 0.5 + 0.9)).toFixed(2)}em}\n`;
+  });
+  st.textContent = css; try { CSS_CACHE = null; } catch (e) { }
+}
+function lxApply(lst, o) {
+  const d = lst.dataset; d.lf = '1'; d.ln = o.ln || 'decimal'; d.lp = o.lp || ''; d.lx = o.lx || ''; delete d.ls; lst.style.listStyleType = '';
+  if (o.lm) d.lm = '1'; else delete d.lm; if (o.start > 1) lst.setAttribute('start', o.start); else if (o.start != null) lst.removeAttribute('start');
+}
+function lxParse(text, ln0) { // "7.1" "C)" "(ค)" "ข้อ 3." → {lp, ln, start, lx}
+  const t = String(text || '').replace(/​/g, ''); let m;
+  if ((m = /^(.*?)(\d+)(\D*)$/.exec(t))) return { lp: m[1], ln: 'decimal', start: +m[2] || 1, lx: m[3] };
+  if ((m = /^(.*?)([๐-๙]+)([^๐-๙]*)$/.exec(t))) return { lp: m[1], ln: 'thai', start: lxUnNum('thai', m[2]) || 1, lx: m[3] };
+  if (/roman/.test(ln0 || '') && (m = /^(.*?)([ivxlcdm]+|[IVXLCDM]+)([^A-Za-z]*)$/.exec(t)) && lxUnNum('lower-roman', m[2])) return { lp: m[1], ln: /[a-z]/.test(m[2]) ? 'lower-roman' : 'upper-roman', start: lxUnNum('lower-roman', m[2]), lx: m[3] };
+  if ((m = /^(.*?)([A-Za-zก-ฮ])([^A-Za-zก-ฮ]*)$/.exec(t))) { const ln = /[a-z]/.test(m[2]) ? 'lower-alpha' : /[A-Z]/.test(m[2]) ? 'upper-alpha' : 'thai-alpha'; return { lp: m[1], ln, start: lxUnNum(ln, m[2]) || 1, lx: m[3] }; }
+  return null;
+}
+function lxCurList(make) { restoreSel(); let li = curLi(); if ((!li || li.parentElement.tagName !== 'OL') && make) { listToggle('ol'); li = curLi(); } return li && li.parentElement.tagName === 'OL' ? li.parentElement : null; }
+function lxDone(lst) { lxFix(); const ed = lst.closest('[contenteditable="true"]'); if (ed) syncFrom(ed); if (typeof schedulePaginate === 'function') schedulePaginate(); }
+function lxPreset(o) { const lst = lxCurList(true); if (!lst) { toast('คลิกตำแหน่งในข้อความก่อน'); return; } lxApply(lst, Object.assign({ start: null }, o)); lxDone(lst); }
+function lxMulti() {
+  const lst = lxCurList(true); if (!lst) { toast('คลิกตำแหน่งในข้อความก่อน'); return; }
+  const pl = lxParentLi(lst), nested = pl && pl.parentElement.tagName === 'OL', subs = $$('ol', lst);
+  if (nested) { lxApply(lst, { ln: 'decimal', lm: 1, lx: '', start: null }); subs.forEach(s => lxApply(s, { ln: 'decimal', lm: 1, lx: '', start: null })); lxDone(lst); return; }
+  if (subs.length) { subs.forEach(s => lxApply(s, { ln: 'decimal', lm: 1, lx: '', start: null })); lxDone(lst); toast('รายการย่อยเป็น 1.1 · 1.1.1 ตามหัวข้อแม่แล้ว'); return; }
+  lxCustom('1.1');
+}
+async function lxCustom(first) {
+  let lst = lxCurList(true); if (!lst) { toast('คลิกตำแหน่งในข้อความก่อน'); return; }
+  const li0 = curLi(), sp = lxSpec(lst), st0 = +(lst.getAttribute('start') || 1), pl = lxParentLi(lst), nested = !!(pl && pl.parentElement.tagName === 'OL');
+  const S = { ln: sp[0], lp: lst.dataset.lm ? '' : sp[1], lx: sp[2], start: st0, lm: !!lst.dataset.lm };
+  if (first) { const p = lxParse(first); if (p) Object.assign(S, p, { lm: false }); }
+  const show = () => (S.lm ? '' : S.lp) + lxNum(S.ln, S.start) + S.lx;
+  const html = `<div class="lxd"><label>พิมพ์เลขแรกตามที่ต้องการ <small>เช่น 7.1 · 2.3.1 · C) · (ค) · ข้อ 3.</small><input id="lxFirst" value="${esc(show())}" autocomplete="off"></label>
+<label>ชนิดตัวนับ<select id="lxLn">${LX_NUM.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label>
+<label class="ck"${nested ? '' : ' style="display:none"'}><input type="checkbox" id="lxLm"> นำหน้าด้วยเลขของหัวข้อแม่อัตโนมัติ (เช่น แม่เป็น 2. → 2.1, 2.2)</label>
+<div class="lxp">ตัวอย่าง: <b id="lxPv"></b></div></div>`;
+  const pr = ask('รูปแบบเลขรายการ', html, 'ใช้รูปแบบนี้');
+  const f = $('#lxFirst'), sel = $('#lxLn'), lm = $('#lxLm'), pv = $('#lxPv'); sel.value = S.ln; lm.checked = S.lm;
+  const prev = () => { const pre = S.lm ? (lxAutoPrefix(lst) || '') : S.lp; pv.textContent = [0, 1, 2].map(i => pre + lxNum(S.ln, S.start + i) + S.lx).join('   '); };
+  f.oninput = () => { const p = lxParse(f.value, sel.value); if (p) { if (S.lm) p.lp = ''; Object.assign(S, p); sel.value = S.ln; } prev(); };
+  sel.onchange = () => { S.ln = sel.value; f.value = show(); prev(); };
+  lm.onchange = () => { S.lm = lm.checked; if (S.lm) S.lp = ''; f.value = show(); prev(); };
+  prev(); setTimeout(() => { f.focus(); f.select(); }, 60);
+  if (!(await pr)) return;
+  if (!lst.isConnected) { restoreSel(); const li = curLi(); lst = li && li.parentElement; if (!lst || lst.tagName !== 'OL') return; }
+  lxApply(lst, S); lxDone(lst);
+}
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `.lxd{display:flex;flex-direction:column;gap:10px;min-width:min(420px,80vw)}.lxd label{display:flex;flex-direction:column;gap:3px;font-size:16px}.lxd label small{color:#8a7f76;font-size:13.5px}.lxd label.ck{flex-direction:row;align-items:center;gap:8px}
+.lxd input:not([type=checkbox]),.lxd select{font:inherit;font-size:18px;padding:6px 10px;border:1px solid #d9cfc4;border-radius:8px}.lxd .lxp{background:#f6f2ec;border-radius:8px;padding:8px 12px;font-size:17px}.lxd .lxp b{white-space:pre}`;
+  document.head.appendChild(css);
+  // เมนูรูปแบบรายการ: เพิ่มหมวดหัวข้อย่อย + กำหนดเอง
+  const m = $('#mLs'); if (m) {
+    const old = $('[data-ls="start"]', m); const hd = old && old.previousElementSibling; if (hd && hd.classList.contains('hd')) hd.remove(); if (old) old.remove();
+    const PRE = [['1.1  1.2  1.3 (หัวข้อย่อย)', 'multi'], ['A)  B)  C)', { ln: 'upper-alpha', lx: ')' }], ['a)  b)  c)', { ln: 'lower-alpha', lx: ')' }], ['(a)  (b)  (c)', { ln: 'lower-alpha', lp: '(', lx: ')' }], ['ก)  ข)  ค)', { ln: 'thai-alpha', lx: ')' }], ['(ก)  (ข)  (ค)', { ln: 'thai-alpha', lp: '(', lx: ')' }]];
+    const box = document.createElement('div'); box.innerHTML = `<div class="hd">หัวข้อย่อย / แบบอื่น</div>${PRE.map((p, i) => `<button data-lxp="${i}">${p[0]}</button>`).join('')}<div class="hd">กำหนดเอง</div><button data-lxp="c">✎ กำหนดรูปแบบ / เลขเริ่มต้น…</button>`;
+    const first = m.firstChild; while (box.firstChild) m.insertBefore(box.firstChild, null);
+    m.addEventListener('click', e => { const x = e.target.closest('[data-lxp]'); if (!x) return; e.stopPropagation(); closeMenus(); const k = x.dataset.lxp; if (k === 'c') lxCustom(); else if (PRE[+k][1] === 'multi') lxMulti(); else lxPreset(PRE[+k][1]); }, true);
+    // เลือกแบบเดิม (1. a. ก.) → ล้างรูปแบบกำหนดเอง
+    m.addEventListener('click', e => { const x = e.target.closest('[data-ls]'); if (!x) return; setTimeout(() => { const li = curLi(), lst = li && li.parentElement; if (lst && lst.dataset.lf) { ['lf', 'ln', 'lp', 'lx', 'lm'].forEach(k => delete lst.dataset[k]); lxDone(lst); } }, 0); });
+  }
+  const _sync = syncFrom; syncFrom = function (el) { try { if (el && el.querySelector && el.querySelector('ol')) lxFix(el.closest('.blk') || el); } catch (e) { } return _sync.apply(this, arguments); };
+  const _ra = renderAll; renderAll = function () { const r = _ra.apply(this, arguments); try { lxFix(); } catch (e) { } return r; };
+  if (typeof rerender === 'function') { const _rr = rerender; rerender = function () { const r = _rr.apply(this, arguments); try { lxFix(); } catch (e) { } return r; }; }
+  setTimeout(() => { try { lxFix(); } catch (e) { } }, 300);
+  // พิมพ์ "A) " หรือ "ก) " ต้นบรรทัด → รายการอัตโนมัติ
+  flowEl.addEventListener('keydown', e => {
+    if (e.key !== ' ' || e.isComposing) return; const t = e.target.closest && e.target.closest('[contenteditable="true"]'); if (!t || curLi()) return;
+    const blk = t.closest('.blk'); if (!blk || ONE_LINE.has(blk.dataset.t) || t.dataset.cell || t.dataset.pf) return;
+    const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return; const r = s.getRangeAt(0), n = r.startContainer; if (n.nodeType !== 3) return;
+    const p = n.previousSibling; if (p && p.nodeName !== 'BR') return; if (n.parentElement !== t && !/^(DIV|P)$/.test(n.parentElement.tagName)) return;
+    const m2 = /^\s*(?:([A-Z])\)|([ก-ฮ])\)|\(([a-zก-ฮ])\))$/.exec(n.nodeValue.slice(0, r.startOffset).replace(/​/g, '')); if (!m2) return;
+    e.preventDefault(); e.stopImmediatePropagation(); const o = lxParse(m2[0].trim()); n.nodeValue = n.nodeValue.slice(r.startOffset) || '​';
+    lineToList(t, n, 0, 'ol', null, 0); const li = curLi(); if (li) { lxApply(li.parentElement, o); lxDone(li.parentElement); }
+  }, true);
+})();
+
+
+/* ---------- บันทึกลงไฟล์ในเครื่อง: แก้จุดอ่อน + บันทึกอัตโนมัติ + แสดงสถานะ ---------- */
+const LFX = { dirty: new Set(), saved: {}, need: {}, err: {}, q: Promise.resolve(), t: null };
+// ไม่เก็บรหัสผูกไฟล์ (lfid) ลงในไฟล์ → ไฟล์ที่ถูกทำสำเนา/ย้าย จะไม่ไปบันทึกทับไฟล์ต้นฉบับ
+lfData = function (d) { d = Object.assign({}, d || doc); delete d.lfid; if (d.cloud && d.cloud.id) d.cloud = { id: d.cloud.id, folder: d.cloud.folder || '' }; else delete d.cloud; return JSON.stringify(d); };
+function lfxWrite(h, text) { const run = async () => { const w = await h.createWritable(); try { await w.write(text); await w.close(); } catch (e) { try { await w.abort(); } catch (e2) { } throw e; } }; const p = LFX.q.then(run, run); LFX.q = p.catch(() => { }); return p; }
+const lfxTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+function lfxStat() {
+  let el = $('#lfStat'); if (!el) { const a = $('#clStat'); if (!a) return; el = document.createElement('span'); el.id = 'lfStat'; el.style.cssText = 'font-size:14px;white-space:nowrap;cursor:pointer;padding:2px 8px;border-radius:999px'; a.after(el); el.onclick = () => $('#bSave').click(); }
+  const h = typeof lfGet === 'function' && lfGet(), k = doc && doc.lfid; if (!h) { el.style.display = 'none'; return; }
+  el.style.display = ''; const nm = h.name.replace(/\.json$/i, '');
+  let t, c = '#6b7280', bg = 'transparent';
+  if (LFX.err[k]) { t = '💾 บันทึกลงเครื่องไม่ได้ · กดเพื่อบันทึก'; c = '#b91c1c'; bg = '#fee2e2'; }
+  else if (LFX.dirty.has(k)) { if (LFX.need[k]) { t = '💾 ยังไม่ได้บันทึกลงเครื่อง · กดเพื่อบันทึก'; c = '#9a3412'; bg = '#ffedd5'; } else t = '💾 กำลังจะบันทึก…'; }
+  else t = '💾 ' + (LFX.saved[k] ? 'บันทึกลงเครื่องแล้ว ' + LFX.saved[k] : nm);
+  el.textContent = t; el.style.color = c; el.style.background = bg; el.title = `ไฟล์ในเครื่อง: ${h.name}\nบันทึกอัตโนมัติหลังแก้ไข · กดเพื่อบันทึกทันที`;
+}
+// บันทึกอัตโนมัติทุกงานที่ผูกไฟล์ในเครื่องและมีการแก้ไข (รวมแท็บที่ไม่ได้เปิดอยู่)
+async function lfxFlush() {
+  if (!LFX.dirty.size || document.body.classList.contains('exporting')) return;
+  await lfLoad(); const docs = (typeof TB !== 'undefined' && TB.list.length ? TB.list.map((t, i) => i === TB.i ? doc : t.doc) : [doc]);
+  for (const k of [...LFX.dirty]) {
+    const d = docs.find(x => x && x.lfid === k), h = LFH.map.get(k); if (!d || !h) { LFX.dirty.delete(k); continue; }
+    try {
+      if (h.queryPermission && (await h.queryPermission({ mode: 'readwrite' })) !== 'granted') { LFX.need[k] = 1; continue; }
+      const text = lfData(d); await lfxWrite(h, text); if (lfData(d) === text) LFX.dirty.delete(k); delete LFX.need[k]; delete LFX.err[k]; LFX.saved[k] = lfxTime();
+    } catch (e) { LFX.err[k] = (e && e.name) || 'err'; }
+  }
+  lfxStat();
+}
+(function () {
+  const pick = () => showSaveFilePicker({ suggestedName: fname('json'), types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] });
+  saveLocal = async function (asNew) {
+    await lfLoad();
+    if (!window.showSaveFilePicker) { // Safari / iPad: เบราว์เซอร์ไม่ยอมให้เขียนทับไฟล์เดิม → ได้เป็นไฟล์ดาวน์โหลด
+      doc.lfl = 1; const ok = await saveFile(fname('json'), lfData()); if (ok) setTimeout(() => toast('บันทึกเป็นไฟล์ดาวน์โหลดแล้ว · Safari เขียนทับไฟล์เดิมไม่ได้ (ถ้าต้องการบันทึกทับไฟล์เดิม ให้เปิดแอปด้วย Chrome)', 6000), 800); return ok;
+    }
+    let h = !asNew && lfGet(), k0 = doc.lfid;
+    try {
+      if (h && h.queryPermission && (await h.queryPermission({ mode: 'readwrite' })) !== 'granted') { if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') { toast('ยังไม่ได้รับอนุญาตให้แก้ไฟล์ “' + h.name + '” · กดบันทึกอีกครั้งแล้วเลือก “อนุญาต”', 5000); LFX.need[k0] = 1; lfxStat(); return false; } }
+      if (h) { try { await lfxWrite(h, lfData()); } catch (e) { if (e && e.name === 'AbortError') throw e; const nm = h.name; h = null; toast(`เขียนทับ “${nm}” ไม่ได้ (ไฟล์อาจถูกย้าย ลบ หรือเปลี่ยนชื่อ) · เลือกที่เก็บใหม่`, 5000); } }
+      if (!h) {
+        try { h = await pick(); } catch (e) { if (e && e.name === 'AbortError') return false; if (k0) { LFX.err[k0] = 1; lfxStat(); } toast('กด “บันทึก” อีกครั้งเพื่อเลือกที่เก็บไฟล์ใหม่'); if (k0 && LFH.map.has(k0) && !asNew) { LFH.map.delete(k0); await lfStore(); } return false; }
+        if (asNew) delete doc.lfid; await lfSet(h); const nm = h.name.replace(/\.json$/i, ''); if (nm && nm !== doc.settings.name) { doc.settings.name = nm; changed(true); }
+        await lfxWrite(h, lfData());
+      }
+      const k = doc.lfid; LFX.dirty.delete(k); delete LFX.need[k]; delete LFX.err[k]; LFX.saved[k] = lfxTime(); doc.lfl = 1; lfBadge(); lfxStat();
+      toast(`บันทึกลงไฟล์ “${h.name}” แล้ว`); return true;
+    } catch (e) { if (e && e.name === 'AbortError') return false; if (doc.lfid) LFX.err[doc.lfid] = 1; lfxStat(); toast('บันทึกลงเครื่องไม่สำเร็จ: ' + (e.message || e), 5000); return false; }
+  };
+  openLocal = async function () {
+    if (typeof tabFull === 'function' && tabFull()) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return; }
+    try {
+      const [h] = await showOpenFilePicker({ types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] }); await lfLoad();
+      // ไฟล์นี้เปิดอยู่แล้วในอีกแท็บ → สลับไปแท็บนั้น (กันสองแท็บบันทึกทับกัน)
+      if (typeof TB !== 'undefined') for (let j = 0; j < TB.list.length; j++) { const d = j === TB.i ? doc : TB.list[j].doc, o = d && d.lfid && LFH.map.get(d.lfid); let same = false; try { same = !!o && await o.isSameEntry(h); } catch (e) { } if (same) { if (j !== TB.i) await tabGo(j); toast(`“${h.name}” เปิดอยู่แล้วในแท็บนี้`); return; } }
+      const f = await h.getFile(); let data; try { data = JSON.parse(await f.text()); } catch (e) { throw new Error('ไฟล์เสียหายหรือไม่ใช่ไฟล์ของ Newton Press'); } if (!data || !data.blocks) throw new Error('ไม่ใช่ไฟล์ของ Newton Press');
+      delete data.lfid; data.lfl = 1; data.settings = Object.assign(sampleDoc().settings, data.settings || {}); data.settings.name = f.name.replace(/\.json$/i, '') || data.settings.name; if (!(data.cloud && data.cloud.id)) delete data.cloud;
+      doc = data; curId = null; applySettings(); renderAll();
+      if (doc !== data) return; // เปิดไม่ได้ (เช่น แท็บเต็ม) → ไม่ผูกไฟล์กับงานเดิม
+      await lfSet(h); hist.stack = []; hist.pos = -1; snapshot(); autosave(); refreshInspector(); $('#scroller').scrollTop = 0; if (typeof clStatus === 'function') clStatus();
+      LFX.dirty.delete(doc.lfid); LFX.saved[doc.lfid] = ''; lfxStat(); toast(`เปิด “${f.name}” แล้ว · แก้ไขแล้วจะบันทึกลงไฟล์นี้ให้อัตโนมัติ`);
+    } catch (e) { if (!(e && e.name === 'AbortError')) toast('เปิดไฟล์ไม่ได้: ' + (e.message || e)); }
+  };
+  // ย้อนกลับ/ทำซ้ำ ต้องไม่ทำให้งานหลุดจากไฟล์ในเครื่อง / Drive
+  const _rs = restore; restore = function (pos) { const k = doc && doc.lfid, l = doc && doc.lfl, c = doc && doc.cloud; const r = _rs.apply(this, arguments); if (doc) { if (k) doc.lfid = k; else delete doc.lfid; if (l) doc.lfl = 1; if (c) doc.cloud = Object.assign({}, c, { dirty: true }); else delete doc.cloud; } if (k) { LFX.dirty.add(k); kick(); } lfBadge(); lfxStat(); return r; };
+  const kick = () => { clearTimeout(LFX.t); LFX.t = setTimeout(lfxFlush, 5000); };
+  const _ch = changed; changed = function () { const r = _ch.apply(this, arguments); if (doc && doc.lfid && LFH.map.has(doc.lfid)) { const was = LFX.dirty.has(doc.lfid); LFX.dirty.add(doc.lfid); kick(); if (!was) lfxStat(); } return r; };
+  setInterval(lfxFlush, 30000);
+  const _lb = lfBadge; lfBadge = function () { const r = _lb.apply(this, arguments); try { lfxStat(); } catch (e) { } return r; };
+  const _ra = renderAll; renderAll = function () { const r = _ra.apply(this, arguments); try { lfxStat(); } catch (e) { } return r; };
+  if (typeof tabGo === 'function') { const _tg = tabGo; tabGo = async function () { try { await lfxFlush(); } catch (e) { } const r = await _tg.apply(this, arguments); lfBadge(); return r; }; }
+  // ปิดแท็บงานที่ผูกไฟล์ในเครื่อง: บันทึกให้ก่อน แล้วปิดได้เลย (ไม่ต้องเตือนว่างานจะหาย)
+  if (typeof tabClose === 'function') { const _tc = tabClose; tabClose = async function (j) { try { const d = j === TB.i ? doc : TB.list[j] && TB.list[j].doc; if (d && d.lfid && LFH.map.has(d.lfid) && !(d.cloud && d.cloud.id)) { await lfxFlush(); if (!LFX.dirty.has(d.lfid)) TB.list[j].fresh = true; } } catch (e) { } return _tc.apply(this, arguments); }; }
+  addEventListener('visibilitychange', () => { if (document.hidden) lfxFlush(); });
+  addEventListener('pagehide', () => { lfxFlush(); });
+  addEventListener('beforeunload', e => { if ([...LFX.dirty].some(k => LFH.map.has(k))) { lfxFlush(); e.preventDefault(); e.returnValue = ''; } });
+  // Safari: งานที่เปิดจากไฟล์ในเครื่อง กดบันทึก = ได้ไฟล์เลย ไม่ต้องถามทุกครั้ง
+  const bs = $('#bSave'); if (bs && !window.showSaveFilePicker) { const _sv = bs.onclick; bs.onclick = function (e) { if (doc.lfl && !(doc.cloud && doc.cloud.id)) return saveLocal(false); return _sv && _sv.call(this, e); }; }
+  lfLoad().then(() => { lfBadge(); });
 })();
 </script>
 </body>
