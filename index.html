@@ -7943,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794390579';
+const NP_BUILD = '1794391106';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10408,6 +10408,188 @@ window.addEventListener('keydown', e => {
   const c = { KeyB: 'bold', KeyI: 'italic', KeyU: 'underline' }[e.code]; if (!c) return;
   e.preventDefault(); e.stopImmediatePropagation(); exec(c);
 }, true);
+
+/* ===================== แถบเครื่องมือตารางลอย (แบบ Pages) + แผงตั้งค่าตารางแบ่งแท็บ ===================== */
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `#tbar{position:fixed;z-index:7002;display:none;gap:2px;align-items:center;background:#fff;border:1px solid var(--ui-line);border-radius:11px;box-shadow:0 6px 20px rgba(0,0,0,.16);padding:3px;font-family:var(--ui-font);user-select:none;-webkit-user-select:none}
+#tbar.on{display:flex}#tbar>button{border:0;background:none;border-radius:8px;height:32px;padding:0 10px;font:inherit;font-size:15px;cursor:pointer;white-space:nowrap;color:#3b2a1e}#tbar>button:hover,#tbar>button.open{background:#f3ece4}
+#tbar>button.pri{background:#2f7de1;color:#fff}#tbar>button.pri:hover{background:#1f6bd0}#tbar .sep{width:1px;height:22px;background:var(--ui-line);margin:0 2px}#tbar .tbinfo{font-size:13px;color:#8a7a6d;padding:0 6px;white-space:nowrap}
+body.tbar-on #tsbar{display:none!important}body:has(.dlg-back.open) #tbar,.exporting #tbar,.xsmode #tbar{display:none!important}
+.tbm{position:fixed;z-index:9999;background:#fff;border:1px solid var(--ui-line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:5px;display:flex;flex-direction:column;min-width:220px;font-size:16px;font-family:var(--ui-font);user-select:none;-webkit-user-select:none}
+.tbm button{border:0;background:none;text-align:left;padding:7px 12px;border-radius:7px;font:inherit;cursor:pointer;color:#3b2a1e;display:flex;gap:8px;align-items:center}.tbm button:hover{background:#f3ece4}.tbm button.on{background:#e8f0fd}.tbm button.dan{color:#c0392b}
+.tbm hr{border:0;border-top:1px solid var(--ui-line);margin:4px 2px}.tbm .lb{font-size:13px;color:#8a7a6d;padding:4px 12px 2px}
+.tbm .sws{display:grid;grid-template-columns:repeat(6,28px);gap:5px;padding:6px 10px}.tbm .sws button{width:28px;height:28px;padding:0;border-radius:6px;border:1px solid #0002}.tbm .sws button.no{background:linear-gradient(135deg,#fff 45%,#c0392b 46%,#c0392b 54%,#fff 55%)}
+.tbm .bdg{margin:4px 8px}.tbm .bdg button{padding:0;width:34px;height:30px;display:grid;place-items:center}.ipane>.hint:first-child{margin-top:4px!important}
+.itabs{display:flex;gap:4px;margin:0 0 10px;border-bottom:1px solid var(--ui-line)}.itabs button{border:0;background:none;padding:7px 10px;font:inherit;font-size:15px;cursor:pointer;color:#8a7a6d;border-bottom:2px solid transparent;margin-bottom:-1px}.itabs button.on{color:#3b2a1e;border-bottom-color:var(--ui-accent,#7a3e10);font-weight:700}
+.ipane{display:none}.ipane.on{display:block}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- หาตาราง/ช่องปัจจุบัน ---------- */
+function tbCtx() {
+  if (PG.ts && PG.ts.z && PG.ts.R) { const b = byId(PG.ts.id); if (b && b.t === 'table') { const R = PG.ts.R; return { b, i: R.r0, j: R.c0, R, n: PG.ts.n || 1 }; } }
+  const s = getSelection(); let n = s.rangeCount ? s.getRangeAt(0).startContainer : null;
+  let td = n && (n.nodeType === 1 ? n : n.parentElement); td = td && td.closest && td.closest('#flow td[data-cell]');
+  if (!td) return null; const blk = td.closest('.blk'); const b = blk && byId(blk.dataset.id); if (!b || b.t !== 'table') return null;
+  const [i, j] = td.dataset.cell.split(',').map(Number); const mg = (b.mg || {})[td.dataset.cell] || [1, 1];
+  return { b, i, j, R: { r0: i, r1: i + mg[0] - 1, c0: j, c1: j + mg[1] - 1 }, n: 1, td };
+}
+let TB_LAST = null;
+function tbPlace() {
+  const bar = $('#tbar'); if (!bar) return; const c = tbCtx();
+  if (!c || document.body.classList.contains('xsmode')) { bar.classList.remove('on'); document.body.classList.remove('tbar-on'); TB_LAST = null; return; }
+  const key = c.b.id + ':' + c.R.r0 + ',' + c.R.c0 + ':' + c.R.r1 + ',' + c.R.c1 + ':' + c.n;
+  if (key !== TB_LAST) { TB_LAST = key; tbRender(c); }
+  const t = $(`.blk[data-id="${c.b.id}"] .b-table table`); if (!t) return; const tr = t.getBoundingClientRect();
+  const sc = $('#scroller'), sr = sc ? sc.getBoundingClientRect() : { top: 0, bottom: innerHeight };
+  bar.classList.add('on'); document.body.classList.add('tbar-on');
+  const h = bar.offsetHeight; let top = tr.top - h - 24; if (top < sr.top + 6) top = Math.min(sr.top + 6, tr.bottom - h - 6);
+  if (tr.bottom < sr.top + 10 || tr.top > sr.bottom - 10) { bar.classList.remove('on'); document.body.classList.remove('tbar-on'); return; }
+  bar.style.top = top + 'px'; bar.style.left = Math.max(6, Math.min(tr.left, innerWidth - bar.offsetWidth - 8)) + 'px';
+}
+function tbRender(c) {
+  const bar = $('#tbar'); const multi = c.n > 1;
+  const nr = c.R.r1 - c.R.r0 + 1, nc = c.R.c1 - c.R.c0 + 1;
+  bar.innerHTML = `<span class="tbinfo">${multi ? `เลือก ${c.n} ช่อง` : `แถว ${c.i + 1} · คอลัมน์ ${c.j + 1}`}</span><span class="sep"></span>
+<button data-m="row">☰ แถว ▾</button><button data-m="col">▥ คอลัมน์ ▾</button><button data-m="cell">${multi ? '⊞ ผสาน/แยก ▾' : '⊞ ช่อง ▾'}</button><span class="sep"></span>
+<button data-m="bg">🎨 สีพื้น ▾</button><button data-m="bd">▦ เส้นขอบ ▾</button><span class="sep"></span><button data-m="set">⚙ ตั้งค่าตาราง</button>`;
+  bar.dataset.nr = nr; bar.dataset.nc = nc;
+}
+let tbMenuEl = null;
+function tbMenuClose() { if (tbMenuEl) tbMenuEl.remove(); tbMenuEl = null; $$('#tbar > button.open').forEach(x => x.classList.remove('open')); }
+function tbMenu(btn, kind) {
+  const c = tbCtx(); if (!c) return; const open = btn.classList.contains('open'); tbMenuClose(); if (open) return;
+  if (kind === 'set') { tbOpenSettings('table'); return; }
+  const b = c.b, R = c.R, nr = c.n > 1 ? R.r1 - R.r0 + 1 : 1, nc = c.n > 1 ? R.c1 - R.c0 + 1 : 1, it = (t, f, cls) => `<button data-f="${f}"${cls ? ` class="${cls}"` : ''}>${t}</button>`;
+  let h = '';
+  if (kind === 'row') { const rsv = (b.rs || (b.rs === undefined ? { 0: 'L' } : {}))[R.r0] || '';
+    h = it('⬆ แทรกแถวด้านบน', 'rA') + it('⬇ แทรกแถวด้านล่าง', 'rB') + it('⧉ ทำซ้ำแถว' + (nr > 1 ? ` (${nr} แถว)` : ''), 'rD') + it('✕ ลบแถว' + (nr > 1 ? ` (${nr} แถว)` : 'นี้'), 'rX', 'dan')
+      + '<hr><div class="lb">รูปแบบแถว</div>' + RS_OPTS.map(([k, v]) => it(v, 'rs:' + k, rsv === k ? 'on' : '')).join(''); }
+  if (kind === 'col') h = it('⬅ แทรกคอลัมน์ด้านซ้าย', 'cL') + it('➡ แทรกคอลัมน์ด้านขวา', 'cR') + it('✕ ลบคอลัมน์' + (nc > 1 ? ` (${nc} คอลัมน์)` : 'นี้'), 'cX', 'dan')
+    + '<hr>' + it('⟷ กว้างขึ้น', 'cW') + it('→← แคบลง', 'cN') + it('⚌ แบ่งความกว้างเท่ากันทุกคอลัมน์', 'cE')
+    + '<hr><div class="lb">จัดข้อความในช่อง (ทั้งตาราง)</div>' + [['', 'กึ่งกลาง'], ['left', 'ชิดซ้าย'], ['first', 'คอลัมน์แรกชิดซ้าย']].map(([k, v]) => it(v, 'al:' + k, (b.al || '') === k ? 'on' : '')).join('');
+  if (kind === 'cell') { const sp = (b.mg || {})[R.r0 + ',' + R.c0]; const anyMg = c.n > 1 ? !!PG.ts.any : !!sp;
+    h = (c.n > 1 ? it(`⊞ ผสาน ${c.n} ช่องเป็นช่องเดียว`, 'mM') : it('→ รวมกับช่องทางขวา', 'mR') + it('↓ รวมกับช่องด้านล่าง', 'mD'))
+      + (anyMg ? it('⊟ แยกช่องที่ผสานไว้', 'mX') : '') + '<hr>' + it('⌫ ล้างข้อความในช่อง' + (c.n > 1 ? `ที่เลือก (${c.n})` : 'นี้'), 'mC')
+      + '<hr><div class="lb">ทิป: ลากคลุมหลายช่อง แล้วกด “ผสาน”</div>'; }
+  if (kind === 'bg') h = `<div class="lb">สีพื้นหลัง${c.n > 1 ? `ช่องที่เลือก (${c.n})` : 'ช่องนี้'}</div><div class="sws">${CF_BG.map(x => `<button data-f="bg:${x}" style="background:${x}" title="${x}"></button>`).join('')}<button data-f="bg:" class="no" title="ไม่มีสี"></button></div>`
+    + `<div class="lb">สีตัวอักษร</div><div class="sws">${CF_FG.map(x => `<button data-f="fg:${x}" style="background:${x}" title="${x}"></button>`).join('')}<button data-f="fg:" class="no" title="สีเดิม"></button></div>`
+    + '<hr>' + it('ใช้สีกับทั้งตาราง…', 'bgall');
+  if (kind === 'bd') h = `<div class="lb">เส้นขอบ${c.n > 1 ? `ช่องที่เลือก (${c.n})` : 'ทั้งตาราง (ลากคลุมช่องก่อน = เฉพาะบางช่อง)'}<br>${BD_ST.find(x => x[0] === BD.st)[1]} ${BD.pt} pt</div><div class="bdg">${BD_KEYS.map(([k, t]) => `<button data-f="bd:${k}" title="${t}">${bdIcon(k)}</button>`).join('')}</div>`
+    + '<hr>' + it('▢ ไม่มีเส้น (ส่วนที่เลือก)', 'bdnone') + it('↺ ล้างเส้นที่ตั้งเอง', 'bdx') + it('✎ เลือกลักษณะเส้น/สี/ความหนา…', 'bdset');
+  const m = document.createElement('div'); m.className = 'tbm'; m.innerHTML = h; document.body.appendChild(m); tbMenuEl = m; btn.classList.add('open');
+  const r = btn.getBoundingClientRect(), mr = m.getBoundingClientRect();
+  m.style.left = Math.max(6, Math.min(r.left, innerWidth - mr.width - 8)) + 'px'; m.style.top = (r.bottom + 4 + mr.height > innerHeight ? Math.max(6, r.top - mr.height - 4) : r.bottom + 4) + 'px';
+  m.addEventListener('mousedown', e => e.preventDefault());
+  m.addEventListener('click', e => { const f = e.target.closest('[data-f]')?.dataset.f; if (!f) return; e.stopPropagation(); tbMenuClose(); tbDo(f); });
+}
+function tbDo(f) {
+  const c = tbCtx(); if (!c) return; const b = c.b, R = c.R; let foc = null; const nr = c.n > 1 ? R.r1 - R.r0 + 1 : 1, nc = c.n > 1 ? R.c1 - R.c0 + 1 : 1;
+  if (curId !== b.id) selectBlock(b.id);
+  const keepRange = c.n > 1;
+  if (f === 'rA') { for (let k = 0; k < nr; k++) tblInsRow(b, R.r0); foc = R.r0 + ',' + R.c0; }
+  else if (f === 'rB') { for (let k = 0; k < nr; k++) tblInsRow(b, R.r1 + 1); foc = (R.r1 + 1) + ',' + R.c0; }
+  else if (f === 'rD') { for (let k = nr - 1; k >= 0; k--) { tblInsRow(b, R.r1 + 1); b.rows[R.r1 + 1] = b.rows[R.r0 + k].slice(); } foc = (R.r1 + 1) + ',' + R.c0; }
+  else if (f === 'rX') { if (nr >= b.rows.length) { toast('ลบทุกแถวไม่ได้ — ถ้าจะลบทั้งตาราง ให้เลือกกล่องแล้วกด ✕'); return; } for (let k = R.r0 + nr - 1; k >= R.r0; k--) tblDelRow(b, k); foc = Math.min(R.r0, b.rows.length - 1) + ',0'; }
+  else if (f.startsWith('rs:')) { tPrep(b); const v = f.slice(3); for (let k = R.r0; k <= R.r1; k++) { if (v) b.rs[k] = v; else delete b.rs[k]; } }
+  else if (f === 'cL') { for (let k = 0; k < nc; k++) tblInsCol(b, R.c0); foc = R.r0 + ',' + R.c0; }
+  else if (f === 'cR') { for (let k = 0; k < nc; k++) tblInsCol(b, R.c1 + 1); foc = R.r0 + ',' + (R.c1 + 1); }
+  else if (f === 'cX') { if (nc >= tNcol(b)) { toast('ลบทุกคอลัมน์ไม่ได้'); return; } for (let k = R.c0 + nc - 1; k >= R.c0; k--) tblDelCol(b, k); foc = R.r0 + ',' + Math.min(R.c0, tNcol(b) - 1); }
+  else if (f === 'cW' || f === 'cN') { tblNudgeCol(b.id, R.c0, f === 'cW' ? 6 : -6); return; }
+  else if (f === 'cE') { delete b.cw; }
+  else if (f.startsWith('al:')) { const v = f.slice(3); if (v) b.al = v; else delete b.al; }
+  else if (f === 'mR' || f === 'mD' || f === 'mX' && c.n <= 1) { const k = R.r0 + ',' + R.c0; b.mg = b.mg || {}; const v = b.mg[k] || [1, 1]; const n = tNcol(b);
+    if (f === 'mR') { if (R.c1 + 1 >= n) { toast('ไม่มีช่องทางขวาแล้ว'); return; } v[1]++; b.mg[k] = v; }
+    else if (f === 'mD') { if (R.r1 + 1 >= b.rows.length) { toast('ไม่มีช่องด้านล่างแล้ว'); return; } v[0]++; b.mg[k] = v; }
+    else delete b.mg[k];
+    if (!Object.keys(b.mg).length) delete b.mg; foc = k; }
+  else if (f === 'mM') { pgCellAct('merge'); return; }
+  else if (f === 'mX') { pgCellAct('split'); return; }
+  else if (f === 'mC') { if (c.n > 1) { pgCellAct('clear'); return; } b.rows[R.r0][R.c0] = ''; foc = R.r0 + ',' + R.c0; }
+  else if (f.startsWith('bg:') || f.startsWith('fg:')) { cfApplyKeys(b, cfKeysOf(b, R), f[0] === 'b' ? 0 : 1, f.slice(3)); tbRefocus(b, R, keepRange); return; }
+  else if (f === 'bgall') { tbOpenSettings('cell'); return; }
+  else if (f.startsWith('bd:') || f === 'bdnone') { tbBorder(b, c, f === 'bdnone' ? 'all' : f.slice(3), f === 'bdnone'); tbRefocus(b, R, keepRange); return; }
+  else if (f === 'bdx') { bdClear(b); tbRefocus(b, R, keepRange); return; }
+  else if (f === 'bdset') { tbOpenSettings('cell'); return; }
+  if (PG.ts) pgCellClear();
+  tblAfter(b, foc || (R.r0 + ',' + R.c0)); schedulePaginate(); TB_LAST = null; setTimeout(tbPlace, 60);
+}
+function cfKeysOf(b, R) { const G = bdGrid(b), ks = new Set(); for (let i = R.r0; i <= R.r1; i++) for (let j = R.c0; j <= R.c1; j++) if (G.own[i + ',' + j]) ks.add(G.own[i + ',' + j]); return [...ks]; }
+function cfApplyKeys(b, keys, slot, col) {
+  b.cf = b.cf || {}; keys.forEach(k => { const v = b.cf[k] = b.cf[k] || ['', '']; v[slot] = col || ''; if (!v[0] && !v[1]) delete b.cf[k]; });
+  if (!Object.keys(b.cf).length) delete b.cf; rerender(b.id); changed(true);
+}
+function tbBorder(b, c, scope, none) {
+  const keep = PG.ts; const save = BD.st;
+  if (c.n <= 1) PG.ts = null; // ช่องเดียว → ใช้ทั้งตาราง (ตามแผงเดิม)
+  if (none) BD.st = 'none'; try { bdApplyScope(b, scope); } finally { BD.st = save; PG.ts = keep; }
+}
+function tbRefocus(b, R, keepRange) {
+  setTimeout(() => {
+    if (keepRange && PG.ts && PG.ts.id === b.id) { pgPaintCells(); }
+    else { const td = $(`.blk[data-id="${b.id}"] td[data-cell="${R.r0},${R.c0}"]`); if (td) { if (curId !== b.id) selectBlock(b.id); placeCaretEnd(td); } }
+    TB_LAST = null; tbPlace(); if (curId === b.id) refreshInspector();
+  }, 40);
+}
+function tbOpenSettings(tab) {
+  TBT = tab; refreshInspector(); const P = $('#insp'); if (!P) return;
+  const side = P.closest('aside,#side,.side') || P; if (typeof side.scrollIntoView === 'function') P.scrollTop = 0;
+  P.classList.add('flash'); setTimeout(() => P.classList.remove('flash'), 700);
+  if (getComputedStyle(P).display === 'none' || P.offsetWidth < 20) toast('เปิดแผง “รูปแบบ” ด้านขวาเพื่อดูการตั้งค่าตารางทั้งหมด');
+}
+(function tbInit() {
+  const bar = document.createElement('div'); bar.id = 'tbar'; document.body.appendChild(bar);
+  window.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('#tbar,.tbm')) e.stopPropagation(); }, true);
+  bar.addEventListener('mousedown', e => e.preventDefault());
+  bar.addEventListener('click', e => { const btn = e.target.closest('button[data-m]'); if (btn) tbMenu(btn, btn.dataset.m); });
+  document.addEventListener('mousedown', e => { if (tbMenuEl && !tbMenuEl.contains(e.target) && !e.target.closest('#tbar')) tbMenuClose(); }, true);
+  let raf = 0; const upd = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; tbPlace(); if (tbMenuEl && !$('#tbar.on')) tbMenuClose(); }); };
+  document.addEventListener('selectionchange', upd); addEventListener('resize', upd); document.addEventListener('scroll', e => { upd(); if (tbMenuEl) tbMenuClose(); }, true);
+  document.addEventListener('pointerup', () => setTimeout(upd, 30)); document.addEventListener('keyup', upd);
+  addEventListener('keydown', e => { if (e.key === 'Escape' && tbMenuEl) { tbMenuClose(); e.stopPropagation(); } }, true);
+  const _pc = pgPaintCells; pgPaintCells = function () { const r = _pc.apply(this, arguments); TB_LAST = null; upd(); return r; };
+})();
+// ปุ่มย่อบนกล่องตาราง (+แ +ค −แ ↧แ ✕แ) ไม่ต้องใช้แล้ว — ใช้แถบลอยแทน
+(function () { const _tb = toolButtons; toolButtons = function (b) { if (b.t !== 'table') return _tb.apply(this, arguments); return _tb({ ...b, t: '__tbl' }); }; })();
+
+/* ---------- แผงด้านขวาสำหรับตาราง: แบ่งเป็นแท็บ ---------- */
+let TBT = null, TBA = null, TB_IT = 0; // แท็บที่ผู้ใช้เลือกล่าสุด / แท็บที่แสดงล่าสุด / เวลาที่แตะแผงล่าสุด
+document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('#insp')) TB_IT = Date.now(); }, true);
+(function () {
+  const _ri = refreshInspector;
+  refreshInspector = function () {
+    const r = _ri.apply(this, arguments);
+    try { const b = curId && byId(curId); if (b && b.t === 'table' && selIds().length <= 1) tbTabify(); } catch (e) { console.warn('tabify', e); }
+    return r;
+  };
+})();
+function tbTabify() {
+  const P = $('#insp'); if (!P || P.querySelector('.itabs')) return;
+  const kids = [...P.children]; const head = kids[0] && kids[0].tagName === 'H4' ? kids.shift() : null;
+  const T = el => (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+  const CELL = ['รวมช่อง', 'จัดข้อความในช่อง', 'แถวที่เคอร์เซอร์อยู่'], MORE = ['สีหลักของส่วนนี้', 'สีพื้นอ่อน', 'ใช้สีตามโทนเอกสาร', 'อยากเปลี่ยนทั้งเล่ม', 'ขึ้นหน้าใหม่ก่อนส่วนนี้', 'เว้นที่ว่างด้านบน'];
+  const groups = { cell: [], table: [], more: [] }; let sec = null;
+  kids.forEach(el => {
+    const t = T(el);
+    if (/^ปุ่มบนตาราง/.test(t)) { el.remove(); return; }
+    if (el.classList.contains('sec')) sec = /^(เส้นขอบ|สีในตาราง)/.test(t) ? 'cell' : 'more';
+    let g = sec || 'table';
+    if (!sec) { if (CELL.some(k => t.startsWith(k))) g = 'cell'; else if (MORE.some(k => t.startsWith(k))) g = 'more'; }
+    groups[g].push(el);
+  });
+  const inCell = !!tbCtx(); const def = TBA = TBT || (Date.now() - TB_IT < 4000 && TBA) || (inCell ? 'cell' : 'table');
+  const tabs = document.createElement('div'); tabs.className = 'itabs';
+  const L = { cell: 'ช่อง/แถว', table: 'ขนาดตาราง', more: 'กล่อง/อื่น ๆ' };
+  tabs.innerHTML = Object.keys(L).map(k => `<button data-it="${k}" class="${k === def ? 'on' : ''}">${L[k]}</button>`).join('');
+  const frag = document.createDocumentFragment(); if (head) frag.appendChild(head); frag.appendChild(tabs);
+  Object.keys(groups).forEach(k => { const p = document.createElement('div'); p.className = 'ipane' + (k === def ? ' on' : ''); p.dataset.ip = k;
+    if (k === 'cell') p.insertAdjacentHTML('beforeend', `<p class="hint" style="margin:0 0 8px">ใช้แถบเครื่องมือเหนือตารางเพื่อแทรก/ลบแถว คอลัมน์ ผสานช่อง และสีพื้นได้เร็วขึ้น</p>`);
+    groups[k].forEach(el => p.appendChild(el)); frag.appendChild(p); });
+  P.innerHTML = ''; P.appendChild(frag);
+  tabs.addEventListener('mousedown', e => e.preventDefault());
+  tabs.addEventListener('click', e => { const k = e.target.closest('[data-it]')?.dataset.it; if (!k) return; TBT = k; $$('.itabs button', P).forEach(x => x.classList.toggle('on', x.dataset.it === k)); $$('.ipane', P).forEach(x => x.classList.toggle('on', x.dataset.ip === k)); });
+}
 </script>
 </body>
 </html>
