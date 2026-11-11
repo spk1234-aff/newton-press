@@ -7942,7 +7942,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794369205';
+const NP_BUILD = '1794370177';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -8550,6 +8550,7 @@ function pgEls() {
 }
 function pgTarget(img) {
   const blk = img.closest('.blk'); if (!blk) return null;
+  if (img.classList.contains('flimg')) return { img, fl: true, blk, id: blk.dataset.id, b: byId(blk.dataset.id), fid: img.dataset.fid };
   if (img.classList.contains('ii')) return { img, inl: true, blk, ed: img.closest('[contenteditable="true"]') };
   return { img, inl: false, blk, id: blk.dataset.id, b: byId(blk.dataset.id) };
 }
@@ -8561,7 +8562,8 @@ function pgSelect(img) {
 }
 function pgReselect() { // หลังวาดบล็อกใหม่ หา <img> ตัวใหม่
   const T = PG.T; if (!T) return; if (T.img.isConnected) { pgPos(); return; }
-  if (!T.inl) { const el = $(`.blk[data-id="${T.id}"] .b-image img`); if (el) { PG.T = null; pgSelect(el); return; } }
+  if (T.fl) { const el = $(`#flow img.flimg[data-fid="${T.fid}"]`); if (el) { PG.T = null; pgSelect(el); return; } }
+  else if (!T.inl) { const el = $(`.blk[data-id="${T.id}"] .b-image img`); if (el) { PG.T = null; pgSelect(el); return; } }
   pgSelect(null);
 }
 function pgLoop() { cancelAnimationFrame(PG.raf); const f = () => { if (!PG.T) return; if (!PG.T.img.isConnected) { pgReselect(); if (!PG.T) return; } if (!PG.drag) pgPos(); PG.raf = requestAnimationFrame(f); }; PG.raf = requestAnimationFrame(f); }
@@ -8576,6 +8578,7 @@ function pgPos() {
 }
 function pgWrapOf(T) { return T.inl ? (T.img.dataset.wrap || '') : (T.b.wrap || ''); }
 function pgBar() {
+  if (PG.T && PG.T.fl) return flBar();
   const T = PG.T, w = pgWrapOf(T), on = v => w === v ? ' on' : '';
   const lay = T.inl
     ? `<button data-a="w:" class="${on('')}" title="อยู่ในบรรทัดเหมือนตัวอักษร">▭ ในบรรทัด</button><button data-a="w:l" class="${on('l')}" title="ชิดซ้าย ข้อความล้อมรอบ">◧ ล้อมซ้าย</button><button data-a="w:r" class="${on('r')}" title="ชิดขวา ข้อความล้อมรอบ">◨ ล้อมขวา</button><button data-a="w:c" class="${on('c')}" title="แยกบรรทัด กึ่งกลาง">▣ กลาง</button>`
@@ -8583,11 +8586,13 @@ function pgBar() {
   $('#ibar').innerHTML = lay + '<span class="sep"></span>' +
     '<button data-a="crop" title="ครอบตัดรูป">✂ ครอบตัด</button><button data-a="rot" title="หมุนตามเข็ม 90°">↻</button><button data-a="rotl" title="หมุนทวนเข็ม 90°">↺</button><button data-a="fh" title="กลับซ้าย–ขวา">⇋</button><button data-a="fv" title="กลับบน–ล่าง">⇅</button>' +
     '<span class="sep"></span><button data-a="look" title="เส้นขอบ เงา มุมโค้ง ความโปร่งใส">🎨 แต่งรูป</button>' +
+    ('<button data-a="tofl" title="ลอยอิสระ: ลากไปวางตำแหน่งใดก็ได้บนหน้ากระดาษ">✥ วางอิสระ</button>') +
     (T.inl ? '<button data-a="toblk" title="ทำเป็นรูปแยกบล็อก (มีคำบรรยายภาพได้)">⤓ แยกบล็อก</button>' : '<button data-a="rep" title="เปลี่ยนรูป">⇄</button>') +
     '<button data-a="del" title="ลบรูป">🗑</button>';
 }
 function pgCommit(T, soft) {
   T = T || PG.T; if (!T) return;
+  if (T.fl) { flSave(T); return; }
   if (T.inl) { if (T.ed && T.ed.isConnected) syncFrom(T.ed); changed(true); }
   else { rerender(T.id); changed(true); if (curId === T.id) refreshInspector(); pgReselect(); }
   if (!soft) schedulePaginate();
@@ -8600,6 +8605,7 @@ function pgSetWrap(v) {
 }
 async function pgAct(a, btn) {
   const T = PG.T; if (!T) return;
+  if (a === 'tofl') { if (T.inl) flFromImg(T); else flFromBlock(T.id); return; }
   if (a.startsWith('w:')) return pgSetWrap(a.slice(2));
   if (a === 'del') { pgDelete(); return; }
   if (a === 'rep') { imgReplace = T.id; $('#imgIn').click(); return; }
@@ -8615,6 +8621,7 @@ async function pgAct(a, btn) {
 }
 function pgDelete() {
   const T = PG.T; if (!T) return; pgSelect(null);
+  if (T.fl) { flRemove(T.id, T.fid); return; }
   if (T.inl) { const ed = T.ed; T.img.remove(); if (ed) syncFrom(ed); changed(true); schedulePaginate(); }
   else { const i = idx(T.id); if (i < 0) return; doc.blocks.splice(i, 1); const el = $(`.blk[data-id="${T.id}"]`); if (el) el.remove(); curId = null; changed(true); schedulePaginate(); refreshInspector(); }
 }
@@ -8750,7 +8757,7 @@ document.addEventListener('pointerdown', e => {
 }, true);
 function pgStartResize(e, k) {
   const T = PG.T, r = T.img.getBoundingClientRect(), z = pgZ(T.img);
-  const box = T.inl ? (T.ed || T.blk) : (T.b.wrap ? $('#flow') : $('.b-image', T.blk) || T.blk);
+  const box = T.fl ? $('#flow') : T.inl ? (T.ed || T.blk) : (T.b.wrap ? $('#flow') : $('.b-image', T.blk) || T.blk);
   PG.drag = { kind: 'resize', k, x: e.clientX, y: e.clientY, w0: r.width, h0: r.height, z, boxW: box.getBoundingClientRect().width, ratio: r.height / Math.max(1, r.width) };
   $('#ihd').classList.add('drag'); document.body.style.cursor = getComputedStyle(e.target).cursor;
 }
@@ -8762,10 +8769,10 @@ document.addEventListener('pointermove', e => {
     if (k === 'n' || k === 's') dw = (k === 's' ? dy : -dy) / D.ratio; else if (k === 'e' || k === 'w') dw = k === 'e' ? dx : -dx;
     else { const sx = /e/.test(k) ? dx : -dx, sy = (/s/.test(k) ? dy : -dy) / D.ratio; dw = Math.abs(sx) > Math.abs(sy) ? sx : sy; }
     const W = Math.max(16, Math.min(D.boxW, D.w0 + dw));
-    if (T.inl) T.img.style.width = Math.round(W / D.z) + 'px';
+    if (T.inl || T.fl) T.img.style.width = Math.round(W / D.z) + 'px';
     else { const pct = Math.max(10, Math.min(100, Math.round(W / D.boxW * 100))); D.pct = pct; if (T.b.wrap) T.blk.style.setProperty('--fw', pct + '%'); else T.img.style.width = pct + '%'; }
     const r = T.img.getBoundingClientRect(), tip = $('#ihd .itip');
-    tip.textContent = `${(r.width / D.z / PG_PX_CM).toFixed(1)} × ${(r.height / D.z / PG_PX_CM).toFixed(1)} ซม.` + (T.inl ? '' : ` · ${D.pct || T.b.w || 60}%`);
+    tip.textContent = `${(r.width / D.z / PG_PX_CM).toFixed(1)} × ${(r.height / D.z / PG_PX_CM).toFixed(1)} ซม.` + (T.inl || T.fl ? '' : ` · ${D.pct || T.b.w || 60}%`);
     tip.style.left = (r.right + 10) + 'px'; tip.style.top = (r.bottom - 10) + 'px'; pgPos(); return;
   }
   if (D.kind === 'move') {
@@ -8784,7 +8791,7 @@ document.addEventListener('pointerup', e => {
   const D = PG.drag; if (!D) return; PG.drag = null; const T = PG.T; document.body.style.cursor = '';
   $('#ihd').classList.remove('drag'); ['imove', 'icaret', 'idrop'].forEach(id => { const x = $('#' + id); if (x) x.style.display = 'none'; });
   if (!T) return;
-  if (D.kind === 'resize') { if (!T.inl && D.pct) T.b.w = D.pct; pgCommit(T); return; }
+  if (D.kind === 'resize') { if (!T.inl && !T.fl && D.pct) T.b.w = D.pct; pgCommit(T); return; }
   if (D.kind === 'move') {
     $('#ihd').classList.add('on'); $('#ibar').classList.add('on');
     if (T.inl && D.drop) { const old = T.ed; D.drop.r.insertNode(T.img); T.ed = D.drop.ed; if (old && old !== T.ed && old.isConnected) syncFrom(old); pgCommit(T); }
@@ -8845,15 +8852,15 @@ addEventListener('drop', e => {
 // ปุ่ม 🖼 รูปภาพ → เลือกแบบแทรก
 (function pgImgBtn() {
   const btn = $('#bImg'); if (!btn) return; const inp = $('#imgIn'); const _ch = inp.onchange;
-  inp.onchange = async e => { if (PG.inl) { PG.inl = false; const r = PG.inlR; PG.inlR = null; const fs = [...e.target.files]; e.target.value = ''; if (!(r && await pgInsertInline(fs, r))) await addImages(fs); return; } return _ch(e); };
+  inp.onchange = async e => { if (PG.flt) { PG.flt = false; const fs = [...e.target.files]; e.target.value = ''; if (typeof flAddFiles === 'function') flAddFiles(fs); return; } if (PG.inl) { PG.inl = false; const r = PG.inlR; PG.inlR = null; const fs = [...e.target.files]; e.target.value = ''; if (!(r && await pgInsertInline(fs, r))) await addImages(fs); return; } return _ch(e); };
   btn.onclick = () => {
     $$('#imgMenu').forEach(m => m.remove()); const r0 = pgRangeNow();
     const m = document.createElement('div'); m.className = 'tmenu'; m.id = 'imgMenu';
-    m.innerHTML = `<button data-k="blk">▣ รูปแยกบรรทัด (มีคำบรรยายภาพได้)</button><button data-k="inl"${r0 ? '' : ' disabled style="opacity:.45" title="คลิกในข้อความก่อน"'}>▭ รูปในบรรทัดข้อความ ที่เคอร์เซอร์</button><hr><div class="tmh">ทิป: ลากรูปจากเครื่องมาวางบนข้อความ หรือคัดลอกแล้ววาง (⌘V) ขณะพิมพ์ ก็แทรกในบรรทัดได้</div>`;
+    m.innerHTML = `<button data-k="blk">▣ รูปแยกบรรทัด (มีคำบรรยายภาพได้)</button><button data-k="flt">✥ รูปลอยอิสระ (ลากวางตรงไหนก็ได้)</button><button data-k="inl"${r0 ? '' : ' disabled style="opacity:.45" title="คลิกในข้อความก่อน"'}>▭ รูปในบรรทัดข้อความ ที่เคอร์เซอร์</button><hr><div class="tmh">ทิป: ลากรูปจากเครื่องมาวางบนข้อความ หรือคัดลอกแล้ววาง (⌘V) ขณะพิมพ์ ก็แทรกในบรรทัดได้</div>`;
     document.body.appendChild(m); const r = btn.getBoundingClientRect(); m.style.left = Math.min(r.left, innerWidth - 360) + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.maxWidth = '350px';
     const off = ev => { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('mousedown', off, true); } }; setTimeout(() => document.addEventListener('mousedown', off, true), 0);
     m.addEventListener('mousedown', ev => ev.preventDefault());
-    m.onclick = ev => { const k = ev.target.closest('button')?.dataset.k; if (!k || ev.target.closest('button').disabled) return; m.remove(); document.removeEventListener('mousedown', off, true); imgReplace = null; if (k === 'inl') { PG.inl = true; PG.inlR = r0; } $('#imgIn').click(); };
+    m.onclick = ev => { const k = ev.target.closest('button')?.dataset.k; if (!k || ev.target.closest('button').disabled) return; m.remove(); document.removeEventListener('mousedown', off, true); imgReplace = null; if (k === 'inl') { PG.inl = true; PG.inlR = r0; } if (k === 'flt') PG.flt = true; $('#imgIn').click(); };
   };
 })();
 // ส่งออก Word: เตรียมขนาดรูปในบรรทัดไว้ล่วงหน้า
@@ -9744,7 +9751,7 @@ async function openSignature() {
 <div id="sgDraw"><canvas id="sigPad"></canvas><div class="r"><label>สีหมึก</label>${['#1a1a1a', '#1f3fa8', '#0b2a6f'].map((c, i) => `<span class="ink${i ? '' : ' on'}" data-ink="${c}" style="background:${c}"></span>`).join('')}<label style="margin-left:10px">ความหนา</label><input type="range" id="sgW" min="1.2" max="5" step=".2" value="2.6"><button class="tb" id="sgUndo">↶ ย้อน</button><button class="tb" id="sgClr">ล้าง</button></div></div>
 <div id="sgPhoto" style="display:none"><div id="sigPrev"><span class="hint">เลือกรูปถ่ายลายเซ็นบนกระดาษขาว (ถ่ายตรง ๆ แสงสว่าง)</span></div><div class="r"><button class="tb" id="sgPick">เลือกรูป…</button><label>ความไวการตัดพื้น</label><input type="range" id="sgTh" min="90" max="235" value="170"><label><input type="checkbox" id="sgKeep"> ใช้สีหมึกจริงจากรูป</label></div><input type="file" id="sgFile" accept="image/*" hidden></div>
 <div class="r"><label>ชื่อลายเซ็น</label><input type="text" id="sgName" placeholder="เช่น ลายเซ็นของฉัน" style="flex:1;min-width:140px"><label><input type="checkbox" id="sgSave" checked> เก็บไว้ใช้ครั้งต่อไป</label></div>
-<div class="r"><label>ขนาด (กว้าง)</label><select id="sgSize"><option value="2.8">2.8 ซม.</option><option value="3.5" selected>3.5 ซม.</option><option value="4.5">4.5 ซม.</option><option value="6">6 ซม.</option></select><label><input type="checkbox" id="sgOver" checked> วางทับเส้น “ลงชื่อ ......” อัตโนมัติ</label></div>
+<div class="r"><label>ขนาด (กว้าง)</label><select id="sgSize"><option value="2.8">2.8 ซม.</option><option value="3.5" selected>3.5 ซม.</option><option value="4.5">4.5 ซม.</option><option value="6">6 ซม.</option></select><label>การวาง</label><select id="sgPlace"><option value="free" selected>วางอิสระ ลากย้ายไปตรงไหนก็ได้</option><option value="over">อยู่ในบรรทัด ทับเส้น “ลงชื่อ ......”</option><option value="inl">อยู่ในบรรทัดที่เคอร์เซอร์</option></select></div>
 </div></div><div class="actions"><span class="hint" id="sgWhere" style="margin-right:auto"></span><button class="tb" id="sgNo">ยกเลิก</button><button class="tb primary" id="sgOk">แทรกลายเซ็น</button></div></div>`;
     document.body.appendChild(d);
     $('#sgNo').onclick = () => closeDlg('#dSig');
@@ -9779,9 +9786,21 @@ async function sgInsertFromDlg() {
   else { src = SG.photoOut || null; if (!src) { toast('เลือกรูปถ่ายลายเซ็นก่อน'); return; } }
   if (!src) return;
   if (SG.pick === null && $('#sgSave').checked) { SG.list.unshift({ id: 's' + Date.now().toString(36), name: name || 'ลายเซ็น ' + (SG.list.length + 1), src, mod: Date.now() }); await sgStore(); sgSyncUp(); }
-  closeDlg('#dSig'); sgInsert(src, +$('#sgSize').value, $('#sgOver').checked);
+  closeDlg('#dSig'); const pl = $('#sgPlace').value; if (pl === 'free') sgInsertFree(src, +$('#sgSize').value); else sgInsert(src, +$('#sgSize').value, pl === 'over');
 }
 /* ---------- แทรกลงเอกสาร ---------- */
+// วางอิสระ: เริ่มที่เส้น “ลงชื่อ” ถ้ามี ไม่งั้นที่เคอร์เซอร์ หรือกลางจอ แล้วลากย้ายได้ทุกที่
+async function sgInsertFree(src, cm) {
+  const im = await pgLoadImg(src).catch(() => null); const wpx = cm * PG_PX_CM; const blk0 = SG.blkId && byId(SG.blkId); const z = ($('#flow').getBoundingClientRect().width / $('#flow').offsetWidth) || 1;
+  const hpx = im ? wpx * im.naturalHeight / im.naturalWidth : wpx * 0.4; let cx = null, cy = null;
+  let ed = SG.range && SG.range.startContainer.isConnected ? pgEdOf(SG.range.startContainer) : null;
+  if (ed && ed.closest('.b-lpsign')) ed = ed.closest('.blk').querySelector('[data-f="l1"]') || ed;
+  if (!ed && blk0 && blk0.t === 'lpsign') ed = $(`.blk[data-id="${blk0.id}"] [data-f="l1"]`);
+  if (ed && /ลงชื่อ/.test(ed.textContent)) { const tw = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT); let n; while ((n = tw.nextNode())) { const m = /ลงชื่อ\)?\s*/.exec(n.nodeValue); if (!m) continue; const rr = document.createRange(); rr.setStart(n, m.index + m[0].length); rr.collapse(true); const q = rr.getClientRects()[0] || rr.getBoundingClientRect(); if (q && (q.left || q.top)) { cx = q.left + 6 * z; cy = q.bottom - hpx * z * 0.82; } break; } }
+  if (cx === null && SG.range && SG.range.startContainer.isConnected) { const q = SG.range.getClientRects()[0] || SG.range.getBoundingClientRect(); if (q && (q.left || q.top)) { cx = q.left; cy = q.top - hpx * z * 0.6; } }
+  if (cx === null) { const el = blk0 && $(`.blk[data-id="${blk0.id}"]`); const sr = $('#scroller').getBoundingClientRect(), fr = $('#flow').getBoundingClientRect(); if (el) { const r = el.getBoundingClientRect(); cx = r.left + r.width - wpx * z - 20; cy = r.top; } else { cx = fr.left + fr.width / 2 - wpx * z / 2; cy = sr.top + sr.height / 2 - hpx * z / 2; } }
+  flAddAt(src, wpx, cx, cy, true); schedulePaginate(); toast('ลากลายเซ็นไปวางตรงไหนก็ได้ · ลากมุมเพื่อปรับขนาด · ลูกศรขยับทีละนิด');
+}
 function sgImg(src, cm) { const im = document.createElement('img'); im.className = 'ii sig'; im.alt = 'ลายเซ็น'; im.src = src; im.draggable = false; im.style.width = Math.round(cm * PG_PX_CM) + 'px'; return im; }
 function sgInsert(src, cm, over) {
   let r = SG.range && SG.range.startContainer.isConnected ? SG.range : null; let ed = r && pgEdOf(r.startContainer);
@@ -9828,6 +9847,154 @@ async function sgSyncDown() {
   } catch (e) { console.warn('sig sync down', e); }
   return got;
 }
+
+/* ===================== รูป/ลายเซ็นลอยอิสระ =====================
+   วางได้ทุกตำแหน่งบนหน้ากระดาษ ลากย้ายได้อิสระ (ไม่ดันข้อความ) · ผูกกับส่วนที่อยู่ใต้รูป จึงเลื่อนตามเนื้อหา
+   เก็บใน b.fl = [{ fid, src, x, y, w, sig }] — x, y เป็น px จากมุมซ้ายบนของกล่อง */
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `#flow img.flimg{position:absolute;z-index:6;max-width:none;cursor:move;-webkit-user-drag:none;user-select:none;-webkit-user-select:none;touch-action:none}
+#flow img.flimg:hover{outline:1px dashed #2f7de1aa}
+.fldragging,.fldragging *{cursor:move!important}`;
+  document.head.appendChild(s);
+})();
+const flId = () => 'f' + Math.random().toString(36).slice(2, 9);
+// วาดรูปลอยของกล่อง
+const _fbFl = fillBlock;
+fillBlock = function (el, b) {
+  _fbFl(el, b); $$(':scope > img.flimg', el).forEach(x => x.remove());
+  (b.fl || []).forEach(f => { const im = document.createElement('img'); im.className = 'flimg' + (f.sig ? ' sig' : ''); im.dataset.fid = f.fid; im.alt = f.sig ? 'ลายเซ็น' : 'รูป'; im.draggable = false; im.src = f.src; Object.assign(im.style, { left: f.x + 'px', top: f.y + 'px', width: f.w + 'px' }); if (f.look) pgApplyLook(im, f.look); el.appendChild(im); });
+};
+function flFind(fid) { for (const b of doc.blocks) { const f = (b.fl || []).find(x => x.fid === fid); if (f) return { b, f }; } return null; }
+function flSave(T) { const r = flFind(T.fid); if (!r) return; r.f.w = Math.round(parseFloat(T.img.style.width) || r.f.w); changed(true); }
+function flRemove(id, fid) { const b = byId(id); if (!b || !b.fl) return; b.fl = b.fl.filter(x => x.fid !== fid); if (!b.fl.length) delete b.fl; const im = $(`#flow img.flimg[data-fid="${fid}"]`); if (im) im.remove(); changed(true); toast('ลบแล้ว'); }
+function flBar() {
+  $('#ibar').innerHTML = '<span style="padding:0 8px;color:var(--ui-mute);font-size:14px">✥ ลากเพื่อย้ายได้อิสระ</span><span class="sep"></span><button data-a="flinl" title="กลับไปอยู่ในบรรทัดข้อความ">▭ ใส่ในบรรทัด</button><button data-a="flfront" title="ซ้อนไว้บนสุด">⬆ บนสุด</button><button data-a="del" title="ลบ">🗑</button>';
+}
+// ปุ่มบนแถบของรูปลอย
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('#ibar [data-a="flinl"], #ibar [data-a="flfront"]'); if (!b || !PG.T || !PG.T.fl) return; e.stopImmediatePropagation();
+  const T = PG.T, r = flFind(T.fid); if (!r) return;
+  if (b.dataset.a === 'flfront') { r.b.fl = r.b.fl.filter(x => x !== r.f); r.b.fl.push(r.f); rerender(r.b.id); changed(true); pgReselect(); return; }
+  // ใส่กลับในบรรทัด: ไปไว้ท้ายข้อความช่องแรกของกล่อง (หรือกล่องข้อความใหม่)
+  pgSelect(null); r.b.fl = r.b.fl.filter(x => x !== r.f); if (!r.b.fl.length) delete r.b.fl;
+  const el = $(`.blk[data-id="${r.b.id}"]`); rerender(r.b.id); const ed = edsOf($(`.blk[data-id="${r.b.id}"]`))[0];
+  const im = document.createElement('img'); im.className = 'ii' + (r.f.sig ? ' sig' : ''); im.src = r.f.src; im.draggable = false; im.style.width = r.f.w + 'px';
+  if (ed) { ed.appendChild(im); syncFrom(ed); } else { const nb = newBlock('para', { html: '' }); doc.blocks.splice(idx(r.b.id) + 1, 0, nb); nb.html = im.outerHTML; renderAll(); }
+  changed(true); schedulePaginate();
+}, true);
+// แปลงรูปในบรรทัด → ลอยอิสระ (คงตำแหน่งเดิมบนจอ)
+function flFromImg(T) {
+  if (!T || !T.inl) return; const img = T.img, blk = img.closest('.blk'), z = pgZ(img), r = img.getBoundingClientRect(), br = blk.getBoundingClientRect();
+  const b = byId(blk.dataset.id); const f = { fid: flId(), src: img.src, x: Math.round((r.left - br.left) / z), y: Math.round((r.top - br.top) / z), w: Math.round(r.width / z) };
+  if (img.classList.contains('sig')) f.sig = true; const lk = pgLookOfInline(img); if (Object.keys(lk).length) f.look = lk;
+  const ed = T.ed; pgSelect(null); const w = img.closest('.sigw'); (w || img).remove(); if (ed) syncFrom(ed);
+  b.fl = (b.fl || []).concat(f); rerender(b.id); changed(true); schedulePaginate();
+  setTimeout(() => { const n = $(`#flow img.flimg[data-fid="${f.fid}"]`); if (n) pgSelect(n); }, 40);
+  toast('ลากไปวางตรงไหนก็ได้บนหน้ากระดาษ');
+}
+// เพิ่มรูปลอยที่ตำแหน่งบนจอ (clientX, clientY = มุมซ้ายบนของรูป)
+function flAddAt(src, wpx, cx, cy, sig) {
+  const blk = flBlockAt(cy) || $('#flow > .blk'); if (!blk) return null; const z = blk.getBoundingClientRect().width / blk.offsetWidth || 1, br = blk.getBoundingClientRect();
+  const b = byId(blk.dataset.id), f = { fid: flId(), src, x: Math.round((cx - br.left) / z), y: Math.round((cy - br.top) / z), w: Math.round(wpx) }; if (sig) f.sig = true;
+  b.fl = (b.fl || []).concat(f); rerender(b.id); changed(true);
+  setTimeout(() => { const n = $(`#flow img.flimg[data-fid="${f.fid}"]`); if (n) pgSelect(n); }, 40); return f;
+}
+// กล่องที่อยู่ ณ ระดับความสูงนี้ (ใช้ผูกรูปลอย)
+function flBlockAt(cy) { let last = null; for (const el of $$('#flow > .blk')) { const r = el.getBoundingClientRect(); if (r.top <= cy) last = el; else break; } return last; }
+// ลากย้าย
+let flD = null;
+addEventListener('pointerdown', e => {
+  if (e.button !== 0) return; const img = e.target.closest && e.target.closest('#flow img.flimg'); if (!img) return;
+  e.preventDefault(); e.stopPropagation();
+  pgSelect(img); const r = img.getBoundingClientRect(); flD = { img, dx: e.clientX - r.left, dy: e.clientY - r.top, x0: e.clientX, y0: e.clientY, z: pgZ(img), moved: false, l0: parseFloat(img.style.left) || 0, t0: parseFloat(img.style.top) || 0 };
+  try { img.setPointerCapture(e.pointerId); } catch (er) { }
+}, true);
+addEventListener('pointermove', e => {
+  if (!flD) return; const d = flD; if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 3) return;
+  if (!d.moved) { d.moved = true; document.body.classList.add('fldragging'); $('#ibar').classList.remove('on'); }
+  d.img.style.left = (d.l0 + (e.clientX - d.x0) / d.z) + 'px'; d.img.style.top = (d.t0 + (e.clientY - d.y0) / d.z) + 'px';
+  const sc = $('#scroller'), cr = sc.getBoundingClientRect(); if (e.clientY > cr.bottom - 30) sc.scrollTop += 14; else if (e.clientY < cr.top + 30) sc.scrollTop -= 14;
+}, true);
+addEventListener('pointerup', () => {
+  if (!flD) return; const d = flD; flD = null; document.body.classList.remove('fldragging'); if (PG.T) { $('#ibar').classList.add('on'); }
+  if (!d.moved) return; const r = d.img.getBoundingClientRect(), fid = d.img.dataset.fid, F = flFind(fid); if (!F) return;
+  // ผูกกับกล่องที่อยู่ใต้มุมบนของรูป
+  const nb = flBlockAt(r.top) || $('#flow > .blk') || d.img.closest('.blk'); const z = d.z, br = nb.getBoundingClientRect();
+  F.f.x = Math.round((r.left - br.left) / z); F.f.y = Math.round((r.top - br.top) / z);
+  if (nb.dataset.id !== F.b.id) { F.b.fl = F.b.fl.filter(x => x !== F.f); if (!F.b.fl.length) delete F.b.fl; const t = byId(nb.dataset.id); t.fl = (t.fl || []).concat(F.f); rerender(F.b.id); rerender(t.id); setTimeout(() => { const n = $(`#flow img.flimg[data-fid="${fid}"]`); if (n) pgSelect(n); }, 30); }
+  else { d.img.style.left = F.f.x + 'px'; d.img.style.top = F.f.y + 'px'; }
+  changed(true);
+}, true);
+// ลูกศรขยับทีละนิด (Shift = ทีละมาก)
+addEventListener('keydown', e => {
+  if (!PG.T || !PG.T.fl || !/^Arrow/.test(e.key) || e.metaKey || e.ctrlKey) return; e.preventDefault(); e.stopImmediatePropagation();
+  const F = flFind(PG.T.fid); if (!F) return; const st = e.shiftKey ? 10 : 1;
+  if (e.key === 'ArrowLeft') F.f.x -= st; if (e.key === 'ArrowRight') F.f.x += st; if (e.key === 'ArrowUp') F.f.y -= st; if (e.key === 'ArrowDown') F.f.y += st;
+  PG.T.img.style.left = F.f.x + 'px'; PG.T.img.style.top = F.f.y + 'px'; clearTimeout(flD && 0); clearTimeout(window.__flk); window.__flk = setTimeout(() => changed(true), 300);
+}, true);
+
+/* ---------- ส่งออก Word: วางรูปลอยแบบยึดตำแหน่ง ---------- */
+(function () {
+  const _dx = exportDOCX;
+  exportDOCX = async function () { for (const b of doc.blocks) for (const f of (b.fl || [])) if (!PG_ISZ[f.src]) PG_ISZ[f.src] = await imgSize(f.src); return _dx.apply(this, arguments); };
+  const bd = $('#bDocx'); if (bd) bd.onclick = () => exportDOCX();
+  const _bx = blockXML;
+  blockXML = async function (b, keep) {
+    let x = await _bx(b, keep); if (!b.fl || !b.fl.length) return x;
+    const anch = b.fl.map(f => {
+      const m = /^data:image\/(png|jpeg|jpg|gif);base64,(.*)$/.exec(f.src); if (!m) return ''; const sz = PG_ISZ[f.src] || { w: 400, h: 200 };
+      const rid = addMedia(m[2], m[1] === 'jpeg' ? 'jpg' : m[1]), id = ++DX.pic; const cx = Math.round(f.w / 3.7795 * EMU), cy = Math.round(f.w / 3.7795 * sz.h / sz.w * EMU);
+      return `<w:r><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="${251660000 + id}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>${Math.round(f.x / 3.7795 * EMU)}</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>${Math.round(f.y / 3.7795 * EMU)}</wp:posOffset></wp:positionV><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="${id}" name="Float ${id}"/><wp:cNvGraphicFramePr/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="fl${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>`;
+    }).join('');
+    return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr>${anch}</w:p>` + (x || '');
+  };
+})();
+
+/* ---------- รูปภาพ/รูปวาดแยกบล็อก → ลอยอิสระ (เก็บบล็อกเดิมไว้ คืนกลับเป็นบล็อกแก้ไขได้) ---------- */
+function flVisualOf(el, b) { return b.t === 'image' ? $('.b-image img', el) : b.t === 'figure' ? ($('svg', el) || $('.b-figure', el)) : el.firstElementChild; }
+async function flSrcOf(b, vis) {
+  if (b.t === 'image') return b.src;
+  const svg = vis && vis.tagName.toLowerCase() === 'svg' ? vis : null; if (!svg) return null;
+  const c = svg.cloneNode(true); const r = svg.getBoundingClientRect(); if (!c.getAttribute('xmlns')) c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  if (!c.getAttribute('width')) c.setAttribute('width', Math.round(r.width)); if (!c.getAttribute('height')) c.setAttribute('height', Math.round(r.height));
+  // ฝังฟอนต์/สไตล์ไม่ได้ทั้งหมด → แปลงเป็น PNG ความละเอียดสูงจากหน้าจอ
+  const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(new XMLSerializer().serializeToString(c))));
+  try { const im = await pgLoadImg(url); const k = 3, cv = document.createElement('canvas'); cv.width = Math.round(r.width * k / pgZ(svg)); cv.height = Math.round(r.height * k / pgZ(svg)); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); return cv.toDataURL('image/png'); } catch (e) { return url; }
+}
+async function flFromBlock(id) {
+  const b = byId(id), el = $(`.blk[data-id="${id}"]`); if (!b || !el) return; const vis = flVisualOf(el, b); if (!vis) return;
+  const src = await flSrcOf(b, vis); if (!src) { toast('แปลงส่วนนี้เป็นภาพลอยไม่ได้'); return; }
+  const r = vis.getBoundingClientRect(), z = pgZ(vis.tagName === 'IMG' ? vis : el) || 1;
+  const i = idx(id), anc = doc.blocks[i - 1] || doc.blocks[i + 1]; if (!anc) { toast('ต้องมีส่วนอื่นในเอกสารอย่างน้อย 1 ส่วน'); return; }
+  const ae = $(`.blk[data-id="${anc.id}"]`), ar = ae.getBoundingClientRect(); const ez = ar.width / ae.offsetWidth || 1;
+  const orig = JSON.parse(JSON.stringify(b)); delete orig.id;
+  const f = { fid: flId(), src, x: Math.round((r.left - ar.left) / ez), y: Math.round((r.top - ar.top) / ez), w: Math.round(r.width / ez), orig };
+  if (b.ist) f.look = b.ist;
+  pgSelect(null); doc.blocks.splice(i, 1); el.remove(); anc.fl = (anc.fl || []).concat(f); rerender(anc.id); curId = null; changed(true); schedulePaginate(); refreshInspector();
+  setTimeout(() => { const n = $(`#flow img.flimg[data-fid="${f.fid}"]`); if (n) pgSelect(n); }, 60);
+  toast('ลากไปวางตรงไหนก็ได้ · กด “ใส่ในบรรทัด” เพื่อคืนเป็นแบบเดิม');
+}
+// “ใส่ในบรรทัด” ของรูปที่มาจากบล็อก → คืนเป็นบล็อกเดิม (แก้ไขรูปวาดได้อีก)
+addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('#ibar [data-a="flinl"]'); if (!b || !PG.T || !PG.T.fl) return; const F = flFind(PG.T.fid); if (!F || !F.f.orig) return;
+  e.stopImmediatePropagation(); e.preventDefault(); pgSelect(null);
+  F.b.fl = F.b.fl.filter(x => x !== F.f); if (!F.b.fl.length) delete F.b.fl;
+  const nb = Object.assign(JSON.parse(JSON.stringify(F.f.orig)), { id: uid() }); doc.blocks.splice(idx(F.b.id) + 1, 0, nb); renderAll(); changed(true); selectBlock(nb.id); toast('คืนเป็นส่วนแยกบรรทัดแล้ว');
+}, true);
+// แทรกรูปใหม่แบบลอยอิสระ (กลางจอ)
+async function flAddFiles(files) {
+  const L = [...files].filter(f => /^image\//.test(f.type)); const sr = $('#scroller').getBoundingClientRect(), fr = $('#flow').getBoundingClientRect(); let k = 0;
+  for (const f of L) { const src = await readImage(f); const im = await pgLoadImg(src).catch(() => null); const w = Math.min(260, im ? im.naturalWidth : 260); const z = fr.width / $('#flow').offsetWidth || 1;
+    flAddAt(src, w, fr.left + fr.width / 2 - w * z / 2 + k * 20, sr.top + sr.height / 3 + k * 20, false); k++; }
+  if (k) toast('ลากรูปไปวางตรงไหนก็ได้ · ลากมุมเพื่อปรับขนาด');
+}
+// แผงขวา: ปุ่ม “วางอิสระ” สำหรับรูปภาพและรูปวาด
+(function () {
+  const _ex = extInspector;
+  extInspector = function (b) { let h = _ex(b); if (b.t === 'image' || b.t === 'figure') h += `<div class="ir"><button class="tb" data-flx="1" title="ลากไปวางตรงไหนก็ได้บนหน้ากระดาษ ไม่ดันข้อความ">✥ วางอิสระ (ลากไปไหนก็ได้)</button></div>`; return h; };
+  document.addEventListener('click', e => { const x = e.target.closest && e.target.closest('[data-flx]'); if (!x || !curId) return; e.preventDefault(); flFromBlock(curId); }, true);
+})();
 </script>
 </body>
 </html>
