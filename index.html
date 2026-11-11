@@ -7943,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794389470';
+const NP_BUILD = '1794389901';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9384,7 +9384,7 @@ function lyFlowOnce() {
     const el = els[i], mt = parseFloat(el.style.marginTop) || 0; if (mt < 60) continue;
     const b0 = byId(el.dataset.id); if (!b0 || b0.npg) continue;
     const prev = els[i - 1], prevBot = prev.offsetTop + prev.offsetHeight, p = Math.floor(prev.offsetTop / P), limit = p * P + PAGE_H - BOT; let avail = limit - prevBot - 6;
-    let tgt = el, tb = b0; if (HEADINGS.has(b0.t) && els[i + 1]) { avail -= el.offsetHeight; tgt = els[i + 1]; tb = byId(tgt.dataset.id); }
+    let tgt = el, tb = b0, j = i; while (tb && !LY_FLOW.has(tb.t) && j - i < 3 && els[j + 1] && !(parseFloat(els[j + 1].style.marginTop) > 0) && tgt.offsetHeight < 140) { avail -= tgt.offsetHeight; j++; tgt = els[j]; tb = byId(tgt.dataset.id); }
     if (!tb || !LY_FLOW.has(tb.t) || avail < 50) continue;
     const ed = $('[contenteditable="true"]', tgt); if (!ed) continue; const C = lyCands(ed); if (!C.length) continue;
     const tr = tgt.getBoundingClientRect(), z = (tr.height / tgt.offsetHeight) || 1; let pick = null;
