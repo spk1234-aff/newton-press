@@ -1015,7 +1015,7 @@ function layoutChoices(el, b) {
   g.style.justifyContent = 'start';
 }
 function buildTable(el, b) {
-  if (typeof buildTableX === 'function' && (b.rs || b.full || b.cw || b.al || b.mg || b.bd || b.nob || b.tw || b.rh || b.rha || b.pad || b.tfs)) return buildTableX(el, b);
+  if (typeof buildTableX === 'function' && (b.rs || b.full || b.cw || b.al || b.mg || b.bd || b.cf || b.nob || b.tw || b.rh || b.rha || b.pad || b.tfs)) return buildTableX(el, b);
   const w = $('.b-table', el);
   const rows = b.rows || [['', ''], ['', '']];
   w.innerHTML = '<table>' + rows.map((r, i) => '<tr>' + r.map((c, j) => `<td contenteditable="true" data-cell="${i},${j}"></td>`).join('') + '</tr>').join('') + '</table>';
@@ -6029,7 +6029,7 @@ buildTableX = function (el, b) {
 };
 const _tXMLp = tableXML;
 tableXML = function (b, C, keep) {
-  if ((!b.mg || !Object.keys(b.mg).length) && !b.bd && !b.nob && !b.tw && !b.rh && !b.rha && !b.pad && !b.tfs) return _tXMLp(b, C, keep); if (typeof cOver === 'function') C = cOver(b, C);
+  if ((!b.mg || !Object.keys(b.mg).length) && !b.bd && !b.cf && !b.nob && !b.tw && !b.rh && !b.rha && !b.pad && !b.tfs) return _tXMLp(b, C, keep); if (typeof cOver === 'function') C = cOver(b, C);
   // สร้างจากตารางเดิมแล้วแทนที่เซลล์ที่ถูกรวม
   const rows = b.rows || []; const n = Math.max(...rows.map(r => r.length)); const rs = b.rs || { 0: 'L' }; const W = b.full ? DX.cw : b.tw ? DX.cw * Math.min(100, +b.tw) / 100 : Math.min(DX.cw, n * 1700); const cw = cwOf(b); const fs = +b.tfs || 1, PAD = { s: [10, 20, 60], l: [80, 100, 180] }[b.pad] || [40, 60, 140];
   const cols = cw ? Array.from({ length: n }, (_, j) => (cw[j] || cw[cw.length - 1])).map((x, _, a) => W * x / a.reduce((s, y) => s + y, 0)) : Array(n).fill(W / n);
@@ -6041,7 +6041,8 @@ tableXML = function (b, C, keep) {
     const cells = []; for (let j = 0; j < n; j++) { const k = `${i},${j}`;
       if (vOwner[k]) { const cs = vOwner[k]; cells.push(cell(para([]), Object.assign({ w: cols.slice(j, j + cs).reduce((a, x) => a + x, 0), span: cs > 1 ? cs : 0, vm: 'continue' }, o))); j += cs - 1; continue; }
       if (cover.has(k)) continue; const sp = span[k] || [1, 1];
-      cells.push(cell(htmlParas(r[j] || '', base).map(p => para(p.runs, { jc: st ? 'center' : jc(j), after: 0, keep })).join(''), Object.assign({ w: cols.slice(j, j + sp[1]).reduce((a, x) => a + x, 0), span: sp[1] > 1 ? sp[1] : 0, vm: sp[0] > 1 ? 'restart' : '' }, o, typeof bdWordO === 'function' ? bdWordO(b, k, o) : {}))); j += sp[1] - 1; }
+      const cfk = b.cf && b.cf[k], bK = cfk && cfk[1] ? Object.assign({}, base, { color: cfk[1].replace('#', '').toUpperCase() }) : base;
+      cells.push(cell(htmlParas(r[j] || '', bK).map(p => para(p.runs, { jc: st ? 'center' : jc(j), after: 0, keep })).join(''), Object.assign({ w: cols.slice(j, j + sp[1]).reduce((a, x) => a + x, 0), span: sp[1] > 1 ? sp[1] : 0, vm: sp[0] > 1 ? 'restart' : '' }, o, typeof bdWordO === 'function' ? bdWordO(b, k, o) : {}, cfk && cfk[0] ? { fill: cfk[0].replace('#', '').toUpperCase() } : {}))); j += sp[1] - 1; }
     return cells; });
   const rh = (b.rows || []).map((_, i) => ((b.rh || {})[i] || +b.rha || 0) * 56.7);
   return table(out, { w: W, cols, center: !b.full, hdr: docHdrN(b), rh });
@@ -7942,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794384823';
+const NP_BUILD = '1794385639';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10120,6 +10121,46 @@ function bdWordO(b, k, o) {
 }
 
 document.addEventListener('pointerup', () => { if (PG.ts && PG.ts.z && curId === PG.ts.id) setTimeout(() => { refreshInspector(); }, 20); });
+
+/* ===================== สีพื้นหลัง / สีตัวอักษรในช่องตาราง ===================== */
+const CF_BG = ['#fbefe7', '#f6dcc8', '#fff4c2', '#e3f1dc', '#dceaf7', '#ece4f5', '#fde2e2', '#eeeeee', '#7a3e10', '#1f3864', '#2e8b57', '#c0392b'];
+const CF_FG = ['#000000', '#ffffff', '#7a3e10', '#1f3864', '#2e8b57', '#c0392b', '#9a8576', '#e67e22'];
+let CF_LAST = null; // ช่องที่เคอร์เซอร์อยู่ล่าสุด {id, k}
+document.addEventListener('focusin', e => { const td = e.target.closest && e.target.closest('#flow td[data-cell]'); const bl = td && td.closest('.blk'); if (bl) CF_LAST = { id: bl.dataset.id, k: td.dataset.cell }; });
+function cfTarget(b) { // คืนรายการคีย์ช่อง + คำอธิบาย
+  const G = bdGrid(b), keys = new Set();
+  if (PG.ts && PG.ts.id === b.id && PG.ts.z && PG.ts.n > 1 && PG.ts.R) { const R = PG.ts.R; for (let i = R.r0; i <= R.r1; i++) for (let j = R.c0; j <= R.c1; j++) keys.add(G.own[i + ',' + j]); return { keys: [...keys].filter(Boolean), what: `ช่องที่เลือก ${PG.ts.n} ช่อง` }; }
+  if (CF_LAST && CF_LAST.id === b.id && G.own[CF_LAST.k]) { const [i, j] = CF_LAST.k.split(',').map(Number); return { keys: [G.own[CF_LAST.k]], what: `ช่องที่เคอร์เซอร์อยู่ (แถว ${i + 1} คอลัมน์ ${j + 1})` }; }
+  Object.values(G.own).forEach(k => keys.add(k)); return { keys: [...keys], what: 'ทั้งตาราง' };
+}
+function cfApply(b, slot, c) {
+  const T = cfTarget(b); b.cf = b.cf || {};
+  T.keys.forEach(k => { const v = b.cf[k] = b.cf[k] || ['', '']; v[slot] = c || ''; if (!v[0] && !v[1]) delete b.cf[k]; });
+  if (!Object.keys(b.cf).length) delete b.cf;
+  rerender(b.id); changed(true); setTimeout(() => { if (PG.ts && PG.ts.id === b.id) pgPaintCells(); refreshInspector(); }, 30);
+}
+(function () {
+  const s = document.createElement('style');
+  s.textContent = `.cfrow{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:2px 0 8px}.cfrow .cfs{width:22px;height:22px;border-radius:5px;border:1px solid #0003;cursor:pointer;padding:0}.cfrow .cfs.no{background:linear-gradient(135deg,#fff 45%,#c0392b 46%,#c0392b 54%,#fff 55%)}.cfrow input[type=color]{width:30px;height:24px;border:0;padding:0;background:none;cursor:pointer}.cflb{font-size:14px;color:var(--ui-muted,#7a6a5d)}`;
+  document.head.appendChild(s);
+  const _ex = extInspector;
+  extInspector = function (b) {
+    let h = _ex(b); if (b.t !== 'table') return h; const T = cfTarget(b);
+    const row = (slot, list) => `<div class="cfrow">${list.map(c => `<button class="cfs" data-cfs="${slot}" data-cfc="${c}" style="background:${c}" title="${c}"></button>`).join('')}<input type="color" data-cfi="${slot}" title="เลือกสีเอง" value="${slot ? '#000000' : '#fbefe7'}"><button class="cfs no" data-cfs="${slot}" data-cfc="" title="ไม่มีสี (กลับเป็นค่าเดิม)"></button></div>`;
+    h += `<div class="sec">สีในตาราง</div><div class="hint" style="margin:-2px 0 6px">ใช้กับ: <b>${T.what}</b> · คลิกในช่อง หรือลากคลุมหลายช่องก่อน</div>
+<div class="cflb">สีพื้นหลังช่อง</div>${row(0, CF_BG)}<div class="cflb">สีตัวอักษรในช่อง</div>${row(1, CF_FG)}`;
+    return h;
+  };
+  document.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('[data-cfs]')) e.preventDefault(); }, true);
+  document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-cfs]'); if (!t) return; const b = curId && byId(curId); if (!b || b.t !== 'table') return; e.preventDefault(); e.stopPropagation(); cfApply(b, +t.dataset.cfs, t.dataset.cfc); }, true);
+  document.addEventListener('change', e => { const d = e.target.dataset; if (!d || d.cfi === undefined) return; e.stopImmediatePropagation(); const b = curId && byId(curId); if (b && b.t === 'table') cfApply(b, +d.cfi, e.target.value); }, true);
+})();
+const _btCf = buildTable;
+buildTable = function (el, b) {
+  const r = _btCf.apply(this, arguments); if (!b.cf) return r;
+  $$('td[data-cell]', el).forEach(td => { const v = b.cf[td.dataset.cell]; if (!v) return; if (v[0]) td.style.background = v[0]; if (v[1]) td.style.color = v[1]; });
+  return r;
+};
 
 /* ===================== ไฟล์ในเครื่อง (บันทึกทับไฟล์เดิม) + วางแล้วจอไม่กระโดด + คัดลอกข้ามหน้า ===================== */
 
