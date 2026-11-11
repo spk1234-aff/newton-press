@@ -7943,7 +7943,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794388252';
+const NP_BUILD = '1794389470';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10301,6 +10301,16 @@ addEventListener('keydown', e => {
     else if (rc && rc.height && rc.bottom > box.bottom - 10) sc.scrollTop += rc.bottom - box.bottom + 40; };
   requestAnimationFrame(keep); setTimeout(keep, 120); setTimeout(keep, 450);
 }, true);
+
+/* ===== ก่อนส่งออก PDF: ให้ย่อหน้ายาวไหลต่อหน้าถัดไปอัตโนมัติ (ไม่เว้นช่องว่างท้ายหน้า) ===== */
+function lyAutoFlow() {
+  if (typeof lyFlowAll !== 'function') return 0;
+  const sc = $('#scroller'), y = sc ? sc.scrollTop : 0; let n = 0;
+  try { n = lyFlowAll(); } catch (e) { console.warn(e); }
+  if (n) { paginate(); if (sc) sc.scrollTop = y; toast(`จัดให้ข้อความไหลต่อหน้าแล้ว ${n} จุด (ไม่เว้นช่องว่างท้ายหน้า)`); }
+  return n;
+}
+['exportPDF', 'exportPrintPDF'].forEach(k => { const f = window[k]; if (typeof f !== 'function') return; window[k] = function () { lyAutoFlow(); return f.apply(this, arguments); }; });
 </script>
 </body>
 </html>
