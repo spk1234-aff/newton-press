@@ -8217,7 +8217,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794525634';
+const NP_BUILD = '1794527077';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -11268,7 +11268,7 @@ function uiMenu(anchor, items) {
     uiMenu(bFileM, [['เอกสารใหม่', click('#bNew')], ['เปิดจากเครื่อง…', click('#bFile')], ['เปิดจาก Drive…', click('#bOpen')], '-', ['บันทึก', click('#bSave'), K + 'S'],
       [ck(h) + (h ? 'บันทึกลงเครื่อง: ' + esc(h.name.slice(0, 22)) : 'บันทึกลงเครื่องด้วย…'), () => h ? saveLocal(false) : saveLocal(false)], [ck(dr) + (dr ? 'บันทึกลง Drive' : 'บันทึกลง Drive ด้วย…'), () => npSaveDrive()],
       ['บันทึกเป็นไฟล์ใหม่…', () => saveLocal(true), K + '⇧S'], ...(h && dr ? ['-', ['เลิกบันทึกลงเครื่อง', () => npUnlink('local')], ['เลิกบันทึกลง Drive', () => npUnlink('drive')]] : []),
-      ...(typeof openHistory === 'function' && dr ? ['-', ['ประวัติเวอร์ชัน…', () => openHistory()]] : ['-']), ...(window.NP_PREV ? [['เปิดงานครั้งก่อน', () => npRestorePrev()]] : []), ['หนังสือเวียน…', () => mmOpen()], ['แม่แบบ…', () => typeof openTemplates === 'function' && openTemplates()], ['แป้นลัดทั้งหมด', click('#fKeys'), K + '/']]); };
+      ...(typeof openHistory === 'function' && dr ? ['-', ['ประวัติเวอร์ชัน…', () => openHistory()]] : ['-']), ...(window.NP_PREV ? [['เปิดงานครั้งก่อน', () => npRestorePrev()]] : []), ...(typeof openPjInfo === 'function' && doc.blocks.some(b => b.t === 'pjcover' || b.t === 'pjinfo') ? [['ข้อมูลโครงงาน (ชื่อเรื่อง ผู้จัดทำ)…', () => openPjInfo()]] : []), ['หนังสือเวียน…', () => mmOpen()], ['แม่แบบ…', () => typeof openTemplates === 'function' && openTemplates()], ['แป้นลัดทั้งหมด', click('#fKeys'), K + '/']]); };
   const bSaveQ = mk('bSaveQ', 'save', 'บันทึก', 'บันทึก (' + K + 'S)', 'sm'); bSaveQ.onclick = click('#bSave');
   const where = () => { const h = typeof lfGet === 'function' && lfGet(), dr = !!(doc.cloud && doc.cloud.id); bSaveQ.title = 'บันทึก (' + K + 'S) → ' + (h && dr ? 'เครื่อง + Drive' : h ? 'ไฟล์ในเครื่อง “' + h.name + '”' : dr ? 'Drive' : 'ยังไม่ได้เลือกที่เก็บ'); bSaveQ.dataset.w = (h && dr ? 'เครื่อง+Drive' : h ? 'เครื่อง' : dr ? 'Drive' : '') + (h && window.LF_DIRTY ? ' •' : ''); };
   bSaveQ.addEventListener('mouseenter', where); setInterval(where, 1500);
@@ -12156,9 +12156,48 @@ document.addEventListener('selectionchange', () => { try { const s = getSelectio
       });
       add('pjch', { num: '', title: 'บรรณานุกรม' }); add('pjtext', { hang: true, html: 'ชื่อผู้แต่ง. (ปีที่พิมพ์). <i>ชื่อหนังสือ</i>. สถานที่พิมพ์: สำนักพิมพ์.' });
       const AP = lnz(V('apx')); if (AP.length) { add('pjch', { num: '', title: 'ภาคผนวก' }); AP.forEach((t, i) => { add('pjch', { num: '', title: `ภาคผนวก ${THAI_AL[i] || i + 1}: ${esc(t)}`, tl: 2 }); add('pjtext', { html: '' }); }); }
-      return { blocks: B, settings: Object.assign({ name: 'โครงงาน ' + (V('title') || '') }, NOHEAD, { pnPos: 'tr', pnFmt: '{n}', pnStart: 1, pnAnchor: first.id, pnFront: 'hide', pnRules: [], figLab: 'รูปภาพที่ ', tblLab: 'ตารางที่ ' }), msg: 'สร้างเล่มโครงงานแล้ว · สารบัญ สารบัญตาราง สารบัญรูปภาพ และเลขหน้าเดินเองอัตโนมัติ' };
+      return { blocks: B, settings: Object.assign({ name: 'โครงงาน ' + (V('title') || '') }, NOHEAD, { pnPos: 'tr', pnFmt: '{n}', pnStart: 1, pnAnchor: first.id, pnFront: 'hide', pnRules: [], figLab: 'รูปภาพที่ ', tblLab: 'ตารางที่ ', pj: { kind, title: V('title'), stu: S, adv: A, level: V('level'), school: V('school'), aff: V('aff'), note: V('note'), kw: V('kw') } }), msg: 'สร้างเล่มโครงงานแล้ว · สารบัญ สารบัญตาราง สารบัญรูปภาพ และเลขหน้าเดินเองอัตโนมัติ' };
     }, 'ตามแบบรายงานโครงงาน: ปก ปกใน บทคัดย่อ กิตติกรรมประกาศ สารบัญ 3 แบบ บทที่ 1–5 บรรณานุกรม ภาคผนวก · เลขหน้ามุมบนขวาเริ่ม 1 ที่บทที่ 1 · คลิกรายการในสารบัญเพื่อไปยังหัวข้อ');
   };
+})();
+
+/* ---------- ข้อมูลโครงงาน: กรอก/แก้ครั้งเดียว ปก ปกใน บทคัดย่อ และข้อความที่อ้างชื่อเรื่อง เปลี่ยนตามทั้งเล่ม ---------- */
+const pjT2H = t => esc(String(t || '')).replace(/\$([^$\n]+)\$/g, (m, x) => `<span class="mx" contenteditable="false" data-tex="${x.replace(/&amp;/g, '&amp;')}"></span>`);
+const pjH2T = h => { const d = document.createElement('div'); d.innerHTML = h || ''; $$('.mx', d).forEach(s => s.replaceWith('$' + (s.dataset.tex || '') + '$')); $$('br', d).forEach(b => b.replaceWith('\n')); return d.textContent.replace(/[​ ]/g, ' ').replace(/[ \t]+/g, ' ').trim(); };
+const pjLines = h => pjH2T(h).split('\n').map(x => x.replace(/^\s*\d+[.)]\s*/, '').replace(/\s+/g, ' ').trim()).filter(x => x && x !== '...');
+function pjRead() { // ข้อมูลที่เก็บไว้ หรืออ่านจากปก/ตารางข้อมูลของไฟล์ที่นำเข้า
+  const s = doc.settings.pj; if (s) return Object.assign({ kind: '', title: '', stu: [], adv: [], level: '', school: '', aff: '', note: '', kw: '' }, s);
+  const c = doc.blocks.find(b => b.t === 'pjcover') || {}, inf = doc.blocks.find(b => b.t === 'pjinfo') || {}, row = re => { const n = Math.max(1, +inf.n || 4); for (let i = 0; i < n; i++) if (re.test(plainText(inf['l' + i] || ''))) return inf['v' + i] || ''; return ''; };
+  const kwb = doc.blocks.find(b => b.t === 'pjtext' && /^\s*คำสำคัญ/.test(plainText(b.html || '')));
+  return { kind: pjH2T(c.kick) || 'โครงงานคณิตศาสตร์', title: pjH2T(c.title).replace(/^เรื่อง\s*/, '') || pjH2T(row(/ชื่อโครงงาน|ชื่อเรื่อง/)), stu: pjLines(c.stu).length ? pjLines(c.stu) : pjLines(row(/ผู้จัดทำ/)), adv: pjLines(c.adv).length ? pjLines(c.adv) : pjLines(row(/ที่ปรึกษา/)),
+    level: pjH2T(row(/ระดับชั้น/)), school: pjH2T(c.school), aff: pjH2T(c.aff), note: pjH2T(c.note), kw: kwb ? pjH2T(kwb.html).replace(/^คำสำคัญ\s*[:：]?\s*/, '') : '' };
+}
+function pjApply(N, O) {
+  const tH = pjT2H(N.title) || '...', two = L => L.map((x, i) => { const k = x.lastIndexOf(' '); return k > 0 ? `<span class="pcn">${i + 1}. ${esc(x.slice(0, k))} </span>${esc(x.slice(k + 1))}` : `${i + 1}. ${esc(x)}`; }).join('<br>') || '1. ...', num = L => L.map((x, i) => `${i + 1}. ${esc(x)}`).join('<br>') || '1. ...';
+  let n = 0;
+  doc.blocks.forEach(b => {
+    if (b.t === 'pjcover') { b.kick = esc(N.kind); b.title = 'เรื่อง&nbsp; ' + tH; b.stu = b.std ? two(N.stu) : num(N.stu); b.adv = b.std ? two(N.adv) : num(N.adv); b.school = esc(N.school); b.aff = esc(N.aff); b.note = brs(N.note); n++; }
+    else if (b.t === 'pjinfo') { const k = Math.max(1, +b.n || 4); for (let i = 0; i < k; i++) { const l = plainText(b['l' + i] || ''); if (/ชื่อโครงงาน|ชื่อเรื่อง/.test(l)) b['v' + i] = tH; else if (/ผู้จัดทำ/.test(l)) b['v' + i] = num(N.stu); else if (/ที่ปรึกษา/.test(l)) b['v' + i] = num(N.adv); else if (/ระดับชั้น/.test(l)) b['v' + i] = esc(N.level); } n++; }
+    else if (b.t === 'pjch' && !b.num && O.kind && plainText(b.title || '') === 'บทคัดย่อ' + O.kind) { b.title = 'บทคัดย่อ' + esc(N.kind); n++; }
+    else if (b.t === 'pjtext' && /^\s*คำสำคัญ/.test(plainText(b.html || ''))) { b.html = '<b>คำสำคัญ:</b> ' + esc(N.kw || '...'); n++; }
+  });
+  // ข้อความในเล่มที่อ้างชื่อเรื่องเดิม / ประเภทโครงงานเดิม → เปลี่ยนตาม (เฉพาะชื่อเรื่องที่ไม่มีสมการ)
+  let m = 0; const rep = (from, to) => { if (!from || from === to || from.length < 6) return; doc.blocks.forEach(b => { if (!['pjtext', 'lptext', 'para'].includes(b.t) || typeof b.html !== 'string' || !b.html.includes(from)) return; b.html = b.html.split(from).join(to); m++; }); };
+  if (O.title && !/\$/.test(O.title)) rep(esc(O.title), tH);
+  doc.settings.pj = N; doc.settings.name = 'โครงงาน ' + N.title.replace(/\$/g, '');
+  renderAll(); changed(true); return [n, m];
+}
+async function openPjInfo() {
+  const O = pjRead(), F = (id, lab, v, rows) => rows ? `<label class="pjf wide"><small>${lab}</small><textarea id="pj_${id}" rows="${rows}">${esc(v)}</textarea></label>` : `<label class="pjf"><small>${lab}</small><input type="text" id="pj_${id}" value="${esc(v)}"></label>`;
+  const html = `<div class="pjgrid">${F('kind', 'ประเภทโครงงาน', O.kind)}${F('level', 'ระดับชั้น', O.level)}${F('title', 'ชื่อเรื่อง (ใส่สมการได้โดยพิมพ์ระหว่าง $ … $ เช่น $\\cos^k(\\theta)$)', O.title, 3)}${F('stu', 'ผู้จัดทำ (บรรทัดละคน)', O.stu.join('\n'), 4)}${F('adv', 'ครูที่ปรึกษา (บรรทัดละคน)', O.adv.join('\n'), 2)}${F('school', 'โรงเรียน', O.school)}${F('aff', 'สังกัด', O.aff)}${F('note', 'ข้อความท้ายปก', O.note, 3)}${F('kw', 'คำสำคัญ', O.kw, 1)}</div><p class="hint" style="margin:6px 0 0">กด “ใช้ข้อมูลนี้” แล้ว ปก ปกใน ตารางข้อมูลหน้าบทคัดย่อ คำสำคัญ และข้อความที่อ้างชื่อเรื่อง จะเปลี่ยนตามทั้งเล่ม · กลับมาแก้ได้ทุกเมื่อที่เมนู ไฟล์ → ข้อมูลโครงงาน</p>`;
+  const pr = ask('ข้อมูลโครงงาน', html, 'ใช้ข้อมูลนี้'); const dl = $('#dAsk .dlg'); const w0 = dl ? dl.style.width : ''; if (dl) dl.style.width = 'min(780px, 94vw)';
+  const ok = await pr; if (dl) dl.style.width = w0; if (!ok) return;
+  const v = id => ($('#pj_' + id) || {}).value || '', N = { kind: v('kind').trim() || 'โครงงานคณิตศาสตร์', title: v('title').replace(/\s*\n\s*/g, ' ').trim(), stu: lnz(v('stu')).map(x => x.replace(/^\d+[.)]\s*/, '')), adv: lnz(v('adv')).map(x => x.replace(/^\d+[.)]\s*/, '')), level: v('level').trim(), school: v('school').trim(), aff: v('aff').trim(), note: v('note').trim(), kw: v('kw').trim() };
+  const [n, m] = pjApply(N, O); toast(`อัปเดตข้อมูลโครงงานแล้ว ${n} จุด` + (m ? ` · แก้ชื่อเรื่องในเนื้อหาอีก ${m} ย่อหน้า` : ''), 4000);
+}
+(function () {
+  const css = document.createElement('style'); css.textContent = `#dAsk .dlg.pjw{width:min(760px,94vw)}.pjgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:62vh;overflow:auto;padding:2px}.pjf{display:flex;flex-direction:column;gap:2px}.pjf.wide{grid-column:1/-1}.pjf small{color:#7b746c;font-size:14px}.pjf input,.pjf textarea{font:inherit;font-size:17px;padding:4px 8px;border:1px solid var(--ui-line,#d9cfc4);border-radius:6px}`; document.head.appendChild(css);
+  const _ei = extInspector; extInspector = function (b) { let h = _ei(b); if (b.t === 'pjcover' || b.t === 'pjinfo') h = `<div class="ir"><button class="tb primary" onclick="openPjInfo()">✎ ข้อมูลโครงงาน (แก้ครั้งเดียว เปลี่ยนทั้งเล่ม)…</button></div>` + h; return h; };
 })();
 </script>
 </body>
