@@ -8217,7 +8217,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794527077';
+const NP_BUILD = '1794527505';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -11268,7 +11268,7 @@ function uiMenu(anchor, items) {
     uiMenu(bFileM, [['เอกสารใหม่', click('#bNew')], ['เปิดจากเครื่อง…', click('#bFile')], ['เปิดจาก Drive…', click('#bOpen')], '-', ['บันทึก', click('#bSave'), K + 'S'],
       [ck(h) + (h ? 'บันทึกลงเครื่อง: ' + esc(h.name.slice(0, 22)) : 'บันทึกลงเครื่องด้วย…'), () => h ? saveLocal(false) : saveLocal(false)], [ck(dr) + (dr ? 'บันทึกลง Drive' : 'บันทึกลง Drive ด้วย…'), () => npSaveDrive()],
       ['บันทึกเป็นไฟล์ใหม่…', () => saveLocal(true), K + '⇧S'], ...(h && dr ? ['-', ['เลิกบันทึกลงเครื่อง', () => npUnlink('local')], ['เลิกบันทึกลง Drive', () => npUnlink('drive')]] : []),
-      ...(typeof openHistory === 'function' && dr ? ['-', ['ประวัติเวอร์ชัน…', () => openHistory()]] : ['-']), ...(window.NP_PREV ? [['เปิดงานครั้งก่อน', () => npRestorePrev()]] : []), ...(typeof openPjInfo === 'function' && doc.blocks.some(b => b.t === 'pjcover' || b.t === 'pjinfo') ? [['ข้อมูลโครงงาน (ชื่อเรื่อง ผู้จัดทำ)…', () => openPjInfo()]] : []), ['หนังสือเวียน…', () => mmOpen()], ['แม่แบบ…', () => typeof openTemplates === 'function' && openTemplates()], ['แป้นลัดทั้งหมด', click('#fKeys'), K + '/']]); };
+      ...(typeof openHistory === 'function' && dr ? ['-', ['ประวัติเวอร์ชัน…', () => openHistory()]] : ['-']), ...(window.NP_PREV ? [['เปิดงานครั้งก่อน', () => npRestorePrev()]] : []), ...(typeof tplAsk === 'function' ? [['ชนิดแม่แบบของไฟล์นี้' + (doc.settings.tpl && TPL_KINDS[doc.settings.tpl] ? ': ' + TPL_KINDS[doc.settings.tpl] : '…'), () => tplAsk()]] : []), ...(typeof openPjInfo === 'function' && doc.blocks.some(b => b.t === 'pjcover' || b.t === 'pjinfo') ? [['ข้อมูลโครงงาน (ชื่อเรื่อง ผู้จัดทำ)…', () => openPjInfo()]] : []), ['หนังสือเวียน…', () => mmOpen()], ['แม่แบบ…', () => typeof openTemplates === 'function' && openTemplates()], ['แป้นลัดทั้งหมด', click('#fKeys'), K + '/']]); };
   const bSaveQ = mk('bSaveQ', 'save', 'บันทึก', 'บันทึก (' + K + 'S)', 'sm'); bSaveQ.onclick = click('#bSave');
   const where = () => { const h = typeof lfGet === 'function' && lfGet(), dr = !!(doc.cloud && doc.cloud.id); bSaveQ.title = 'บันทึก (' + K + 'S) → ' + (h && dr ? 'เครื่อง + Drive' : h ? 'ไฟล์ในเครื่อง “' + h.name + '”' : dr ? 'Drive' : 'ยังไม่ได้เลือกที่เก็บ'); bSaveQ.dataset.w = (h && dr ? 'เครื่อง+Drive' : h ? 'เครื่อง' : dr ? 'Drive' : '') + (h && window.LF_DIRTY ? ' •' : ''); };
   bSaveQ.addEventListener('mouseenter', where); setInterval(where, 1500);
@@ -11962,7 +11962,7 @@ async function lfxFlush() {
       doc = data; curId = null; applySettings(); renderAll();
       if (doc !== data) return; // เปิดไม่ได้ (เช่น แท็บเต็ม) → ไม่ผูกไฟล์กับงานเดิม
       await lfSet(h); hist.stack = []; hist.pos = -1; snapshot(); autosave(); refreshInspector(); $('#scroller').scrollTop = 0; if (typeof clStatus === 'function') clStatus();
-      LFX.dirty.delete(doc.lfid); LFX.saved[doc.lfid] = ''; lfxStat(); toast(`เปิด “${f.name}” แล้ว · แก้ไขแล้วจะบันทึกลงไฟล์นี้ให้อัตโนมัติ`);
+      LFX.dirty.delete(doc.lfid); LFX.saved[doc.lfid] = ''; lfxStat(); if (typeof tplAsk === 'function') setTimeout(() => tplAsk(true), 700); toast(`เปิด “${f.name}” แล้ว · แก้ไขแล้วจะบันทึกลงไฟล์นี้ให้อัตโนมัติ`);
     } catch (e) { if (!(e && e.name === 'AbortError')) toast('เปิดไฟล์ไม่ได้: ' + (e.message || e)); }
   };
   // ย้อนกลับ/ทำซ้ำ ต้องไม่ทำให้งานหลุดจากไฟล์ในเครื่อง / Drive
@@ -12156,7 +12156,7 @@ document.addEventListener('selectionchange', () => { try { const s = getSelectio
       });
       add('pjch', { num: '', title: 'บรรณานุกรม' }); add('pjtext', { hang: true, html: 'ชื่อผู้แต่ง. (ปีที่พิมพ์). <i>ชื่อหนังสือ</i>. สถานที่พิมพ์: สำนักพิมพ์.' });
       const AP = lnz(V('apx')); if (AP.length) { add('pjch', { num: '', title: 'ภาคผนวก' }); AP.forEach((t, i) => { add('pjch', { num: '', title: `ภาคผนวก ${THAI_AL[i] || i + 1}: ${esc(t)}`, tl: 2 }); add('pjtext', { html: '' }); }); }
-      return { blocks: B, settings: Object.assign({ name: 'โครงงาน ' + (V('title') || '') }, NOHEAD, { pnPos: 'tr', pnFmt: '{n}', pnStart: 1, pnAnchor: first.id, pnFront: 'hide', pnRules: [], figLab: 'รูปภาพที่ ', tblLab: 'ตารางที่ ', pj: { kind, title: V('title'), stu: S, adv: A, level: V('level'), school: V('school'), aff: V('aff'), note: V('note'), kw: V('kw') } }), msg: 'สร้างเล่มโครงงานแล้ว · สารบัญ สารบัญตาราง สารบัญรูปภาพ และเลขหน้าเดินเองอัตโนมัติ' };
+      return { blocks: B, settings: Object.assign({ name: 'โครงงาน ' + (V('title') || '') }, NOHEAD, { pnPos: 'tr', pnFmt: '{n}', pnStart: 1, pnAnchor: first.id, pnFront: 'hide', pnRules: [], figLab: 'รูปภาพที่ ', tblLab: 'ตารางที่ ', tpl: 'project', pj: { kind, title: V('title'), stu: S, adv: A, level: V('level'), school: V('school'), aff: V('aff'), note: V('note'), kw: V('kw') } }), msg: 'สร้างเล่มโครงงานแล้ว · สารบัญ สารบัญตาราง สารบัญรูปภาพ และเลขหน้าเดินเองอัตโนมัติ' };
     }, 'ตามแบบรายงานโครงงาน: ปก ปกใน บทคัดย่อ กิตติกรรมประกาศ สารบัญ 3 แบบ บทที่ 1–5 บรรณานุกรม ภาคผนวก · เลขหน้ามุมบนขวาเริ่ม 1 ที่บทที่ 1 · คลิกรายการในสารบัญเพื่อไปยังหัวข้อ');
   };
 })();
@@ -12189,15 +12189,88 @@ function pjApply(N, O) {
 }
 async function openPjInfo() {
   const O = pjRead(), F = (id, lab, v, rows) => rows ? `<label class="pjf wide"><small>${lab}</small><textarea id="pj_${id}" rows="${rows}">${esc(v)}</textarea></label>` : `<label class="pjf"><small>${lab}</small><input type="text" id="pj_${id}" value="${esc(v)}"></label>`;
-  const html = `<div class="pjgrid">${F('kind', 'ประเภทโครงงาน', O.kind)}${F('level', 'ระดับชั้น', O.level)}${F('title', 'ชื่อเรื่อง (ใส่สมการได้โดยพิมพ์ระหว่าง $ … $ เช่น $\\cos^k(\\theta)$)', O.title, 3)}${F('stu', 'ผู้จัดทำ (บรรทัดละคน)', O.stu.join('\n'), 4)}${F('adv', 'ครูที่ปรึกษา (บรรทัดละคน)', O.adv.join('\n'), 2)}${F('school', 'โรงเรียน', O.school)}${F('aff', 'สังกัด', O.aff)}${F('note', 'ข้อความท้ายปก', O.note, 3)}${F('kw', 'คำสำคัญ', O.kw, 1)}</div><p class="hint" style="margin:6px 0 0">กด “ใช้ข้อมูลนี้” แล้ว ปก ปกใน ตารางข้อมูลหน้าบทคัดย่อ คำสำคัญ และข้อความที่อ้างชื่อเรื่อง จะเปลี่ยนตามทั้งเล่ม · กลับมาแก้ได้ทุกเมื่อที่เมนู ไฟล์ → ข้อมูลโครงงาน</p>`;
+  const html = `<div class="pjgrid">${F('kind', 'ประเภทโครงงาน', O.kind)}${F('level', 'ระดับชั้น', O.level)}${F('title', 'ชื่อเรื่อง (ใส่สมการได้โดยพิมพ์ระหว่าง $ … $ เช่น $\\cos^k(\\theta)$)', O.title, 3)}${F('stu', 'ผู้จัดทำ (บรรทัดละคน)', O.stu.join('\n'), 4)}${F('adv', 'ครูที่ปรึกษา (บรรทัดละคน)', O.adv.join('\n'), 2)}${F('school', 'โรงเรียน', O.school)}${F('aff', 'สังกัด', O.aff)}${F('note', 'ข้อความท้ายปก', O.note, 3)}${F('kw', 'คำสำคัญ', O.kw, 1)}${doc.blocks.some(b => b.t === 'pjcover') ? '' : '<label class="pjf wide" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="pj_addc" checked> ไฟล์นี้ยังไม่มีปกแบบแม่แบบ → เพิ่มปก ปกใน และตารางข้อมูลหน้าบทคัดย่อให้ (แทนหน้าปกเดิมที่พิมพ์เป็นข้อความ)</label>'}</div><p class="hint" style="margin:6px 0 0">กด “ใช้ข้อมูลนี้” แล้ว ปก ปกใน ตารางข้อมูลหน้าบทคัดย่อ คำสำคัญ และข้อความที่อ้างชื่อเรื่อง จะเปลี่ยนตามทั้งเล่ม · กลับมาแก้ได้ทุกเมื่อที่เมนู ไฟล์ → ข้อมูลโครงงาน</p>`;
   const pr = ask('ข้อมูลโครงงาน', html, 'ใช้ข้อมูลนี้'); const dl = $('#dAsk .dlg'); const w0 = dl ? dl.style.width : ''; if (dl) dl.style.width = 'min(780px, 94vw)';
   const ok = await pr; if (dl) dl.style.width = w0; if (!ok) return;
   const v = id => ($('#pj_' + id) || {}).value || '', N = { kind: v('kind').trim() || 'โครงงานคณิตศาสตร์', title: v('title').replace(/\s*\n\s*/g, ' ').trim(), stu: lnz(v('stu')).map(x => x.replace(/^\d+[.)]\s*/, '')), adv: lnz(v('adv')).map(x => x.replace(/^\d+[.)]\s*/, '')), level: v('level').trim(), school: v('school').trim(), aff: v('aff').trim(), note: v('note').trim(), kw: v('kw').trim() };
+  if (!doc.blocks.some(b => b.t === 'pjcover') && ($('#pj_addc') || {}).checked) pjAddFront(N);
   const [n, m] = pjApply(N, O); toast(`อัปเดตข้อมูลโครงงานแล้ว ${n} จุด` + (m ? ` · แก้ชื่อเรื่องในเนื้อหาอีก ${m} ย่อหน้า` : ''), 4000);
 }
 (function () {
   const css = document.createElement('style'); css.textContent = `#dAsk .dlg.pjw{width:min(760px,94vw)}.pjgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:62vh;overflow:auto;padding:2px}.pjf{display:flex;flex-direction:column;gap:2px}.pjf.wide{grid-column:1/-1}.pjf small{color:#7b746c;font-size:14px}.pjf input,.pjf textarea{font:inherit;font-size:17px;padding:4px 8px;border:1px solid var(--ui-line,#d9cfc4);border-radius:6px}`; document.head.appendChild(css);
   const _ei = extInspector; extInspector = function (b) { let h = _ei(b); if (b.t === 'pjcover' || b.t === 'pjinfo') h = `<div class="ir"><button class="tb primary" onclick="openPjInfo()">✎ ข้อมูลโครงงาน (แก้ครั้งเดียว เปลี่ยนทั้งเล่ม)…</button></div>` + h; return h; };
+})();
+
+/* ---------- นำไฟล์เข้าแล้วเลือกว่าเป็นแม่แบบอะไร → ปรับให้ใช้ระบบของแม่แบบนั้น (สารบัญ เลขหน้า ข้อมูลโครงงาน) ---------- */
+const TPL_KINDS = { project: 'เล่มโครงงาน', lesson: 'แผนการจัดการเรียนรู้', exam: 'ข้อสอบ / แบบทดสอบ', form: 'แบบฟอร์ม / บันทึกข้อความ', general: 'เอกสารทั่วไป' };
+function tplGuess() {
+  const B = doc.blocks, has = t => B.some(b => b.t === t), txt = b => plainText(b.html || b.title || '');
+  if (has('pjcover') || has('pjinfo') || has('pjch')) return 'project';
+  if (has('lphead')) return 'lesson'; if (doc.settings.qz || has('examcover') || B.filter(b => b.t === 'problem').length >= 3) return 'exam'; if (has('memohead') || has('cshead')) return 'form';
+  const ch = B.filter(b => /^บทที่\s*[0-9๑-๙]/.test(b.t === 'chapter' ? plainText(b.num || '') : txt(b))).length; if (ch >= 2 || (ch && B.some(b => /^(บทคัดย่อ|กิตติกรรมประกาศ)/.test(txt(b))))) return 'project';
+  return 'general';
+}
+function pjAddFront(N) { // เพิ่มปก ปกใน และตารางข้อมูล ให้ไฟล์ที่ยังไม่มี
+  const mk = () => newBlock('pjcover', { std: 1, by: 'โดย', advl: 'อาจารย์ที่ปรึกษาโครงงาน' }); const add = [mk(), mk()];
+  if (!doc.blocks.some(b => b.t === 'pjinfo')) { const inf = newBlock('pjinfo', { n: 4, l0: 'ชื่อโครงงาน', l1: 'ผู้จัดทำโครงงาน', l2: 'ครูที่ปรึกษาโครงงาน', l3: 'ระดับชั้น' }); const k = doc.blocks.findIndex(b => b.t === 'pjch' && /^บทคัดย่อ/.test(plainText(b.title || ''))); if (k >= 0) doc.blocks.splice(k + 1, 0, inf); else add.push(newBlock('pjch', { num: '', title: 'บทคัดย่อ' + esc(N.kind), nobm: 1 }), inf); }
+  // หน้าปกเดิมที่พิมพ์เป็นข้อความธรรมดา (ก่อนหัวข้อแรก) → เอาออก เพราะมีปกแบบแม่แบบแทนแล้ว (ย้อนกลับได้ด้วย ⌘Z)
+  const k0 = doc.blocks.findIndex(b => b.t === 'pjch'), old = k0 > 0 ? doc.blocks.slice(0, k0) : [];
+  if (old.length && old.length <= 16 && old.every(b => ['para', 'pjtext', 'lptext', 'pagebreak', 'spacer', 'h3'].includes(b.t)) && old.map(b => plainText(b.html || '')).join('').length < 900) doc.blocks.splice(0, k0);
+  doc.blocks.unshift(...add);
+}
+function pjAdopt() { // แปลงหัวบท/หัวข้อที่พิมพ์เป็นข้อความธรรมดา ให้เป็นหัวบท/หัวข้อของแม่แบบ → สารบัญและเลขหน้าเดินเอง
+  const B = doc.blocks, HT = new Set(['para', 'pjtext', 'lptext', 'section', 'subsection', 'h3', 'given']), one = b => HT.has(b.t) && typeof b.html === 'string' && !/<br|<li|<div[^>]*>.*<div/i.test(b.html.replace(/(<br>\s*)+$/, ''));
+  const bold = b => b.t === 'section' || b.t === 'subsection' || b.t === 'h3' || /^\s*(<div[^>]*>)?\s*<(b|strong)[ >]/i.test(b.html || '') && plainText((b.html || '').replace(/<(b|strong)[^>]*>[\s\S]*?<\/\1>/gi, '')).trim().length < 2;
+  const keepSt = (b, t, x) => { const st = b.st, id = b.id; Object.keys(b).forEach(k => delete b[k]); Object.assign(b, { id, t }, x); };
+  let n = 0; const FRONT = /^(บทคัดย่อ.{0,30}|กิตติกรรมประกาศ|สารบัญ.{0,12}|บรรณานุกรม|เอกสารอ้างอิง|ภาคผนวก.{0,80})$/;
+  for (let i = 0; i < B.length; i++) {
+    const b = B[i];
+    if (b.t === 'chapter') { keepSt(b, 'pjch', { num: b.num || '', title: b.title || '' }); n++; continue; }
+    if (!one(b)) continue; const t = plainText(b.html).replace(/\s+/g, ' ').trim(); if (!t || t.length > 160) continue; let m;
+    if ((m = /^(บทที่\s*[0-9๑-๙]+)\s*(.*)$/.exec(t))) { let title = m[2]; const nx = B[i + 1]; if (!title && nx && one(nx) && plainText(nx.html).trim().length < 90 && !/^\d+\.\d/.test(plainText(nx.html).trim())) { title = nx.html.replace(/<\/?(b|strong|div)[^>]*>/gi, ''); B.splice(i + 1, 1); } keepSt(b, 'pjch', { num: m[1], title: title ? (m[2] ? esc(title) : title) : '' }); n++; continue; }
+    if (FRONT.test(t) && (bold(b) || /center/.test(b.html) || (b.st && b.st.al === 'center') || t.length < 22)) { const x = { num: '', title: b.html.replace(/<\/?(b|strong|div)[^>]*>/gi, '') }; if (/^ภาคผนวก\s*\S/.test(t)) x.tl = 2; if (/^(บทคัดย่อ|กิตติกรรม)/.test(t)) x.nobm = 1; keepSt(b, 'pjch', x); n++; continue; }
+    if (/^\d+\.\d+\.\d+\s+\S/.test(t) && bold(b) && t.length < 110) { keepSt(b, 'pjsec', { html: b.html.replace(/<\/?(b|strong)[^>]*>/gi, ''), sub: 1 }); n++; continue; }
+    if (/^\d+\.\d+\s+\S/.test(t) && bold(b)) { keepSt(b, 'pjsec', { html: b.html.replace(/<\/?(b|strong)[^>]*>/gi, '') }); n++; continue; }
+    if (b.t === 'section') { keepSt(b, 'pjsec', { html: b.html }); n++; } else if (b.t === 'subsection') { keepSt(b, 'pjsec', { html: b.html, sub: 1 }); n++; }
+  }
+  // สารบัญ: ใส่ตัวสารบัญอัตโนมัติถ้ายังไม่มี (สารบัญที่พิมพ์มือไว้เดิมยังอยู่ ลบเองได้)
+  const first = B.find(b => b.t === 'pjch' && b.num); let addToc = 0;
+  if (first && !B.some(b => b.t === 'toc')) {
+    const mk = (title, kind) => { const k = B.findIndex(b => b.t === 'pjch' && plainText(b.title || '').replace(/\s/g, '') === title); const tb = newBlock('toc', Object.assign({ nodot: true, loose: true }, kind ? { kind } : {})); if (k >= 0) { B.splice(k + 1, 0, tb); return 1; } if (kind) return 0; B.splice(B.indexOf(first), 0, newBlock('pjch', { num: '', title }), tb); return 1; };
+    addToc += mk('สารบัญ', ''); addToc += mk('สารบัญตาราง', 'tbl'); addToc += mk('สารบัญรูปภาพ', 'fig') || mk('สารบัญภาพ', 'fig');
+  }
+  Object.assign(doc.settings, NOHEAD, { pnPos: 'tr', pnFmt: '{n}', pnStart: 1, pnFront: 'hide', pnRules: [], tpl: 'project' }, first ? { pnAnchor: first.id } : {}); if (!doc.settings.figLab) doc.settings.figLab = 'รูปภาพที่ ';
+  return [n, addToc];
+}
+// อ่านชื่อเรื่อง/รายชื่อ จากหน้าปกที่พิมพ์เป็นข้อความธรรมดา
+function pjSniff() {
+  const B = doc.blocks, k = B.findIndex(b => (b.t === 'pjch' && b.num) || /^บทที่\s*[0-9๑-๙]/.test(plainText(b.html || ''))), front = B.slice(0, k < 0 ? Math.min(B.length, 40) : k), L = [];
+  front.forEach(b => { if (typeof b.html === 'string') pjH2T(b.html.replace(/<\/(div|p|li)>/gi, '\n')).split('\n').forEach(x => { x = x.replace(/\s+/g, ' ').trim(); if (x) L.push(x); }); });
+  const R = { stu: [], adv: [] }; let mode = '';
+  for (const x of L) {
+    if (!R.title && /^เรื่อง\s*\S/.test(x)) { R.title = x.replace(/^เรื่อง\s*[:：]?\s*/, ''); continue; }
+    if (/ที่ปรึกษา/.test(x) && x.length < 40) { mode = 'adv'; continue; } if (/^(โดย|ผู้จัดทำ|คณะผู้จัดทำ)\s*$/.test(x)) { mode = 'stu'; continue; }
+    const m = /^(?:\d+[.)]\s*)?((?:นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|ว่าที่)\s*\S.*)$/.exec(x); if (m && x.length < 70) { const a = R[mode || 'stu']; if (!a.includes(m[1]) && a.length < 8) a.push(m[1]); continue; }
+    if (!R.school && /^โรงเรียน\S/.test(x) && x.length < 60) R.school = x; else if (!R.aff && /^สังกัด/.test(x)) R.aff = x; else if (!R.kind && /^โครงงาน\S{2,30}$/.test(x)) R.kind = x;
+    if (R.adv.length && /^(บทคัดย่อ|กิตติกรรม)/.test(x)) break;
+  }
+  return R;
+}
+async function tplAsk(auto) {
+  if (auto && (doc.settings.tpl || (typeof dlgOpen === 'function' && dlgOpen()))) return;
+  const g = doc.settings.tpl || tplGuess();
+  const html = `<div class="tplk">${Object.entries(TPL_KINDS).map(([k, v]) => `<label><input type="radio" name="tplk" value="${k}" ${k === g ? 'checked' : ''}> <b>${v}</b>${k === g && !doc.settings.tpl ? ' <small>(โปรแกรมเดาว่าเป็นแบบนี้)</small>' : ''}${k === 'project' ? '<small style="display:block;margin-left:24px">จัดหัวบท/หัวข้อให้สารบัญและเลขหน้าเดินเอง แล้วให้กรอกชื่อเรื่อง ผู้จัดทำ ครั้งเดียวเปลี่ยนทั้งเล่ม</small>' : ''}</label>`).join('')}</div><p class="hint" style="margin:6px 0 0">เลือกครั้งเดียว โปรแกรมจะจำไว้ในไฟล์ · เปลี่ยนภายหลังได้ที่เมนู ไฟล์ → ชนิดแม่แบบของไฟล์นี้</p>`;
+  if (!(await ask('ไฟล์นี้เป็นแม่แบบอะไร', html, 'ใช้แบบนี้'))) return;
+  const k = ($('input[name="tplk"]:checked') || {}).value || 'general'; const was = doc.settings.tpl; doc.settings.tpl = k;
+  if (k !== 'project') { changed(true); toast('บันทึกชนิดแม่แบบ: ' + TPL_KINDS[k]); return; }
+  const had = !!doc.settings.pj, [n, t] = pjAdopt();
+  if (!had) { const cur = pjRead(), sn = pjSniff(); doc.settings.pj = { kind: cur.kind || sn.kind || 'โครงงานคณิตศาสตร์', title: cur.title || sn.title || '', stu: cur.stu.length ? cur.stu : sn.stu, adv: cur.adv.length ? cur.adv : sn.adv, level: cur.level || 'มัธยมศึกษาตอนปลาย', school: cur.school || sn.school || SCHOOL, aff: cur.aff || sn.aff || 'สังกัด' + AFF, note: cur.note, kw: cur.kw }; doc.settings.pjNew = 1; }
+  renderAll(); changed(true); toast(`จัดเป็นเล่มโครงงานแล้ว · แปลงหัวบท/หัวข้อ ${n} จุด${t ? ' · เพิ่มสารบัญอัตโนมัติ ' + t + ' ชุด' : ''}`, 4500);
+  setTimeout(() => openPjInfo(), 500);
+}
+(function () {
+  const css = document.createElement('style'); css.textContent = `.tplk{display:flex;flex-direction:column;gap:8px;min-width:min(460px,84vw)}.tplk label{display:block;font-size:17px;padding:7px 10px;border:1px solid var(--ui-line,#d9cfc4);border-radius:10px;cursor:pointer}.tplk label:has(input:checked){border-color:#b45309;background:#fff7ed}.tplk small{color:#7b746c;font-size:14px}`; document.head.appendChild(css);
+  const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { if (doc && doc.lfl) tplAsk(true); }, 1500));
 })();
 </script>
 </body>
