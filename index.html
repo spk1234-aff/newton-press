@@ -1124,6 +1124,7 @@ function paginate() {
   if (typeof capSync === 'function') capSync();
   if (typeof labelIndent === 'function') labelIndent();
   if (typeof tblUnsplit === 'function') tblUnsplit();
+  $$('#flow .toc-r').forEach(r => { if (r.style.marginTop) r.style.marginTop = ''; });
   $$('#flow > .blk').forEach(el => { el.style.marginTop = ''; { const bb = byId(el.dataset.id); if (typeof gapDraw === 'function') gapDraw(el, bb); else el.style.paddingTop = bb && bb.sp ? (+bb.sp * 3.7795) + 'px' : ''; } const w = $('.b-work', el); if (w) { const b = byId(el.dataset.id); w.style.height = (b.h || 40) * 3.7795 + 'px'; } });
   const P = PAGE_H + PAGE_G, ROOM = PAGE_H - TOP - BOT;
   // ข้อที่ยาวเกินหนึ่งหน้า: แยกเป็นบล็อกย่อยให้ขึ้นหน้าใหม่ทีละบล็อก
@@ -1151,7 +1152,7 @@ function paginate() {
     let target = null;
     if (u.forced && prev && t > rs + 2) target = (p + 1) * P + TOP;
     else if (t < rs) target = rs;
-    else if (bt > re && bt - t <= re - rs) target = (p + 1) * P + TOP;
+    else if (bt > re && bt - t <= re - rs && !(u.kind === 'toc' && typeof tocSplit === 'function' && re - t > 120)) target = (p + 1) * P + TOP;
     if (target !== null && prev && target > re) {
       // ขยายกรอบทดของข้อก่อนหน้าให้เต็มหน้า
       const pl = prev.els[prev.els.length - 1];
@@ -1164,6 +1165,7 @@ function paginate() {
     }
     if (target !== null) first.style.marginTop = Math.max(0, target - t) + 'px';
     if (typeof tblSplit === 'function') u.els.forEach(el => { if (el.dataset.t === 'table') tblSplit(el); });
+    if (typeof tocSplit === 'function') u.els.forEach(el => { if (el.dataset.t === 'toc') tocSplit(el); });
     prev = u;
   }
   // กรอบทดแบบเต็มหน้าของข้อสุดท้าย
@@ -6253,7 +6255,7 @@ extBlockHTML = function (b) {
   const E = (f, ph, cls = '') => `<div class="${cls}" contenteditable="true" data-f="${f}" data-ph="${ph}"></div>`;
   switch (b.t) {
     case 'pjcover': { const lg = [logoOf(b.lg), logoOf(b.lg2)].filter(Boolean); lg.forEach(cachePng);
-      return `<div class="b-pjcover${b.ctr ? ' ctr' : ''}">${lg.length ? `<div class="pc-lg">${lg.map(s => `<img src="${s}" alt="">`).join('')}</div>` : ''}${E('kick', 'ชื่อเอกสาร', 'pc-k')}${E('title', 'เรื่อง / รายวิชา ...', 'pc-t')}${E('by', 'โดย', 'pc-by')}<div class="pc-l">${E('stu', 'รายชื่อ')}</div>${E('advl', '(หัวข้อรอง)', 'pc-by')}<div class="pc-l">${E('adv', 'รายชื่อ')}</div><div class="pc-sp"></div>${E('school', 'โรงเรียน', 'pc-s')}${E('aff', 'สังกัด', 'pc-s')}<div class="pc-sp"></div>${E('note', 'ข้อความท้ายปก', 'pc-n')}</div>`; }
+      return `<div class="b-pjcover${b.ctr ? ' ctr' : ''}${b.std ? ' std' : ''}">${lg.length ? `<div class="pc-lg">${lg.map(s => `<img src="${s}" alt="">`).join('')}</div>` : ''}${E('kick', 'ชื่อเอกสาร', 'pc-k')}${E('title', 'เรื่อง / รายวิชา ...', 'pc-t')}${E('by', 'โดย', 'pc-by')}<div class="pc-l">${E('stu', 'รายชื่อ')}</div>${E('advl', '(หัวข้อรอง)', 'pc-by')}<div class="pc-l">${E('adv', 'รายชื่อ')}</div><div class="pc-sp"></div>${E('school', 'โรงเรียน', 'pc-s')}${E('aff', 'สังกัด', 'pc-s')}<div class="pc-sp"></div>${E('note', 'ข้อความท้ายปก', 'pc-n')}</div>`; }
     case 'pjch': return `<div class="b-pjch">${E('num', '', 'pj-n')}${E('title', 'ชื่อบท', 'pj-t')}</div>`;
     case 'pjsec': return `<div class="b-pjsec${b.sub ? ' sub' : ''}" contenteditable="true" data-f="html" data-ph="1.1 หัวข้อ"></div>`;
     case 'pjtext': return `<div class="b-pjtext${b.hang ? ' hang' : ''}${b.noind ? ' noind' : ''}" contenteditable="true" data-f="html" data-ph="พิมพ์ข้อความ..."></div>`;
@@ -6349,7 +6351,7 @@ extBlockXML = function (b, o) {
   switch (b.t) {
     case 'pjcover': { const c = { jc: 'center', after: 0 }; const L = (h) => b.ctr ? P(h, {}, c) : table([[cell(P(h, {}, { tabs: [['left', 2600]] }), { border: none })]], { w: 5200, center: true });
       const lg = [logoOf(b.lg), logoOf(b.lg2)].filter(Boolean).map(s => img(s, 26)).filter(Boolean);
-      return (lg.length ? para(lg.flatMap((x, i) => i ? [run('   ', {}), x] : [x]), { jc: 'center', after: 300 }) : '') + P(b.kick, { b: true, size: big }, c) + para([], { after: 300 }) + P(b.title, { b: true }, c) + para([], { after: 200 }) + P(b.by, { b: true }, c) + L(b.stu) + (plainText(b.advl || '') ? para([], { after: 120 }) + P(b.advl, { b: true }, c) + L(b.adv) : '') + para([], { after: 360 }) + P(b.school, { b: true }, c) + P(b.aff, { b: true }, c) + para([], { after: 360 }) + P(b.note, { b: true }, c) + '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; }
+      return (lg.length ? para(lg.flatMap((x, i) => i ? [run('   ', {}), x] : [x]), { jc: 'center', after: 300 }) : '') + P(b.kick, { b: true, size: big }, c) + para([], { after: 300 }) + P(b.title, { b: !b.std }, b.std ? { after: 0 } : c) + para([], { after: 200 }) + P(b.by, { b: !b.std }, c) + L(b.stu) + (plainText(b.advl || '') ? para([], { after: 120 }) + P(b.advl, { b: !b.std }, c) + L(b.adv) : '') + para([], { after: 360 }) + P(b.school, { b: !b.std }, c) + P(b.aff, { b: !b.std }, c) + para([], { after: 360 }) + P(b.note, { b: !b.std }, c) + '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; }
     case 'pjch': return (b.num ? P(b.num, { b: true, size: big }, { jc: 'center', keep: true, style: 'Heading1' }) : '') + P(b.title, { b: true, size: big }, { jc: 'center', keep: true, after: 200, style: b.num ? undefined : 'Heading1' });
     case 'pjsec': return P(b.html, { b: true }, { keep: true, ind: b.sub ? 600 : 0, style: b.sub ? 'Heading3' : 'Heading2', after: 40 });
     case 'pjtext': return htmlParas(b.html || '', {}).map(p => para(p.runs, { keep, jc: p.jc || DX.al, after: 0, ind: b.hang ? 720 : 0, hang: b.hang ? 720 : 0, first: !b.hang && !b.noind ? 720 : 0 })).join('');
@@ -6762,7 +6764,7 @@ function caretToStart(ed) { ed.focus({ preventScroll: true }); const r = documen
 /* ---------- คำบรรยายตาราง / ภาพ + เลขรันอัตโนมัติ ---------- */
 const CAP_T = { table: 'tbl', figure: 'fig', image: 'fig' };
 function capNums() { const c = { tbl: 0, fig: 0 }, m = {}; doc.blocks.forEach(b => { const k = CAP_T[b.t]; if (k && b.capOn) m[b.id] = ++c[k]; }); return m; }
-const capLabel = (b, n) => (CAP_T[b.t] === 'tbl' ? 'ตารางที่ ' : 'ภาพที่ ') + n;
+const capLabel = (b, n) => (CAP_T[b.t] === 'tbl' ? ((doc.settings && doc.settings.tblLab) || 'ตารางที่ ') : ((doc.settings && doc.settings.figLab) || 'ภาพที่ ')) + n;
 function capSync() {
   const m = capNums();
   $$('#flow > .blk').forEach(el => {
@@ -7373,6 +7375,7 @@ async function exportPDF() {
       const par = [];
       outline().forEach(x => { let p = null; for (let l = x.lv - 1; l >= 0; l--) if (par[l]) { p = par[l]; break; } const node = pdf.outline.add(p, x.title, { pageNumber: Math.min(x.page, n) }); par[x.lv] = node; for (let l = x.lv + 1; l < 6; l++) par[l] = null; });
     } catch (e) { console.warn('outline', e); }
+    try { if (typeof tocPdfLinks === 'function') tocPdfLinks(pdf, n); } catch (e) { console.warn('toc links', e); }
     busy(true, 'กำลังรวมไฟล์ PDF…'); await npYield();
     const blob = pdf.output('blob');
     await saveFile(fname('pdf'), blob);
@@ -8214,7 +8217,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794456511';
+const NP_BUILD = '1794525634';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -12048,6 +12051,115 @@ addEventListener('keydown', e => {
 
 var NP_POS = null; // ตำแหน่งเคอร์เซอร์ล่าสุดแบบไม่ผูกกับโหนด (ใช้เมื่อกล่องถูกวาดใหม่)
 document.addEventListener('selectionchange', () => { try { const s = getSelection(); if (!s.rangeCount) return; const r = s.getRangeAt(0), n = r.startContainer, el = n.nodeType === 1 ? n : n.parentElement, t = el && el.closest && el.closest('#flow [contenteditable="true"]'), blk = t && t.closest('.blk'); if (!blk) return; NP_POS = { id: blk.dataset.id, cell: t.dataset.cell || '', f: t.dataset.f || '', pf: t.dataset.pf || '', off: xsOff(t, n, r.startOffset) }; } catch (e) { } });
+
+
+/* ---------- เล่มโครงงานตามแบบ สมาคมคณิตศาสตร์ฯ + สารบัญเชื่อมกับเนื้อหา (คลิกไปยังหัวข้อ · ลิงก์ใน PDF · มีสมการในสารบัญ) ---------- */
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `.b-pjcover.std{font-weight:400;padding-top:24px}.b-pjcover.std .pc-k{font-weight:700;font-size:1.15em;margin-bottom:30px}
+.b-pjcover.std .pc-t{align-self:stretch;text-align:left;margin-bottom:26px}.b-pjcover.std .pc-by{margin:6px 0 2px}
+.b-pjcover.std .pc-l{font-weight:400;min-width:0;text-align:left}.b-pjcover.std .pcn{display:inline-block;min-width:9.2em}
+.b-pjcover.std .pc-sp{flex:0 0 34px}.b-pjcover.std .pc-n{margin-top:70px}
+.b-toc.nodot .toc-r .dd{border-bottom-color:transparent}.b-toc .toc-r{padding-top:3px;padding-bottom:3px}.b-toc .toc-r .tt{flex:0 1 auto;min-width:0}.b-toc .toc-r .pg{min-width:2.2em;text-align:center}
+.b-toc .toc-r .tt .mx{cursor:inherit}body:not(.exporting) .b-toc .toc-r[data-go]{cursor:pointer}body:not(.exporting) .b-toc .toc-r[data-go]:hover .tt{color:#1d4ed8;text-decoration:underline}
+.b-toc.loose .toc-r{padding-top:7px;padding-bottom:7px}`;
+  document.head.appendChild(css);
+  // ข้อความหัวข้อ → HTML สำหรับสารบัญ (คงสมการไว้ ตัดรูปแบบอื่นออก)
+  const tocHTML = h => { const d = document.createElement('div'); d.innerHTML = h || ''; let o = ''; (function walk(n) { n.childNodes.forEach(c => { if (c.nodeType === 3) o += esc(c.nodeValue.replace(/​/g, '')); else if (c.nodeType === 1) { if (c.classList.contains('mx')) o += `<span class="mx" contenteditable="false" data-tex="${esc(c.dataset.tex || '')}"></span>`; else if (c.tagName === 'BR') o += ' '; else walk(c); } }); })(d); return o.replace(/\s+/g, ' ').trim(); };
+  const TOC_HEAD = { '': 'เรื่อง', tbl: 'ตาราง', fig: 'ภาพ' };
+  tocEntries = function (tb) {
+    const i0 = doc.blocks.indexOf(tb), P = PAGE_H + PAGE_G, n = $('#sheets').childElementCount, out = [];
+    const pgOf = el => { const L = pageLabel(Math.floor(el.offsetTop / P), n, doc.settings); return L.hide ? '' : (String(L.text).match(/[0-9๐-๙ivxlcdm]+|[ก-ฮ]$/i) || [''])[0]; };
+    if (tb.kind === 'tbl' || tb.kind === 'fig') {
+      const m = capNums();
+      doc.blocks.forEach(b => { if (!m[b.id] || CAP_T[b.t] !== tb.kind) return; const el = $(`.blk[data-id="${b.id}"]`); if (!el) return; const lab = capLabel(b, m[b.id]); out.push({ lv: 0, id: b.id, text: lab + '  ' + plainText(b.cap || ''), html: esc(lab) + '&nbsp;&nbsp;' + tocHTML(b.cap), page: pgOf(el), plain: 1 }); });
+      return out;
+    }
+    const lvMax = tb.nosub ? 1 : (+tb.depth || 3);
+    doc.blocks.forEach((b, k) => {
+      if (k <= i0 || TOC_SKIP.has(b.t) || b.nobm) return; const el = $(`.blk[data-id="${b.id}"]`); if (!el) return; let lv, text, html;
+      if (b.t === 'pjch') { if (/^\s*สารบัญ/.test(plainText(b.title || ''))) return; text = [plainText(b.num || ''), plainText(b.title || '')].filter(Boolean).join(' '); html = [tocHTML(b.num), tocHTML(b.title)].filter(Boolean).join(' '); lv = b.num ? 1 : 0; }
+      else if (b.t === 'pjsec' || b.t === 'lpsec') { text = plainText(b.html || ''); html = tocHTML(b.html); lv = b.sub ? 3 : 2; }
+      else { lv = OUT_LV[b.t]; if (lv === undefined) return; if (b.t === 'chapter') { text = [plainText(b.num || ''), plainText(b.title || '')].filter(Boolean).join(' '); html = [tocHTML(b.num), tocHTML(b.title)].filter(Boolean).join(' '); } else { text = plainText(b.html || b.title || ''); html = tocHTML(b.html || b.title); } }
+      if (+b.tl) lv = +b.tl;
+      if (!text || Math.max(lv, 1) > lvMax) return; out.push({ lv, id: b.id, text, html, page: pgOf(el) });
+    });
+    return out;
+  };
+  updateTOC = function () {
+    let again = false;
+    doc.blocks.filter(b => b.t === 'toc').forEach(tb => {
+      const box = $(`.blk[data-id="${tb.id}"] .b-toc`), el = box && $('.toc-body', box); if (!el) return;
+      box.classList.toggle('nodot', !!tb.nodot); box.classList.toggle('loose', !!tb.loose); const h0 = $('.toc-h span', box); if (h0) h0.textContent = TOC_HEAD[tb.kind || ''] || 'เรื่อง';
+      const E = tocEntries(tb), sig = JSON.stringify(E); if (el.dataset.sig === sig) return; const cnt = (el.dataset.sig ? JSON.parse(el.dataset.sig).length : -1); el.dataset.sig = sig;
+      el.innerHTML = E.map(e => `<div class="toc-r lv${e.plain ? 0 : e.lv}${e.plain ? ' pl' : ''}" data-go="${e.id}" title="คลิกเพื่อไปยังหัวข้อนี้"><span class="tt"${e.plain ? ' style="font-weight:400"' : ''}>${e.html || esc(e.text)}</span><span class="dd"></span><span class="pg">${esc(e.page)}</span></div>`).join('') || `<div class="hint">${tb.kind === 'tbl' ? 'ยังไม่มีตารางที่ติ๊ก “มีชื่อตาราง”' : tb.kind === 'fig' ? 'ยังไม่มีภาพที่ติ๊ก “มีชื่อภาพ”' : 'ยังไม่มีหัวบทถัดจากสารบัญ'}</div>`;
+      try { renderMath(el); } catch (e) { }
+      again = true;
+    });
+    if (again && typeof schedulePaginate === 'function') schedulePaginate();
+  };
+  // สารบัญยาวเกินหน้า → ตัดขึ้นหน้าใหม่ทีละรายการ
+  window.tocSplit = function (el) {
+    const flow = $('#flow'), fr = flow.getBoundingClientRect(), z = (fr.height / flow.offsetHeight) || 1, P = PAGE_H + PAGE_G;
+    $$('.toc-r', el).forEach(r => { const rc = r.getBoundingClientRect(), y = (rc.top - fr.top) / z, h = rc.height / z, p = Math.floor(y / P), re = p * P + PAGE_H - BOT; if (y + h > re) r.style.marginTop = Math.max(0, (p + 1) * P + TOP - y) + 'px'; });
+  };
+  // คลิกรายการในสารบัญ → ไปยังหัวข้อนั้น
+  flowEl.addEventListener('click', e => { const r = e.target.closest && e.target.closest('.toc-r[data-go]'); if (!r || document.body.classList.contains('exporting')) return; const el = $(`.blk[data-id="${r.dataset.go}"]`); if (!el) return; e.preventDefault(); selectBlock(r.dataset.go); const sc = $('#scroller'); sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 60; el.classList.add('tocflash'); setTimeout(() => el.classList.remove('tocflash'), 1200); });
+  css.textContent += `.blk.tocflash{animation:tocfl 1.2s}@keyframes tocfl{0%,60%{background:#fff3c4}100%{background:transparent}}`;
+  // ลิงก์ในไฟล์ PDF: คลิกรายการสารบัญแล้วกระโดดไปหน้านั้น
+  window.tocPdfLinks = function (pdf, n) {
+    const P = PAGE_H + PAGE_G, st = $('#stage').getBoundingClientRect(), mm = 210 / 794;
+    $$('#flow .toc-r[data-go]').forEach(r => { const t = $(`.blk[data-id="${r.dataset.go}"]`); if (!t) return; const rc = r.getBoundingClientRect(), y = rc.top - st.top, pi = Math.floor(y / P), tp = Math.min(n - 1, Math.max(0, Math.floor(t.offsetTop / P))); if (pi < 0 || pi >= n) return; pdf.setPage(pi + 1); pdf.link((rc.left - st.left) * mm, (y - pi * P) * mm, rc.width * mm, rc.height * mm, { pageNumber: tp + 1 }); });
+  };
+  const _ei = extInspector; extInspector = function (b) {
+    let h = _ei(b);
+    if (b.t === 'toc') h += `<div class="ir"><label><input type="checkbox" data-bc2="nodot" ${b.nodot ? 'checked' : ''}> ไม่มีเส้นจุดไข่ปลา</label></div><div class="ir"><label><input type="checkbox" data-bc2="loose" ${b.loose ? 'checked' : ''}> เว้นบรรทัดห่าง</label></div><p class="hint" style="font-size:14px">คลิกรายการในสารบัญเพื่อไปยังหัวข้อ · ส่งออก PDF แล้วคลิกในสารบัญได้เช่นกัน</p>`;
+    if (b.t === 'pjch') h += `<div class="ir"><label>ระดับในสารบัญ</label><select data-b="tl">${[['', 'หัวบท (ตัวหนา ชิดซ้าย)'], ['2', 'หัวข้อย่อย (เยื้องเข้า) เช่น ภาคผนวก ก'], ['3', 'ย่อยอีกชั้น']].map(([k, v]) => `<option value="${k}"${String(b.tl || '') === k ? ' selected' : ''}>${v}</option>`).join('')}</select></div><div class="ir"><label><input type="checkbox" data-bc2="nobm" ${b.nobm ? 'checked' : ''}> ไม่แสดงในสารบัญ</label></div>`;
+    if (b.t === 'pjcover') h += `<div class="ir"><label><input type="checkbox" data-bc2="std" ${b.std ? 'checked' : ''}> ปกแบบรายงานโครงงาน (ตัวธรรมดา ชื่อเรื่องชิดซ้าย)</label></div>`;
+    return h;
+  };
+  /* ---------- แม่แบบเล่มโครงงาน (ตามแบบรายงานโครงงานคณิตศาสตร์ สมาคมคณิตศาสตร์ฯ) ---------- */
+  openProject = function () {
+    docDlg('เล่มโครงงานสมบูรณ์', [
+      ['kind', 'ประเภทโครงงาน', 'โครงงานคณิตศาสตร์'], ['title', 'ชื่อเรื่อง', ''], ['stu', 'ผู้จัดทำ (บรรทัดละคน)', '', 't', 4], ['adv', 'ครูที่ปรึกษา (บรรทัดละคน)', 'นายศาสตราวุฒิ อาชนะชัย', 't', 2],
+      ['level', 'ระดับชั้น', 'มัธยมศึกษาตอนปลาย'], ['school', 'โรงเรียน', SCHOOL], ['aff', 'สังกัด', 'สังกัด' + AFF],
+      ['note', 'ข้อความท้ายปก', 'รายงานฉบับนี้เป็นส่วนประกอบของโครงงานคณิตศาสตร์ ระดับมัธยมศึกษาตอนปลาย\nเนื่องในการประกวดโครงงานคณิตศาสตร์ ประจำปี ' + (new Date().getFullYear() + 543) + '\nจัดโดย สมาคมคณิตศาสตร์แห่งประเทศไทย ในพระบรมราชูปถัมภ์', 't', 3],
+      ['kw', 'คำสำคัญ', ''], ['apx', 'ภาคผนวก (บรรทัดละหัวข้อ)', 'พิสูจน์ทฤษฎีบทเพิ่มเติม\nประมวลภาพการดำเนินการ', 't', 3],
+      ['h', 'ส่วนประกอบ', '', 'h'], ['inner', 'ปกใน', true, 'c'], ['tbl', 'สารบัญตาราง', true, 'c'], ['fig', 'สารบัญรูปภาพ', true, 'c'], ['dot', 'สารบัญมีเส้นจุดไข่ปลา', false, 'c'],
+    ], V => {
+      const B = []; const add = (t, x) => { const b = newBlock(t, x || {}); B.push(b); return b; }; const S = lnz(V('stu')), A = lnz(V('adv')), kind = V('kind') || 'โครงงานคณิตศาสตร์', ttl = esc(V('title') || '...');
+      const two = L => L.map((x, i) => { const k = x.lastIndexOf(' '); return k > 0 ? `<span class="pcn">${i + 1}. ${esc(x.slice(0, k))} </span>${esc(x.slice(k + 1))}` : `${i + 1}. ${esc(x)}`; }).join('<br>') || '1. ...';
+      const num = L => L.map((x, i) => `${i + 1}. ${esc(x)}`).join('<br>');
+      const cover = () => add('pjcover', { std: 1, kick: esc(kind), title: 'เรื่อง&nbsp; ' + ttl, by: 'โดย', stu: two(S), advl: 'อาจารย์ที่ปรึกษาโครงงาน', adv: two(A), school: esc(V('school')), aff: esc(V('aff')), note: brs(V('note')) });
+      cover(); if (V('inner')) cover();
+      add('pjch', { num: '', title: 'บทคัดย่อ' + esc(kind), nobm: 1 });
+      add('pjinfo', { n: 4, l0: 'ชื่อโครงงาน', v0: ttl, l1: 'ผู้จัดทำโครงงาน', v1: num(S), l2: 'ครูที่ปรึกษาโครงงาน', v2: num(A), l3: 'ระดับชั้น', v3: esc(V('level')) });
+      add('lptext', { ind: 0, html: '<div style="text-align:center"><b>บทคัดย่อ</b></div>' });
+      add('pjtext', { html: 'โครงงานนี้จัดทำขึ้นโดยมีวัตถุประสงค์เพื่อ ...' }); add('pjtext', { noind: true, html: '<b>คำสำคัญ:</b> ' + esc(V('kw') || '...') });
+      add('pjch', { num: '', title: 'กิตติกรรมประกาศ', nobm: 1 }); add('pjtext', { html: `การศึกษา${esc(kind)} เรื่อง${ttl} เล่มนี้ สำเร็จลุล่วงโดยได้รับความอนุเคราะห์อย่างดี จาก ... ซึ่งได้กรุณาให้คำปรึกษาแนะนำแนวคิด วิธีการ และสละเวลาอันมีค่าแก้ไขข้อบกพร่องของเนื้อหา และสำนวนภาษา ด้วยความเอาใจใส่อย่างดียิ่ง คณะผู้จัดทำขอขอบพระคุณเป็นอย่างสูง ณ โอกาสนี้` });
+      add('pjtext', { html: 'ขอขอบพระคุณ ... ที่ให้การสนับสนุนการดำเนินการศึกษาโครงงานเล่มนี้จนสำเร็จด้วยดี' }); add('lptext', { ind: 0, html: '<br><div style="text-align:right">คณะผู้จัดทำ</div>' });
+      const T = x => Object.assign({ nodot: !V('dot'), loose: true }, x);
+      add('pjch', { num: '', title: 'สารบัญ' }); add('toc', T({}));
+      if (V('tbl')) { add('pjch', { num: '', title: 'สารบัญตาราง' }); add('toc', T({ kind: 'tbl' })); }
+      if (V('fig')) { add('pjch', { num: '', title: 'สารบัญรูปภาพ' }); add('toc', T({ kind: 'fig' })); }
+      const CH = [['บทนำ', ['ที่มาและความสำคัญ', 'วัตถุประสงค์', 'ขอบเขตของการศึกษา', 'ประโยชน์ที่คาดว่าจะได้รับ', 'นิยามศัพท์เฉพาะ']], ['เอกสารที่เกี่ยวข้อง', ['ความรู้พื้นฐานเรื่องที่ 1', 'ความรู้พื้นฐานเรื่องที่ 2']], ['วิธีการดำเนินการ', ['เครื่องมือ', 'วิธีการดำเนินการ']], ['ผลการดำเนินการ', ['ผลการศึกษา ...', 'ผลการศึกษา ...']], ['สรุป อภิปรายผล และข้อเสนอแนะ', ['สรุปและอภิปรายผล', 'ประโยชน์ที่ได้รับ', 'ข้อเสนอแนะ']]];
+      let first = null;
+      CH.forEach(([t, secs], k) => {
+        const c = add('pjch', { num: `บทที่ ${k + 1}`, title: t }); if (!first) first = c;
+        if (k === 1) add('pjtext', { html: `การจัดทำ${esc(kind)} เรื่อง “<b>${ttl}</b>” ในครั้งนี้ คณะผู้จัดทำโครงงานได้ศึกษาเนื้อหาที่เกี่ยวข้องประกอบด้วย<br>${TAB}2.1 ${secs[0]}<br>${TAB}2.2 ${secs[1]}` });
+        secs.forEach((s, j) => {
+          add('pjsec', { html: `${k + 1}.${j + 1}&nbsp; ${s}` });
+          if (k === 0 && (j === 1 || j === 3)) { add('pjtext', { html: `<b>${k + 1}.${j + 1}.1</b>${TAB}${j === 1 ? 'เพื่อศึกษา ...' : 'ได้ทราบถึง ...'}` }); add('pjtext', { html: `<b>${k + 1}.${j + 1}.2</b>${TAB}${j === 1 ? 'เพื่อศึกษา ...' : 'ได้ทราบถึง ...'}` }); }
+          else add('pjtext', { html: '' });
+          if (k === 1 && j === 0) { add('table', { capOn: true, cap: 'ชื่อตาราง (แก้ไขได้ · เลขตารางและสารบัญตารางเดินเอง)', rows: [['หัวข้อ', 'รายละเอียด'], ['', '']], full: true, rs: { 0: 'L' } }); }
+        });
+      });
+      add('pjch', { num: '', title: 'บรรณานุกรม' }); add('pjtext', { hang: true, html: 'ชื่อผู้แต่ง. (ปีที่พิมพ์). <i>ชื่อหนังสือ</i>. สถานที่พิมพ์: สำนักพิมพ์.' });
+      const AP = lnz(V('apx')); if (AP.length) { add('pjch', { num: '', title: 'ภาคผนวก' }); AP.forEach((t, i) => { add('pjch', { num: '', title: `ภาคผนวก ${THAI_AL[i] || i + 1}: ${esc(t)}`, tl: 2 }); add('pjtext', { html: '' }); }); }
+      return { blocks: B, settings: Object.assign({ name: 'โครงงาน ' + (V('title') || '') }, NOHEAD, { pnPos: 'tr', pnFmt: '{n}', pnStart: 1, pnAnchor: first.id, pnFront: 'hide', pnRules: [], figLab: 'รูปภาพที่ ', tblLab: 'ตารางที่ ' }), msg: 'สร้างเล่มโครงงานแล้ว · สารบัญ สารบัญตาราง สารบัญรูปภาพ และเลขหน้าเดินเองอัตโนมัติ' };
+    }, 'ตามแบบรายงานโครงงาน: ปก ปกใน บทคัดย่อ กิตติกรรมประกาศ สารบัญ 3 แบบ บทที่ 1–5 บรรณานุกรม ภาคผนวก · เลขหน้ามุมบนขวาเริ่ม 1 ที่บทที่ 1 · คลิกรายการในสารบัญเพื่อไปยังหัวข้อ');
+  };
+})();
 </script>
 </body>
 </html>
