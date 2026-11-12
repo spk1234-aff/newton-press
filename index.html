@@ -8214,7 +8214,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794455355';
+const NP_BUILD = '1794456511';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -12012,6 +12012,42 @@ async function lfxFlush() {
   // จัดหน้าใหม่แล้วเคอร์เซอร์ตกไปหน้าถัดไป → เลื่อนตามทันที (ไม่ปล่อยให้หลุดจอแล้วค่อยกระโดดตอนกดปุ่มถัดไป)
   if (typeof paginate === 'function') { const _pg = paginate; paginate = function () { const rc0 = caretRect(), v = sc.getBoundingClientRect(), vis = rc0 && rc0.bottom > v.top && rc0.top < v.bottom && document.activeElement && document.activeElement.closest && document.activeElement.closest('#flow'); const r = _pg.apply(this, arguments); if (vis) { try { reveal(); } catch (e) { } Promise.resolve(r).then(() => { try { reveal(); } catch (e) { } }); } return r; }; }
 })();
+
+/* ---------- หลังกดปุ่มในแถบเครื่องมือ/แผงข้าง โฟกัสหลุดจากข้อความ: พิมพ์ต่อได้ที่เดิม ----------
+   เดิม: Enter = เคอร์เซอร์กระโดดไปช่องแรกของกล่องที่เลือกไว้ (หน้าจอเลื่อนไปไกล) · Backspace = ลบทั้งกล่อง/ทั้งตาราง */
+addEventListener('keydown', e => {
+  if (e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (typeof dlgOpen === 'function' && dlgOpen()) return;
+  if (typeof blockMode !== 'undefined' && blockMode) return; if (typeof selSet !== 'undefined' && selSet.size > 1) return;
+  const a = document.activeElement, k = e.key;
+  if (a && a !== document.body && a !== document.documentElement) {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable || (a.closest && a.closest('#flow,.dlg,.menu,.uim,.tbm,#cpk,#egp'))) return;
+    if (a.tagName === 'BUTTON' && k !== 'Enter' && k !== 'Backspace' && k !== 'Delete') return; // ปุ่มที่ยังโฟกัสอยู่: เว้นวรรค/ลูกศรทำงานตามปกติ
+  }
+  const edit = k === 'Enter' || k === 'Backspace' || k === 'Delete', arrow = /^Arrow/.test(k), ch = k.length === 1 && k !== ' ';
+  if (!edit && !arrow && !ch && k !== ' ') return;
+  const r = typeof lastRange !== 'undefined' && lastRange, n = r && r.startContainer, el = n && (n.nodeType === 1 ? n : n.parentElement), ed = n && n.isConnected && el && el.closest && el.closest('#flow [contenteditable="true"]');
+  if (!ed && NP_POS) { // ข้อความถูกวาดใหม่ (เช่น หลังเปลี่ยนเส้นตาราง) → หาตำแหน่งเดิมจากรหัสกล่อง/ช่อง
+    try { const blk = $(`#flow .blk[data-id="${NP_POS.id}"]`), t = blk && $$('[contenteditable="true"]', blk).find(x => (x.dataset.cell || '') === NP_POS.cell && (x.dataset.f || '') === NP_POS.f && (x.dataset.pf || '') === NP_POS.pf);
+      if (t) { const pt = xsPoint(t, NP_POS.off); const rr = pt && pt.startContainer ? pt : null; if (rr) { e.preventDefault(); e.stopImmediatePropagation(); t.focus({ preventScroll: true }); const s = getSelection(); s.removeAllRanges(); s.addRange(rr); lastRange = rr.cloneRange(); if (window.npReveal) setTimeout(window.npReveal, 0); return; } } } catch (err) { }
+  }
+  if (!ed) { if (edit && typeof selSet !== 'undefined' && selSet.size) { e.preventDefault(); e.stopImmediatePropagation(); toast(k === 'Enter' ? 'คลิกตำแหน่งในข้อความก่อน' : 'คลิกที่ ⠿ ของกล่องก่อน ถ้าต้องการลบทั้งกล่อง'); } return; }
+  e.preventDefault(); e.stopImmediatePropagation();
+  const multi = typeof PG !== 'undefined' && PG.ts && PG.ts.a && PG.ts.z && String(PG.ts.a) !== String(PG.ts.z);
+  ed.focus({ preventScroll: true }); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  if (multi) return; // เลือกหลายช่องอยู่: แค่คืนเคอร์เซอร์ ไม่แก้ข้อความ
+  try {
+    if (ch || k === ' ') document.execCommand('insertText', false, k);
+    else if (k === 'Backspace') document.execCommand('delete');
+    else if (k === 'Delete') document.execCommand('forwardDelete');
+    else if (k === 'Enter' && ed.dataset.cell && !el.closest('li')) document.execCommand('insertLineBreak');
+    if (ch || edit || k === ' ') syncFrom(ed);
+  } catch (err) { }
+  if (window.npReveal) setTimeout(window.npReveal, 0);
+}, true);
+
+var NP_POS = null; // ตำแหน่งเคอร์เซอร์ล่าสุดแบบไม่ผูกกับโหนด (ใช้เมื่อกล่องถูกวาดใหม่)
+document.addEventListener('selectionchange', () => { try { const s = getSelection(); if (!s.rangeCount) return; const r = s.getRangeAt(0), n = r.startContainer, el = n.nodeType === 1 ? n : n.parentElement, t = el && el.closest && el.closest('#flow [contenteditable="true"]'), blk = t && t.closest('.blk'); if (!blk) return; NP_POS = { id: blk.dataset.id, cell: t.dataset.cell || '', f: t.dataset.f || '', pf: t.dataset.pf || '', off: xsOff(t, n, r.startOffset) }; } catch (e) { } });
 </script>
 </body>
 </html>
