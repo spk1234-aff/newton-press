@@ -2112,7 +2112,13 @@ function curEditable() {
 }
 function restoreSel() { if (!curEditable() && lastRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(lastRange); } }
 function fmtDone() { const ed = curEditable(); if (ed) syncFrom(ed); }
-function exec(cmd, val) { restoreSel(); document.execCommand('styleWithCSS', false, true); document.execCommand(cmd, false, val); fmtDone(); }
+function exec(cmd, val) {
+  restoreSel(); document.execCommand('styleWithCSS', false, true); document.execCommand(cmd, false, val);
+  if (cmd === 'foreColor' || cmd === 'removeFormat') { // สมการในส่วนที่เลือก → เปลี่ยนสีตามด้วย
+    try { const s = getSelection(), ed = curEditable(); if (ed && s.rangeCount && !s.isCollapsed) { const r = s.getRangeAt(0); $$('.mx', ed).filter(m => r.intersectsNode(m)).forEach(m => { if (cmd === 'foreColor' && val) m.dataset.col = val; else delete m.dataset.col; m.style.color = m.dataset.col || ''; }); } } catch (e) { }
+  }
+  fmtDone();
+}
 
 /* ขนาดตัวอักษรของข้อความที่เลือก (หน่วย pt) */
 function setFontSize(pt) {
@@ -8208,7 +8214,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794440218';
+const NP_BUILD = '1794445717';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
