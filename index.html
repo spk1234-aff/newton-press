@@ -8214,7 +8214,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794445717';
+const NP_BUILD = '1794455355';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -11978,6 +11978,39 @@ async function lfxFlush() {
   // Safari: งานที่เปิดจากไฟล์ในเครื่อง กดบันทึก = ได้ไฟล์เลย ไม่ต้องถามทุกครั้ง
   const bs = $('#bSave'); if (bs && !window.showSaveFilePicker) { const _sv = bs.onclick; bs.onclick = function (e) { if (doc.lfl && !(doc.cloud && doc.cloud.id)) return saveLocal(false); return _sv && _sv.call(this, e); }; }
   lfLoad().then(() => { lfBadge(); });
+})();
+
+
+/* ---------- กันหน้าจอกระโดดเมื่อกด Enter / ย้ายเคอร์เซอร์ด้วยโปรแกรม (Safari เลื่อนเองตอน focus) ---------- */
+(function () {
+  const sc = $('#scroller'); if (!sc) return;
+  const caretRect = () => {
+    const s = getSelection(); if (!s.rangeCount) return null; const r = s.getRangeAt(0); let n = r.startContainer; const el = n.nodeType === 1 ? n : n.parentElement; if (!el || !el.closest || !el.closest('#flow')) return null;
+    let rc = r.getClientRects()[0];
+    if (!rc || (!rc.height && !rc.width && !rc.top)) { // บรรทัดว่าง: ใช้ตำแหน่งของโหนดถัดจากเคอร์เซอร์ หรือกล่องข้อความ
+      const c = n.nodeType === 1 ? (n.childNodes[r.startOffset] || n.childNodes[r.startOffset - 1]) : null; const e2 = c && c.nodeType === 1 ? c : el; rc = e2.getBoundingClientRect();
+      if (c && c.nodeType === 1 && c.tagName === 'BR') rc = { top: rc.top, bottom: rc.bottom || rc.top + 24 }; else if (e2 === el && rc.height > 80) return null;
+    }
+    return rc;
+  };
+  // เลื่อนเท่าที่จำเป็นให้เห็นเคอร์เซอร์ (ไม่จัดกลางจอ)
+  const reveal = () => { const rc = caretRect(); if (!rc) return; const v = sc.getBoundingClientRect(), top = v.top + 24, bot = v.bottom - 48; if (rc.bottom > bot) sc.scrollTop += rc.bottom - bot; else if (rc.top < top) sc.scrollTop -= top - rc.top; };
+  window.npReveal = reveal;
+  // focus ในหน้ากระดาษ: ไม่ให้เบราว์เซอร์เลื่อนเอง
+  const _focus = HTMLElement.prototype.focus;
+  HTMLElement.prototype.focus = function (o) { if (this.closest && this.closest('#flow') && !(o && o.preventScroll)) { const y = sc.scrollTop; _focus.call(this, { preventScroll: true }); if (sc.scrollTop !== y) sc.scrollTop = y; return; } return _focus.apply(this, arguments); };
+  // Enter: ตรึงตำแหน่งหน้าจอไว้ แล้วเลื่อนเฉพาะเมื่อเคอร์เซอร์หลุดจอ
+  let pin = null;
+  addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.isComposing || !(e.target.closest && e.target.closest('#flow'))) return;
+    const y = sc.scrollTop, id = {}; pin = id;
+    const fix = () => { if (pin !== id) return; if (Math.abs(sc.scrollTop - y) > 2) sc.scrollTop = y; reveal(); };
+    setTimeout(fix, 0); requestAnimationFrame(() => { fix(); requestAnimationFrame(fix); }); setTimeout(fix, 60); setTimeout(fix, 140); setTimeout(() => { if (pin === id) pin = null; }, 160);
+  }, true);
+  ['wheel', 'touchmove', 'mousedown'].forEach(k => addEventListener(k, () => { pin = null; }, { passive: true, capture: true }));
+  addEventListener('keydown', e => { if (e.key !== 'Enter') pin = null; }, true);
+  // จัดหน้าใหม่แล้วเคอร์เซอร์ตกไปหน้าถัดไป → เลื่อนตามทันที (ไม่ปล่อยให้หลุดจอแล้วค่อยกระโดดตอนกดปุ่มถัดไป)
+  if (typeof paginate === 'function') { const _pg = paginate; paginate = function () { const rc0 = caretRect(), v = sc.getBoundingClientRect(), vis = rc0 && rc0.bottom > v.top && rc0.top < v.bottom && document.activeElement && document.activeElement.closest && document.activeElement.closest('#flow'); const r = _pg.apply(this, arguments); if (vis) { try { reveal(); } catch (e) { } Promise.resolve(r).then(() => { try { reveal(); } catch (e) { } }); } return r; }; }
 })();
 </script>
 </body>
