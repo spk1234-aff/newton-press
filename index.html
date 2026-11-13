@@ -7431,8 +7431,8 @@ async function pageRenderer(scale = 2.5) {
   const st = $('#stage').cloneNode(true);
   // ล็อกความสูงทุกกล่องตามที่จัดหน้าไว้ ไม่ให้ตำแหน่งเลื่อนสะสมถ้าฟอนต์ในภาพโหลดช้า
   const orig = $$('#flow > .blk'), cl = $$('#flow > .blk', st);
-  orig.forEach((el, i) => { if (cl[i]) { cl[i].style.height = el.offsetHeight + 'px'; cl[i].style.boxSizing = 'border-box'; cl[i].style.overflow = 'visible'; } });
-  $$('#flow', st).forEach(f => { f.style.height = $('#flow').offsetHeight + 'px'; });
+  orig.forEach((el, i) => { if (cl[i]) { cl[i].style.height = el.getBoundingClientRect().height + 'px'; cl[i].style.boxSizing = 'border-box'; cl[i].style.overflow = 'visible'; } });
+  $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
   $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
   $$('.tools,.wh,.grip,.band,.dropline', st).forEach(e => e.remove()); $$('.msel', st).forEach(e => e.classList.remove('msel'));
   const P = PAGE_H + PAGE_G;
@@ -9523,8 +9523,8 @@ async function exportPrintPDF() {
     const P = PAGE_H + PAGE_G, n = $('#sheets').childElementCount;
     const st = $('#stage').cloneNode(true); st.removeAttribute('id'); st.id = 'stage';
     const orig = $$('#flow > .blk'), cl = $$('#flow > .blk', st);
-    orig.forEach((el, i) => { if (cl[i]) { cl[i].style.height = el.offsetHeight + 'px'; cl[i].style.boxSizing = 'border-box'; cl[i].style.overflow = 'visible'; } });
-    $$('#flow', st).forEach(f => { f.style.height = $('#flow').offsetHeight + 'px'; });
+    orig.forEach((el, i) => { if (cl[i]) { cl[i].style.height = el.getBoundingClientRect().height + 'px'; cl[i].style.boxSizing = 'border-box'; cl[i].style.overflow = 'visible'; } });
+    $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
     $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
     $$('.tools,.wh,.grip,.band,.dropline,.vgrip,.gapph,.tz', st).forEach(e => e.remove()); $$('.msel,.isel,.csel', st).forEach(e => e.classList.remove('msel', 'isel', 'csel'));
     const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });
