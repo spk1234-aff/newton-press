@@ -8238,7 +8238,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794710308';
+const NP_BUILD = '1794716860';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -8256,8 +8256,8 @@ const NP_BUILD = '1794710308';
   if (location.protocol.startsWith('http')) { setTimeout(check, 5000); setInterval(check, 10 * 60e3); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); }); }
 })();
 
-/* ---------- แท็บเอกสาร: เปิดได้พร้อมกันสูงสุด 5 ไฟล์ ---------- */
-const TABMAX = 5;
+/* ---------- แท็บเอกสาร: เปิดได้พร้อมกันสูงสุด 12 ไฟล์ ---------- */
+const TABMAX = 12;
 const TB = { list: [], i: 0, ref: null, sw: false, busy: false, t: null };
 const tabKey = () => 't' + Math.random().toString(36).slice(2, 9);
 const tabCloud = d => !!(d && d.cloud && d.cloud.id);
