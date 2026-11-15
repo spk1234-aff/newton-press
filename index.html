@@ -8238,7 +8238,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794716860';
+const NP_BUILD = '1794720102';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -12809,6 +12809,189 @@ ${R}.mx:not([data-disp]):has(.mfrac,.mop.op-limits){display:inline-block;margin:
 document.addEventListener('load', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.closest && t.closest('#flow')) schedulePaginate(); }, true);
 // กล่องที่มีพื้นที่เขียนในกรอบ (b.minh มม.)
 (function () { const _fb = fillBlock; fillBlock = function (el, b) { _fb(el, b); if (b && b.t === 'box') { const bx = $('.b-box', el); if (bx) bx.style.minHeight = b.minh ? (b.minh + 'mm') : ''; } }; })();
+
+/* ===================== รูปสไตล์แบบฝึกทักษะ (วาดด้วยคำสั่ง แก้ไขได้) =====================
+   รูปทุกรูปในหมวด "แบบฝึกทักษะ" ของคลังรูป ใช้ตัววาดเดียวกัน: คำสั่งบรรทัดละ 1 อย่าง
+   แก้ตัวเลข/ข้อความในช่อง "คำสั่งวาด" แล้วรูปเปลี่ยนทันที · เพิ่มบรรทัดเพื่อเพิ่มของในรูป */
+(function () {
+  const WC = { or: '#c8611a', nv: '#2c4a7a', rd: '#a33424', lo: '#e3a03c', gr: '#8f8f8f', bk: '#262626', pu: '#7b3f8c', gn: '#2e7d32', pk: '#f8e4df', bl: '#e6ebf5', cr: '#fdf0e3', wh: '#ffffff', lr: '#fbeeeb' };
+  const TH = { ส้ม: 'or', น้ำเงิน: 'nv', แดง: 'rd', ส้มอ่อน: 'lo', เทา: 'gr', ดำ: 'bk', ม่วง: 'pu', เขียว: 'gn', ชมพู: 'pk', ฟ้า: 'bl', ครีม: 'cr', ขาว: 'wh' };
+  const col = (s, d) => { if (!s) return d; s = String(s).trim(); if (/^#[0-9a-f]{6}$/i.test(s)) return s; s = TH[s] || s; return WC[s] || d; };
+  const NUM = '(-?\\d*\\.?\\d+(?:\\/\\d+)?)';
+  const num = v => { v = String(v).trim().replace('−', '-'); if (v.includes('/')) { const [a, b] = v.split('/'); return +a / +b; } return +v; };
+  const PTS = t => [...String(t).matchAll(new RegExp('\\(\\s*' + NUM + '\\s*,\\s*' + NUM + '\\s*\\)', 'g'))].map(m => [num(m[1]), num(m[2])]);
+  const after = (t, n) => { let r = String(t); const re = new RegExp('^\\s*\\(\\s*' + NUM + '\\s*,\\s*' + NUM + '\\s*\\)'); for (let i = 0; i < n; i++) r = r.replace(re, ''); return r.trim(); };
+  function opts(s) { // or dash w=2 fill=pk pos=se ...
+    const o = { flags: {} }; String(s || '').trim().split(/\s+/).filter(Boolean).forEach(t => { const m = /^([^=]+)=(.*)$/.exec(t); if (m) o[m[1]] = m[2]; else if (col(t, null)) o.c = col(t); else o.flags[t] = 1; }); return o;
+  }
+  const f1 = v => (+v).toFixed(1);
+  const fmtN = v => { const r = Math.round(v * 1000) / 1000; return (r < 0 ? '−' : '') + Math.abs(r); };
+  const txt = (x, y, s, o = {}) => svgMath(f1(x), f1(y + (o.fs || 16) * 0.34), s, o);
+  const arrowHead = (a, b, c, sz = 10) => { const d = nrm(sub2(b, a)), n = [-d[1], d[0]], h = [b[0] - d[0] * sz, b[1] - d[1] * sz]; return pg([b, [h[0] + n[0] * sz * .45, h[1] + n[1] * sz * .45], [h[0] - n[0] * sz * .45, h[1] - n[1] * sz * .45]], `fill="${c}"`); };
+  const sty = (c, w, dash) => `fill="none" stroke="${c}" stroke-width="${w}"${dash ? ` stroke-dasharray="${typeof dash === 'string' && /\d/.test(dash) ? dash.replace(/,/g, ' ') : '7 5'}"` : ''} stroke-linejoin="round" stroke-linecap="round"`;
+
+  const TK = (t, a, b) => { t = String(t || '').trim(); if (!t || t === '0') return []; if (t.includes(',')) return t.split(',').map(num).filter(isFinite); const st = num(t); const r = []; for (let x = Math.ceil(a / st - 1e-9) * st; x <= b + 1e-9; x += st) r.push(Math.round(x * 1e6) / 1e6); return r; };
+  function wbGen(p) {
+    const x0 = num(p.x0), x1 = num(p.x1), y0 = num(p.y0), y1 = num(p.y1), sx = num(p.sx) || 40, sy = num(p.sy) || sx, pad = 14, FS = num(p.fs) || 16;
+    const axOn = p.ax === 'yes', pR = axOn ? 34 : pad, pT = axOn ? 26 : pad;
+    const X = x => pad + (x - x0) * sx, Y = y => pT + (y1 - y) * sy, S = q => [X(q[0]), Y(q[1])];
+    const W = (x1 - x0) * sx + pad + pR, H = (y1 - y0) * sy + pad + pT;
+    let ax = { on: p.ax === 'yes', xa: x0, xb: x1, ya: y0, yb: y1 };
+    const lines = String(p.src || '').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    lines.forEach(l => { const m = /^(axes|แกน)\s*:\s*(.*)$/i.exec(l.split('|')[0]); if (m) { const v = m[2].trim().split(/[\s,]+/).map(num); if (v.length >= 4 && v.every(isFinite)) ax = { on: true, xa: v[0], xb: v[1], ya: v[2], yb: v[3] }; } });
+    const cid = 'wbc' + Math.random().toString(36).slice(2, 8);
+    let bg = '', s = '', top = '';
+    // ---------- แกนและเส้นตาราง ----------
+    if (ax.on) {
+      const tx = String(p.tx).includes(',') ? 0 : num(p.tx) || 0, ty = String(p.ty).includes(',') ? 0 : num(p.ty) || 0, gx = num(p.gx) || tx, gy = num(p.gy) || ty, brk = p.yb === 'yes';
+      const oy = brk ? ax.ya : Math.min(Math.max(0, ax.ya), ax.yb), ox = Math.min(Math.max(0, ax.xa), ax.xb);
+      if (p.grid === 'yes') {
+        if (gx) for (let x = Math.ceil(ax.xa / gx - 1e-9) * gx; x <= ax.xb + 1e-9; x += gx) bg += `<path d="M${f1(X(x))} ${f1(Y(ax.ya))}V${f1(Y(ax.yb))}" stroke="#dde1ec" stroke-width="1"/>`;
+        if (gy) for (let y = Math.ceil(ax.ya / gy - 1e-9) * gy; y <= ax.yb + 1e-9; y += gy) bg += `<path d="M${f1(X(ax.xa))} ${f1(Y(y))}H${f1(X(ax.xb))}" stroke="#dde1ec" stroke-width="1"/>`;
+      }
+      const AC = '#333333', ex = 12;
+      bg += `<path d="M${f1(X(ax.xa) - 4)} ${f1(Y(oy))}H${f1(X(ax.xb) + ex)}" stroke="${AC}" stroke-width="1.5"/>` + arrowHead([X(ax.xb), Y(oy)], [X(ax.xb) + ex + 6, Y(oy)], AC, 11);
+      bg += `<path d="M${f1(X(ox))} ${f1(Y(ax.ya) + (brk ? 0 : 4))}V${f1(Y(ax.yb) - ex)}" stroke="${AC}" stroke-width="1.5"/>` + arrowHead([X(ox), Y(ax.yb)], [X(ox), Y(ax.yb) - ex - 6], AC, 11);
+      if (brk) { const yy = Y(ax.ya) - 22, xx = X(ox); bg += `<path d="M${f1(xx)} ${f1(yy + 12)}l-6 -3 12 -6 -12 -6 6 -3" fill="#fff" stroke="${AC}" stroke-width="1.5"/>`; }
+      const tf = FS * 1.05;
+      TK(p.tx, ax.xa, ax.xb).forEach(v => { if (Math.abs(v - ox) < 1e-9) return; bg += `<path d="M${f1(X(v))} ${f1(Y(oy) - 4)}V${f1(Y(oy) + 4)}" stroke="${AC}" stroke-width="1.3"/>` + svgMath(f1(X(v)), f1(Y(oy) + tf + 6), fmtN(v), { fs: tf, c: '#222' }); });
+      TK(p.ty, ax.ya, ax.yb).forEach(v => { if (Math.abs(v - oy) < 1e-9) return; bg += `<path d="M${f1(X(ox) - 4)} ${f1(Y(v))}H${f1(X(ox) + 4)}" stroke="${AC}" stroke-width="1.3"/>` + svgMath(f1(X(ox) - 8), f1(Y(v) + tf * .35), fmtN(v), { fs: tf, a: 'end', c: '#222' }); });
+      if (p.o !== 'no') bg += svgMath(f1(X(ox) - 7), f1(Y(oy) + tf + 6), '0', { fs: tf, a: 'end', c: '#222' });
+      if (p.xl) bg += svgMath(f1(X(ax.xb) + ex + 4), f1(Y(oy) + tf + 8), p.xl, { fs: tf * 1.1, c: '#222' });
+      if (p.yl) bg += svgMath(f1(X(ox) + 10), f1(Y(ax.yb) - ex + 2), p.yl, { fs: tf * 1.1, a: 'start', c: '#222' });
+      bg = `<defs><clipPath id="${cid}"><rect x="${f1(X(ax.xa) - 2)}" y="${f1(Y(ax.yb) - 2)}" width="${f1((ax.xb - ax.xa) * sx + 4)}" height="${f1((ax.yb - ax.ya) * sy + 4)}"/></clipPath></defs>` + bg;
+    }
+    const posOff = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0], ne: [.75, -.75], nw: [-.75, -.75], se: [.75, .75], sw: [-.75, .75], c: [0, 0] };
+    // ---------- คำสั่ง ----------
+    lines.forEach(line => {
+      const bar = line.indexOf('|'); const main = bar < 0 ? line : line.slice(0, bar), o = opts(bar < 0 ? '' : line.slice(bar + 1));
+      const m = /^([a-zก-๙]+)\s*:\s*(.*)$/i.exec(main.trim()); if (!m) return;
+      const k = m[1].toLowerCase(), v = m[2]; const P = PTS(v), rest = after(v, (k === 'rect' || k === 'กล่อง') ? 2 : 1);
+      const c = o.c, w = o.w ? num(o.w) : null, dash = o.flags.dash ? true : (o.dash || false), fs = o.size ? num(o.size) : FS;
+      try {
+        if (k === 'f' || k === 'กราฟ') {
+          const [ex, a, b] = v.split(';').map(t => t.trim()); const fn = evalFunc(ex); const lo = a !== undefined && a !== '' ? num(a) : ax.xa, hi = b !== undefined && b !== '' ? num(b) : ax.xb;
+          let d = '', pen = false; const n = 400;
+          for (let i = 0; i <= n; i++) { const x = lo + (hi - lo) * i / n, y = fn(x); if (!isFinite(y) || Math.abs(y) > 1e6) { pen = false; continue; } d += (pen ? 'L' : 'M') + f1(X(x)) + ' ' + f1(Y(y)); pen = true; }
+          s += `<path d="${d}" ${sty(c || WC.or, w || 2.8, dash)}${ax.on ? ` clip-path="url(#${cid})"` : ''}/>`;
+        } else if (k === 'line' || k === 'เส้นตรง') {
+          if (P.length < 2) return; const [a, b] = P; const dx = b[0] - a[0], dy = b[1] - a[1]; const ext = 1e3; const A2 = [a[0] - dx * ext, a[1] - dy * ext], B2 = [a[0] + dx * ext, a[1] + dy * ext];
+          const lo = o.from !== undefined ? num(o.from) : null, hi = o.to !== undefined ? num(o.to) : null;
+          if (lo !== null && hi !== null && dx) { const yA = a[1] + dy / dx * (lo - a[0]), yB = a[1] + dy / dx * (hi - a[0]); s += pl([S([lo, yA]), S([hi, yB])], sty(c || WC.nv, w || 2.4, dash)); }
+          else s += pl([S(A2), S(B2)], sty(c || WC.nv, w || 2.4, dash) + (ax.on ? ` clip-path="url(#${cid})"` : ''));
+        } else if (k === 'seg' || k === 'เส้น') {
+          if (P.length < 2) return; const Q = P.map(S); const cc = c || WC.bk;
+          s += pl(Q, sty(cc, w || 2.2, dash)); if (o.flags.arrow) s += arrowHead(Q[Q.length - 2], Q[Q.length - 1], cc, 11);
+        } else if (k === 'poly' || k === 'รูปหลายเหลี่ยม') {
+          if (P.length < 3) return; s += pg(P.map(S), sty(c || WC.rd, w || 2.2, dash).replace('fill="none"', `fill="${col(o.fill, 'none')}"`));
+        } else if (k === 'rect' || k === 'กล่อง') {
+          if (P.length < 2) return; const [a, b] = P.map(S); const xL = Math.min(a[0], b[0]), yT = Math.min(a[1], b[1]), ww = Math.abs(b[0] - a[0]), hh = Math.abs(b[1] - a[1]); const r = o.r ? num(o.r) : 0; const cc = c || WC.rd;
+          if (o.flags.shadow) s += `<rect x="${f1(xL + 4)}" y="${f1(yT + 4)}" width="${f1(ww)}" height="${f1(hh)}" rx="${r}" fill="#e3d3cf"/>`;
+          s += `<rect x="${f1(xL)}" y="${f1(yT)}" width="${f1(ww)}" height="${f1(hh)}" rx="${r}" ${sty(cc, w || 2.2, dash).replace('fill="none"', `fill="${col(o.fill, 'none')}"`)}/>`;
+          if (rest) s += txt(xL + ww / 2, yT + hh / 2, rest, { fs, c: col(o.tc, cc) });
+        } else if (k === 'circle' || k === 'วงกลม') {
+          if (!P.length) return; const r = num(rest.split(/\s+/)[0]) || 1; const q = S(P[0]);
+          s += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${f1(r * sx)}" ${sty(c || WC.rd, w || 2.2, dash).replace('fill="none"', `fill="${col(o.fill, 'none')}"${o.op ? ` fill-opacity="${o.op}"` : ''}`)}/>`;
+        } else if (k === 'arc' || k === 'ส่วนโค้ง') {
+          if (!P.length) return; const [rx, ry, a0, a1] = rest.split(/\s+/).map(num); const q = P[0]; let d = '';
+          for (let i = 0; i <= 120; i++) { const t = (a0 + (a1 - a0) * i / 120) * Math.PI / 180; d += (i ? 'L' : 'M') + f1(X(q[0] + rx * Math.cos(t))) + ' ' + f1(Y(q[1] + ry * Math.sin(t))); }
+          if (o.fill) d += 'Z';
+          s += `<path d="${d}" ${sty(c || WC.or, w || 2.2, dash).replace('fill="none"', `fill="${col(o.fill, 'none')}"`)}/>`;
+        } else if (k === 'curve' || k === 'เส้นโค้ง') {
+          if (P.length < 3) return; const Q = P.map(S); const d = P.length >= 4 ? `M${Q[0].map(f1)}C${Q[1].map(f1)} ${Q[2].map(f1)} ${Q[3].map(f1)}` : `M${Q[0].map(f1)}Q${Q[1].map(f1)} ${Q[2].map(f1)}`;
+          s += `<path d="${d}" ${sty(c || WC.rd, w || 2.2, dash)}/>`;
+        } else if (k === 'smooth' || k === 'โค้งผ่านจุด') {
+          if (P.length < 2) return; const Q = P.map(S); let d = `M${Q[0].map(f1)}`;
+          for (let i = 0; i < Q.length - 1; i++) { const p0 = Q[i - 1] || Q[i], p1 = Q[i], p2 = Q[i + 1], p3 = Q[i + 2] || p2; const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]; d += `C${c1.map(f1)} ${c2.map(f1)} ${p2.map(f1)}`; }
+          s += `<path d="${d}" ${sty(c || WC.nv, w || 2.2, dash)}/>`;
+        } else if (k === 'pt' || k === 'จุด') {
+          if (!P.length) return; const q = S(P[0]); const cc = c || WC.or, r = o.r ? num(o.r) : 5.5;
+          top += o.flags.open ? `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${r}" fill="#fff" stroke="${cc}" stroke-width="2"/>` : `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${r}" fill="${cc}"/>`;
+          if (rest) { const po = posOff[o.pos || 'ne'] || posOff.ne; const dd = r + 7; const a = po[0] > .1 ? 'start' : po[0] < -.1 ? 'end' : 'middle'; top += txt(q[0] + po[0] * dd, q[1] + po[1] * dd * (po[0] ? 1 : 1.25), rest, { fs, c: col(o.tc, cc === WC.or || cc === WC.nv ? WC.bk : cc), a }); }
+        } else if (k === 'node' || k === 'ปม') {
+          if (!P.length) return; const q = S(P[0]); const cc = c || WC.bk, r = o.r ? num(o.r) : 16;
+          top += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${r}" fill="${col(o.fill, '#fff')}" stroke="${cc}" stroke-width="2"/>`;
+          if (rest) top += txt(q[0], q[1], rest, { fs, c: col(o.tc, cc) });
+        } else if (k === 'text' || k === 'ข้อความ') {
+          if (!P.length) return; const q = S(P[0]); top += txt(q[0], q[1], rest, { fs, c: c || WC.bk, a: o.anchor || 'middle', b: !!o.flags.bold });
+        } else if (k === 'person' || k === 'คน') {
+          if (!P.length) return; const q = S(P[0]); const z = (o.size ? num(o.size) : 30) / 24;
+          top += `<g transform="translate(${f1(q[0] - 12 * z)} ${f1(q[1] - 12 * z)}) scale(${z.toFixed(3)})"><circle cx="12" cy="6.5" r="4.6" fill="${c || WC.rd}"/><path d="M4 23v-5.5c0-3.6 3.4-6.3 8-6.3s8 2.7 8 6.3V23z" fill="${c || WC.rd}"/></g>`;
+        } else if (k === 'tree' || k === 'แผนภาพต้นไม้') {
+          s += treeDraw(v, o, X, Y, sx, sy, FS);
+        }
+      } catch (e) { }
+    });
+    return svgW(W, H, bg + s + top);
+  }
+
+  /* แผนภาพต้นไม้: tree: ป้ายระดับ1 ; ป้ายระดับ2 ; ... | at=(x,y) w=.. h=.. mode=edge|node cols=rd,or,nv out=ผล1;ผล2;... outbox */
+  function treeDraw(v, o, X, Y, sx, sy, FS) {
+    const L = v.split(';').map(t => t.split(',').map(x => x.trim()).filter(Boolean)).filter(l => l.length);
+    if (!L.length) return '';
+    const at = PTS(o.at || '(0,0)')[0] || [0, 0], w = num(o.w || 10), h = num(o.h || 8), mode = o.mode || 'edge';
+    const cols = String(o.cols || 'rd,or,nv').split(',').map(c => col(c, WC.rd));
+    const outs = o.out ? o.out.split(';') : null; const N = L.reduce((a, l) => a * l.length, 1);
+    const cw = w / (L.length + (outs || o.flags.outbox ? 1 : 0)); const rowH = h / N;
+    let s = '', top = ''; const leaves = [];
+    const root = [X(at[0]), Y(at[1] - h / 2)];
+    top += `<circle cx="${f1(root[0])}" cy="${f1(root[1])}" r="9" fill="#fff" stroke="${WC.bk}" stroke-width="2"/>`;
+    const nr = mode === 'node' ? 14 : 6.5;
+    function rec(lev, i0, i1, px, pr) {
+      if (lev === L.length) { leaves.push(px); return; }
+      const n = L[lev].length, span = (i1 - i0) / n, cc = cols[lev % cols.length];
+      L[lev].forEach((lab, j) => {
+        const a = i0 + span * j, b = a + span; const q = [X(at[0] + cw * (lev + 1)), Y(at[1] - (a + b) / 2 * rowH)];
+        const d = nrm(sub2(q, px)); const p1 = [px[0] + d[0] * pr, px[1] + d[1] * pr], p2 = [q[0] - d[0] * (nr + 2), q[1] - d[1] * (nr + 2)];
+        s += pl([p1, p2], sty(cc, 2.4));
+        if (mode === 'node') { top += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${nr}" fill="${mixHex(cc, '#ffffff', .82)}" stroke="${cc}" stroke-width="1.8"/>` + txt(q[0], q[1], lab, { fs: FS * .95, c: cc }); }
+        else {
+          top += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${nr}" fill="${cc}"/>`;
+          const mm = mid(p1, p2), up = j < n / 2; top += txt(mm[0] - (up ? 4 : 4), mm[1] + (up ? -15 : 15), lab, { fs: FS * .95, c: cc });
+        }
+        rec(lev + 1, a, b, q, nr + 2);
+      });
+    }
+    rec(0, 0, N, root, 10);
+    leaves.forEach((q, i) => {
+      if (o.flags.outbox) { const x = q[0] + nr + 24; s += pl([[q[0] + nr + 2, q[1]], [x, q[1]]], sty('#b9b9b9', 1.2, '2 3')) + `<rect x="${f1(x)}" y="${f1(q[1] - rowH * sy * .32)}" width="${f1(cw * sx * .78)}" height="${f1(rowH * sy * .64)}" rx="3" fill="none" stroke="#b9b9b9" stroke-width="1.3" stroke-dasharray="5 4"/>`; }
+      if (outs && outs[i] !== undefined) top += txt(q[0] + nr + 18, q[1], outs[i].trim(), { fs: FS * 1.25, c: WC.bk, a: 'start' });
+    });
+    return s + top;
+  }
+
+  /* ---------- ชุดค่าตั้งต้นของรูป ---------- */
+  const P = (src, d) => [['src', 'คำสั่งวาด (บรรทัดละ 1 อย่าง)', src, 'ta'],
+    ['x0', 'กรอบ x น้อยสุด', d.x0], ['x1', 'กรอบ x มากสุด', d.x1], ['y0', 'กรอบ y น้อยสุด', d.y0], ['y1', 'กรอบ y มากสุด', d.y1],
+    ['sx', 'ขนาด 1 หน่วยแกน x (px)', d.sx], ['sy', 'ขนาด 1 หน่วยแกน y (px)', d.sy || d.sx],
+    ['ax', 'แกน x–y', d.ax || 'no', ['yes:แสดง', 'no:ไม่แสดง']], ['tx', 'ระยะตัวเลขแกน x (0 = ไม่แสดง)', d.tx || '1'], ['ty', 'ระยะตัวเลขแกน y (0 = ไม่แสดง)', d.ty || '1'],
+    ['grid', 'เส้นตาราง', d.grid || 'yes', ['yes:แสดง', 'no:ไม่แสดง']], ['gx', 'ระยะเส้นตารางแนวตั้ง (เว้น = ตามตัวเลข)', d.gx || ''], ['gy', 'ระยะเส้นตารางแนวนอน (เว้น = ตามตัวเลข)', d.gy || ''],
+    ['xl', 'ชื่อแกนนอน', d.xl === undefined ? 'x' : d.xl], ['yl', 'ชื่อแกนตั้ง', d.yl === undefined ? 'y' : d.yl], ['yb', 'แกน y เริ่มไม่ใช่ 0 (หยัก)', d.yb || 'no', ['yes:ใช่', 'no:ไม่ใช่']],
+    ['fs', 'ขนาดตัวอักษร', d.fs || '16']];
+  window.WBFIG_P = P; window.wbGen = wbGen;
+    const HELP = 'คำสั่งบรรทัดละ 1 อย่าง ตัวเลือกต่อท้ายหลัง | เช่น สี (or ส้ม · nv น้ำเงิน · rd แดง · lo ส้มอ่อน · gr เทา · bk ดำ · pu ม่วง · gn เขียว หรือ #รหัสสี) dash = เส้นประ w=ความหนา<br>' +
+      '<code>f: x^2 ; -1 ; 2</code> กราฟ (ช่วง x ใส่หรือไม่ก็ได้) · <code>pt: (2,3) P(2,3) | pos=se open</code> จุด · <code>line: (0,0) (1,2) | dash</code> เส้นตรงยาวตลอด · <code>seg: (0,0) (1,2) (3,1) | arrow</code> เส้นต่อจุด<br>' +
+      '<code>poly: (0,0) (2,0) (1,2) | fill=pk</code> · <code>rect: (0,0) (2,1) ข้อความ | r=6 fill=bl</code> · <code>circle: (0,0) 2 | fill=pk</code> · <code>arc: (0,0) 3 1 0 180 | dash</code> (rx ry องศาเริ่ม องศาจบ)<br>' +
+      '<code>curve: (0,0) (2,3) (4,0)</code> เส้นโค้ง · <code>smooth: (0,0) (1,1) (2,0)</code> โค้งผ่านจุด · <code>node: (0,0) A | r=16</code> วงกลมมีชื่อ · <code>text: (1,2) ข้อความ $x^2$ | size=18 anchor=start</code> · <code>person: (1,1) | rd size=30</code><br>' +
+      '<code>tree: ใส่,ไม่ใส่ ; ใส่,ไม่ใส่ | at=(0,8) w=10 h=8 mode=edge cols=rd,or,nv out=ผล1;ผล2;…</code> แผนภาพต้นไม้ (mode=node = ป้ายในวงกลม, outbox = กล่องว่าง) · <code>axes: -2 3 -1 5</code> กำหนดช่วงแกน';
+  window.WB_LIB = {};
+  window.wbAdd = function (cat, items) { // items: [kind, ชื่อ, src, frame]
+    const kinds = items.map(([k, name, src, d]) => { LIB[k] = { name, p: P(src, d), gen: wbGen }; WB_LIB[k] = 1; if (typeof KIND_HELP === 'object') KIND_HELP[k] = HELP; return k; });
+    const i = LIBCAT.findIndex(c => c[0] === cat); if (i >= 0) LIBCAT[i][1] = LIBCAT[i][1].concat(kinds.filter(k => !LIBCAT[i][1].includes(k)));
+    else { let h = LIBCAT.findIndex(c => c[0] === '— แบบฝึกทักษะ —'); if (h < 0) { LIBCAT.splice(1, 0, ['— แบบฝึกทักษะ —']); h = 1; } let j = h + 1; while (LIBCAT[j] && LIBCAT[j][1] && WB_LIB[LIBCAT[j][1][0]]) j++; LIBCAT.splice(j, 0, [cat, kinds]); }
+  };
+  wbAdd('แบบฝึกทักษะ: วาดเอง', [['wbfree', 'รูปเปล่า (สไตล์แบบฝึก)', 'f: x^2/2 | or\npt: (1,0.5) P(1, 1/2) | pos=se', { x0: '-3', x1: '3', y0: '-1', y1: '4', sx: '50', ax: 'yes' }]]);
+})();
+// คำบรรยายใต้รูปวาด (b.cap) — ใช้เมื่อรูปมีคำบรรยาย เช่น รูปจากแบบฝึกทักษะ
+(function () {
+  const st = document.createElement('style'); st.textContent = '.figcap{font-size:.92em;color:#5b4f47;text-align:center;margin:2px 0 6px}'; document.head.appendChild(st);
+  const _bh = blockHTML;
+  blockHTML = function (b) { const h = _bh.apply(this, arguments); return (b && b.t === 'figure' && b.cap !== undefined) ? h + '<div class="figcap" contenteditable="true" data-f="cap" data-ph="คำบรรยายรูป (เว้นว่างได้)"></div>' : h; };
+})();
+
+/* ===================== รูปจากแบบฝึกทักษะ (สร้างใหม่ด้วยตัววาดสไตล์แบบฝึก แก้ไขได้) ===================== */
+wbAdd("แบบฝึกทักษะ: บทที่ 11 หลักการนับ", [["wb11_routes", "ทางถนน–ทางเรือ บ้านไปโรงเรียน", "# ทางถนน (เส้นโค้งสีแดง)\ncurve: (2,0.15) (8,5.8) (13,0.15) | rd\ncurve: (2,0.1) (8,4.4) (13,0.1) | rd\ncurve: (2,0.05) (8,3.0) (13,0.05) | rd\ntext: (8,3.3) r_1 | rd\ntext: (8,2.6) r_2 | rd\ntext: (8,1.9) r_3 | rd\ntext: (3.4,3.4) ทางถนน | rd bold\n# ทางเรือ (เส้นคลื่นสีน้ำเงิน)\nsmooth: (2,-0.05) (3,-0.9) (4.3,-1.3) (5.3,-0.8) (6.4,-1.45) (7.6,-0.9) (8.7,-1.5) (9.8,-0.9) (11,-1.35) (12,-0.8) (13,-0.05) | nv\nsmooth: (2,-0.1) (3,-1.6) (4.3,-2.3) (5.3,-1.8) (6.4,-2.5) (7.6,-1.9) (8.7,-2.6) (9.8,-1.9) (11,-2.3) (12,-1.6) (13,-0.1) | nv\ntext: (8.7,-0.85) c_1 | nv\ntext: (8.7,-1.95) c_2 | nv\ntext: (4,-3.3) ทางเรือ | nv bold\n# สถานที่\nrect: (-0.4,-0.55) (2,0.55) บ้าน | bk r=6 fill=wh w=2\nrect: (13,-0.55) (15.7,0.55) โรงเรียน | bk r=6 fill=wh w=2", {"x0": "-0.6", "x1": "15.9", "y0": "-3.8", "y1": "3.8", "sx": "32", "fs": "19"}], ["wb11_venn", "แผนภาพเวนน์ สมาชิกชมรม (รูปคน)", "rect: (0,0) (10,7) | bk w=2.4\ntext: (0.45,6.45) U | bk size=20\ncircle: (3.6,3.0) 2.55 | rd fill=pk op=0.75\ncircle: (6.4,3.0) 2.55 | nv fill=bl op=0.75\ntext: (2.5,6.0) ชมรมกีฬา | rd bold size=19\ntext: (7.6,6.0) ชมรมดนตรี | nv bold size=19\n# คนในชมรมกีฬาอย่างเดียว\nperson: (2.3,4.0) | rd\nperson: (2.0,2.1) | rd\nperson: (2.9,2.5) | rd\n# คนที่อยู่ทั้งสองชมรม\nperson: (5.0,3.8) | pu\nperson: (5.0,2.1) | pu\n# คนในชมรมดนตรีอย่างเดียว\nperson: (7.4,4.0) | nv\nperson: (7.8,2.4) | nv", {"x0": "-0.1", "x1": "10.1", "y0": "-0.1", "y1": "7.1", "sx": "40", "fs": "17"}], ["wb11_shirt", "แผนภาพต้นไม้ เสื้อ–กางเกง", "text: (4,9.7) เสื้อ | rd bold\ntext: (8,9.7) กางเกง | nv bold\ntext: (10.6,9.7) ชุดที่ได้ | bk bold\ntree: s_1,s_2,s_3 ; p_1,p_2 | at=(0,9) w=12 h=9 mode=node cols=rd,nv outbox", {"x0": "-0.5", "x1": "12.4", "y0": "-0.2", "y1": "10.3", "sx": "40", "fs": "16"}], ["wb11_subset", "แผนภาพต้นไม้ การสร้างสับเซต", "text: (3.5,9.7) ตัดสินใจเรื่อง a | rd bold size=15\ntext: (7,9.7) ตัดสินใจเรื่อง b | or bold size=15\ntext: (10.5,9.7) ตัดสินใจเรื่อง c | rd bold size=15\ntext: (14.4,9.7) สับเซตที่ได้ | bk bold\ntree: ใส่,ไม่ใส่ ; ใส่,ไม่ใส่ ; ใส่,ไม่ใส่ | at=(0,9) w=14 h=9 mode=edge cols=rd,or,nv out={a,b,c};{a,b};{a,c};{a};{b,c};{b};{c};∅", {"x0": "-0.4", "x1": "15.8", "y0": "-0.2", "y1": "10.3", "sx": "40", "fs": "17"}], ["wb11_cards", "บัตรตัวเลข 0–4 และหลักของจำนวน", "text: (5.2,3.3) บัตรตัวเลข | bk\nrect: (0,0) (1.7,2.2) 0 | rd r=8 shadow fill=wh\nrect: (2.2,0) (3.9,2.2) 1 | rd r=8 shadow fill=wh\nrect: (4.4,0) (6.1,2.2) 2 | rd r=8 shadow fill=wh\nrect: (6.6,0) (8.3,2.2) 3 | rd r=8 shadow fill=wh\nrect: (8.8,0) (10.5,2.2) 4 | rd r=8 shadow fill=wh\nseg: (11.1,1.1) (12.3,1.1) | gr arrow w=1.6\ntext: (14.0,2.75) หลักร้อย | bk\ntext: (17.1,2.75) หลักสิบ | bk\ntext: (20.2,2.75) หลักหน่วย | bk\nrect: (12.8,0.1) (15.2,2.0) | rd r=8 fill=pk\nrect: (15.9,0.1) (18.3,2.0) | rd r=8 fill=lr\nrect: (19.0,0.1) (21.4,2.0) | rd r=8 fill=pk", {"x0": "-0.3", "x1": "21.7", "y0": "-0.4", "y1": "3.9", "sx": "36", "fs": "21"}], ["wb11_cities", "ถนนระหว่างเมือง A, B, C", "# A ไป B: 2 สาย · B ไป C: 3 สาย (สีแดง)\ncurve: (0,0) (2.4,3.7) (6.5,4.2) | rd\ncurve: (0,0) (3.6,2.9) (6.5,4.2) | rd\ncurve: (6.5,4.2) (10.8,3.8) (13,0) | rd\ncurve: (6.5,4.2) (10.2,3.2) (13,0) | rd\ncurve: (6.5,4.2) (9.6,2.5) (13,0) | rd\n# A ไป C โดยไม่ผ่าน B: 2 สาย (สีน้ำเงิน)\ncurve: (0,0) (6.5,-2.6) (13,0) | nv\ncurve: (0,0) (6.5,-4.4) (13,0) | nv\nnode: (0,0) A | r=18\nnode: (6.5,4.2) B | r=18\nnode: (13,0) C | r=18\ntext: (6.5,-3.4) ถนนระหว่างเมือง A, B และ C | #444444 size=20", {"x0": "-0.8", "x1": "13.8", "y0": "-3.9", "y1": "5", "sx": "34", "fs": "19"}], ["wb11_flag3", "ธงแถบแนวตั้ง 3 แถบ", "seg: (-0.08,1.75) (-0.08,-0.65) | gr w=7\nrect: (0,0) (1.1,1.6) | rd w=3\nrect: (1.1,0) (2.2,1.6) | rd w=3\nrect: (2.2,0) (3.3,1.6) | rd w=3\ntext: (0.55,-0.33) แถบที่ 1 | bk\ntext: (1.65,-0.33) แถบที่ 2 | bk\ntext: (2.75,-0.33) แถบที่ 3 | bk", {"x0": "-0.2", "x1": "3.4", "y0": "-0.7", "y1": "1.8", "sx": "100", "fs": "22"}], ["wb11_flag4", "ธงแถบแนวนอน 4 แถบ", "seg: (-0.08,1.75) (-0.08,-0.15) | gr w=7\nrect: (0,1.275) (2.2,1.7) | rd w=3\nrect: (0,0.85) (2.2,1.275) | rd w=3\nrect: (0,0.425) (2.2,0.85) | rd w=3\nrect: (0,0) (2.2,0.425) | rd w=3\ntext: (2.35,1.49) แถบที่ 1 | bk anchor=start\ntext: (2.35,1.06) แถบที่ 2 | bk anchor=start\ntext: (2.35,0.64) แถบที่ 3 | bk anchor=start\ntext: (2.35,0.21) แถบที่ 4 | bk anchor=start", {"x0": "-0.2", "x1": "3.15", "y0": "-0.2", "y1": "1.8", "sx": "120", "fs": "22"}], ["wb11_tri3", "สามเหลี่ยมด้านเท่าแบ่ง 9 รูป", "poly: (0,0.000) (1,0.000) (0.5,0.866) | rd fill=lr w=2.6\npoly: (1,0.000) (2,0.000) (1.5,0.866) | rd fill=lr w=2.6\npoly: (2,0.000) (3,0.000) (2.5,0.866) | rd fill=lr w=2.6\npoly: (0.5,0.866) (1.5,0.866) (1,1.732) | rd fill=lr w=2.6\npoly: (1.5,0.866) (2.5,0.866) (2,1.732) | rd fill=lr w=2.6\npoly: (1,1.732) (2,1.732) (1.5,2.598) | rd fill=lr w=2.6\npoly: (0,0) (3,0) (1.5,2.598) | rd w=2.8", {"x0": "-0.05", "x1": "3.05", "y0": "-0.05", "y1": "2.65", "sx": "120", "fs": "18"}], ["wb11_tri4", "สามเหลี่ยมด้านเท่าแบ่ง 16 รูป", "poly: (0,0.000) (1,0.000) (0.5,0.866) | rd fill=lr w=2.6\npoly: (1,0.000) (2,0.000) (1.5,0.866) | rd fill=lr w=2.6\npoly: (2,0.000) (3,0.000) (2.5,0.866) | rd fill=lr w=2.6\npoly: (3,0.000) (4,0.000) (3.5,0.866) | rd fill=lr w=2.6\npoly: (0.5,0.866) (1.5,0.866) (1,1.732) | rd fill=lr w=2.6\npoly: (1.5,0.866) (2.5,0.866) (2,1.732) | rd fill=lr w=2.6\npoly: (2.5,0.866) (3.5,0.866) (3,1.732) | rd fill=lr w=2.6\npoly: (1,1.732) (2,1.732) (1.5,2.598) | rd fill=lr w=2.6\npoly: (2,1.732) (3,1.732) (2.5,2.598) | rd fill=lr w=2.6\npoly: (1.5,2.598) (2.5,2.598) (2,3.464) | rd fill=lr w=2.6\npoly: (0,0) (4,0) (2,3.464) | rd w=2.8", {"x0": "-0.05", "x1": "4.05", "y0": "-0.05", "y1": "3.51", "sx": "90", "fs": "18"}], ["wb11_map", "แผนที่ 4 เขต A, B, C, D", "rect: (0,0) (2,3) A | rd fill=lr w=2.8\nrect: (2,1.5) (4.5,3) B | rd fill=bl w=2.8\nrect: (2,0) (4.5,1.5) C | rd fill=lr w=2.8\nrect: (4.5,0) (6.5,3) D | rd fill=bl w=2.8", {"x0": "-0.1", "x1": "6.6", "y0": "-0.1", "y1": "3.1", "sx": "70", "fs": "26"}]]);
+wbAdd("แบบฝึกทักษะ: บทที่ 14 แคลคูลัส", [["wb14_secant", "เส้นตัดโค้งเข้าใกล้เส้นสัมผัส (y = x²)", "axes: -1.15 2.45 -0.35 5.1\nf: x^2 ; -1.1 ; 2.3 | or\nline: (1,1) (2,4) | or w=1.8 from=0.62 to=2.28\nline: (1,1) (1.5,2.25) | lo w=1.8 from=0.45 to=2.42\nline: (1,1) (0,0) | #d9a066 w=1.6 from=-0.45 to=2.5\nline: (0,-1) (1,1) | nv dash from=0.35 to=2.4\npt: (2,4) Q_1 | lo pos=w tc=or\npt: (1.5,2.25) Q_2 | lo pos=w tc=or\npt: (0,0) Q_3 | lo pos=nw tc=or\npt: (1,1) P(1, 1) | or pos=se\ntext: (-0.62,1.15) y = x^2 | or size=18", {"x0": "-1.25", "x1": "2.75", "y0": "-0.45", "y1": "5.3", "sx": "88", "sy": "54", "tx": "1,2", "ty": "1,4", "grid": "no", "ax": "yes"}], ["wb14_tangents", "เส้นสัมผัส y = x² ที่ x = −2 ถึง 3", "f: x^2 ; -2.55 ; 3.37 | or\nseg: (-2.4,5.6) (-1.6,2.4) | nv w=2.6\nseg: (-1.4,1.8) (-0.6,0.2) | nv w=2.6\nseg: (-0.4,0) (0.4,0) | nv w=2.6\nseg: (0.6,0.2) (1.4,1.8) | nv w=2.6\nseg: (1.6,2.4) (2.4,5.6) | nv w=2.6\nseg: (2.65,6.9) (3.35,11.1) | nv w=2.6\npt: (-2,4) | or\npt: (-1,1) | or\npt: (0,0) | or\npt: (1,1) | or\npt: (2,4) | or\npt: (3,9) | or", {"x0": "-2.9", "x1": "3.9", "y0": "-0.7", "y1": "11.6", "sx": "52", "sy": "27", "tx": "1", "ty": "2", "ax": "yes", "grid": "no"}], ["wb14_grid", "ตารางพิกัดเปล่า (แกน a, m)", "axes: -3.3 4.4 -7 9", {"x0": "-3.6", "x1": "4.9", "y0": "-7.4", "y1": "9.6", "sx": "36", "sy": "18", "tx": "1", "ty": "2", "gx": "1", "gy": "1", "xl": "a", "yl": "m", "ax": "yes", "grid": "yes"}], ["wb14_absx", "y = |x| และการขยายรอบจุด O", "axes: -2.2 2.35 -0.15 2.5\nseg: (-2.1,2.1) (0,0) | nv w=3\nseg: (0,0) (2.1,2.1) | or w=3\npt: (-1.9,1.9) | nv\npt: (-1.3,1.3) | nv\npt: (-0.6,0.6) | nv\npt: (0.6,0.6) | or\npt: (1.3,1.3) | or\npt: (1.9,1.9) | or\npt: (0,0) | bk r=7\ntext: (-1.4,2.5) ความชัน −1 | nv\ntext: (1.35,2.5) ความชัน 1 | or\nseg: (0.4,0.25) (3.15,0.42) | gr arrow w=1.5\nrect: (3.35,-0.22) (6.6,2.3) | gr fill=cr w=1.6\nseg: (3.35,1.65) (4.97,0.4) | nv w=3\nseg: (4.97,0.4) (6.6,1.7) | or w=3\npt: (4.97,0.4) | bk r=7\ntext: (4.97,-0.6) ขยายรอบ O 10 เท่า: ยังเป็นมุม | bk", {"x0": "-2.45", "x1": "6.75", "y0": "-0.85", "y1": "2.75", "sx": "70", "sy": "70", "tx": "1", "ty": "1", "grid": "no", "ax": "yes", "fs": "19"}], ["wb14_tangentP", "กราฟ y = f(x) และเส้นสัมผัสที่ P(2,3)", "f: x^2/2+1 ; -1.6 ; 4.8 | or w=3\nline: (0,-1) (2,3) | nv dash from=-0.6 to=4.7\npt: (2,3) P(2, 3) | or pos=se\ntext: (2.6,7.6) y = f(x) | or size=19", {"x0": "-1.75", "x1": "5.6", "y0": "-2.6", "y1": "9.1", "sx": "54", "sy": "23", "tx": "1", "ty": "2", "gy": "1", "ax": "yes", "grid": "yes"}], ["wb14_temp", "อุณหภูมิ T(t) แกนตั้งเริ่มที่ 25", "axes: 0 5.35 24 35.3\nf: 30+4x-x^2 ; 0 ; 5 | or w=3.4\npt: (0,30) | or r=6.5\npt: (5,25) | or r=6.5\ntext: (4.25,31.3) T(t) | or size=24", {"x0": "-0.7", "x1": "5.8", "y0": "23.4", "y1": "35.9", "sx": "62", "sy": "22", "tx": "1", "ty": "2", "grid": "no", "ax": "yes", "yb": "yes", "xl": "", "yl": "", "fs": "20"}], ["wb14_cone", "กรวยสูง 6 ซม. รัศมี r", "poly: (-2.4,0) (0,6) (2.4,0) | or fill=cr w=2.6\narc: (0,0) 2.4 0.62 180 360 | or w=2.6 fill=cr\narc: (0,0) 2.4 0.62 0 180 | or w=1.8 dash\nseg: (-2.4,0) (0,0) | or w=1.4\nseg: (0,6) (0,0) | nv w=2.2 dash\nseg: (0,0) (2.4,0) | nv w=2.8\ntext: (0.95,2.6) 6 ซม. | nv size=24\ntext: (1.3,-0.3) r | nv size=26", {"x0": "-2.6", "x1": "2.6", "y0": "-0.85", "y1": "6.15", "sx": "44", "fs": "20"}], ["wb14_corners", "กราฟมีจุดหักและจุดไม่ต่อเนื่อง", "seg: (-1,0) (1,2) (3,0) | or w=3\nseg: (3,3) (5,2) | or w=3\npt: (-1,0) | or r=6.5\npt: (3,0) | or r=6.5 open\npt: (3,3) | or r=6.5\npt: (5,2) | or r=6.5", {"x0": "-1.5", "x1": "5.6", "y0": "-0.7", "y1": "3.45", "sx": "62", "sy": "56", "tx": "1", "ty": "1", "xl": "", "yl": "", "fs": "20", "ax": "yes", "grid": "yes"}], ["wb14_tangent06", "เส้นโค้ง y = f(x) และเส้นผ่าน P กับ (4,6)", "f: 3+1.5(x-2)-0.25(x-2)^2 ; 0.2 ; 5.3 | or w=3\nline: (0,0) (4,6) | nv from=-0.12 to=4.3\npt: (2,3) P | or pos=se tc=or\npt: (4,6) (4, 6) | nv pos=w tc=nv\ntext: (4.5,4.6) y = f(x) | or size=19", {"x0": "-0.6", "x1": "5.9", "y0": "-0.6", "y1": "6.7", "sx": "52", "sy": "40", "tx": "1", "ty": "1", "ax": "yes", "grid": "yes"}]]);
 
 /* ===================== ไฟล์ .npress: ดับเบิลคลิกในเครื่องแล้วเปิดใน Newton Press =====================
    ใช้ได้เมื่อติดตั้งแอปผ่าน Chrome / Edge (manifest มี file_handlers) · macOS ส่งไฟล์มาทาง launchQueue */
