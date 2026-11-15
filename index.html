@@ -909,6 +909,21 @@ function sampleDoc() {
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
 function status(msg) { $('#status').textContent = msg; }
+// ข้อความล้วนของหัวกรอบ (สมการ → อักขระธรรมดา) ใช้กับหัวกรอบ "(ต่อ)" ที่แสดงผ่าน CSS content
+function texPlain(t) {
+  const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', 'n': 'ⁿ', '+': '⁺', '-': '⁻', 'x': 'ˣ' };
+  const SUB = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉', 'n': 'ₙ' };
+  const ITAL = c => { const k = c.charCodeAt(0); if (c === 'h') return 'ℎ'; if (k >= 97 && k <= 122) return String.fromCodePoint(0x1D44E + k - 97); if (k >= 65 && k <= 90) return String.fromCodePoint(0x1D434 + k - 65); return c; };
+  let s = String(t || '').replace(/\\(displaystyle|textstyle|left|right|qquad|quad)(?![a-zA-Z])/g, ' ').replace(/\\[,;!]/g, ' ').replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2')
+    .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)').replace(/\\(text|mathrm|mathbf|operatorname)\s*\{([^{}]*)\}/g, '\u0001$2\u0002')
+    .replace(/\\int/g, '∫').replace(/\\lim/g, '\u0001lim\u0002').replace(/\\to/g, '→').replace(/\\infty/g, '∞').replace(/\\pi/g, 'π').replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\le(q)?\b/g, '≤').replace(/\\ge(q)?\b/g, '≥').replace(/\\neq?\b/g, '≠').replace(/\\prime/g, '′').replace(/\\Delta/g, 'Δ').replace(/\\[lr]?vert/g, '|');
+  s = s.replace(/\^\s*\{([^{}]*)\}|\^\s*(\\?[A-Za-z0-9+\-])/g, (m, a, b) => { const v = a !== undefined ? a : b; return [...v].every(c => SUP[c]) ? [...v].map(c => SUP[c]).join('') : '^' + (v.length > 1 ? '(' + v + ')' : v); })
+    .replace(/_\s*\{([^{}]*)\}|_\s*([A-Za-z0-9])/g, (m, a, b) => { const v = a !== undefined ? a : b; return [...v].every(c => SUB[c]) ? [...v].map(c => SUB[c]).join('') : '_' + v; })
+    .replace(/'/g, '′').replace(/\\[a-zA-Z]+/g, '').replace(/[{}]/g, '');
+  let out = '', raw = false; for (const c of s) { if (c === '\u0001') raw = true; else if (c === '\u0002') raw = false; else out += raw ? c : ITAL(c); }
+  return out.replace(/\s+/g, ' ').trim();
+}
+function actTitleText(el) { const c = el.cloneNode(true); c.querySelectorAll('.mx').forEach(m => m.replaceWith(document.createTextNode(texPlain(m.dataset.tex)))); return c.textContent.replace(/\s+/g, ' ').trim(); }
 function byId(id) { return doc.blocks.find(b => b.id === id); }
 function idx(id) { return doc.blocks.findIndex(b => b.id === id); }
 
@@ -1181,7 +1196,7 @@ function paginate() {
     }
     if (target !== null && target > re && first.classList.contains('inact')) { // กรอบกิจกรรม/ฝึกทันทีต่อหน้าใหม่: ปิดกรอบหน้าเดิม และใส่หัวกรอบซ้ำ (ต่อ)
       let h = first.previousElementSibling; while (h && !h.classList.contains('acthead')) h = h.previousElementSibling;
-      if (h) { first.dataset.acttl = (($('.b-activity', h) || h).querySelector('[data-f=html]') || h).textContent.replace(/\s+/g, ' ').trim() + ' (ต่อ)'; first.dataset.actic = ((($('.aic', h) || {}).textContent) || ''); first.classList.add('actcont'); target += 32; }
+      if (h) { first.dataset.acttl = actTitleText(($('.b-activity', h) || h).querySelector('[data-f=html]') || h) + ' (ต่อ)'; first.dataset.actic = ((($('.aic', h) || {}).textContent) || ''); first.classList.add('actcont'); target += 32; }
       const pl = prev && prev.els[prev.els.length - 1]; if (pl && pl.classList.contains('inact')) pl.classList.add('actbrk');
     }
     if (target !== null) first.style.marginTop = Math.max(0, target - t) + 'px';
@@ -3139,7 +3154,7 @@ function svgMath(x, y, str, o = {}) {
   const L = /[a-zA-Zα-ωΑ-Ωϕϑ]/;
   while (i < src.length) {
     let ch = src[i];
-    if ((ch === '^' || ch === '_') && i + 1 < src.length) { const up = ch === '^'; i++; let t = ''; if (src[i] === '{') { i++; while (i < src.length && src[i] !== '}') t += src[i++]; i++; } else if (src[i] === '(' && up) { let dep = 0; do { if (src[i] === '(') dep++; if (src[i] === ')') dep--; t += src[i++]; } while (i < src.length && dep > 0); } else { while (i < src.length && /[\d.a-zA-Z′'+−]/.test(src[i]) && t.length < 4) { t += src[i++]; if (/[a-z]/i.test(t) && !up) break; if (/[a-z]/i.test(t)) break; } }
+    if ((ch === '^' || ch === '_') && i + 1 < src.length) { const up = ch === '^'; i++; let t = ''; if (src[i] === '{') { i++; while (i < src.length && src[i] !== '}') t += src[i++]; i++; } else if (src[i] === '(' && up) { let dep = 0; do { if (src[i] === '(') dep++; if (src[i] === ')') dep--; t += src[i++]; } while (i < src.length && dep > 0); } else { while (i < src.length && /[\d.a-zA-Z′'+−]/.test(src[i]) && t.length < 4 && !(t.length && /[+−]/.test(src[i]))) { t += src[i++]; if (/[a-z]/i.test(t) && !up) break; if (/[a-z]/i.test(t)) break; } }
       const d = up ? -fs * 0.38 : fs * 0.22; out += t.split(/([a-zA-Zα-ω]+)/).filter(Boolean).map((w, k) => span(w, L.test(w), k ? 0 : d) ).join('').replace(/<tspan([^>]*)>/g, (m0, at, off) => at.includes('font-size=') ? m0 : `<tspan${at} font-size="${fs * 0.72}">`); pend += -d; continue; }
     if (/[฀-๿]/.test(ch)) { let w = ''; while (i < src.length && /[฀-๿\s]/.test(src[i])) w += src[i++]; out += `<tspan font-family="THS" font-size="${fs * 1.12}"${pd()}>${esc(w)}</tspan>`; continue; }
     if (L.test(ch)) { let w = ''; while (i < src.length && L.test(src[i])) w += src[i++]; const fn = /^(sin|cos|tan|sec|csc|cot|log|ln|exp|sqrt|abs|Re|Im|arg|max|min|det|lim|mod|arcsin|arccos|arctan)$/.test(w); out += span(fn ? w + (/^(Re|Im)$/.test(w) ? '' : ' ') : w, !fn); continue; }
@@ -8242,7 +8257,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794741074';
+const NP_BUILD = '1794748884';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
