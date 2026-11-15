@@ -8242,7 +8242,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794737010';
+const NP_BUILD = '1794739200';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13221,7 +13221,7 @@ td .skl,th .skl{color:var(--dark)}
     const F = frame(), pT = F.ax ? 26 : 14, X = x => 14 + (x - F.x0) * F.sx, Y = y => pT + (F.y1 - y) * F.sy;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'wbh-g');
     const list = sel >= 0 ? [sel] : objs.map((_, i) => i);
-    list.forEach(i => { const o = objs[i]; (o && o.P || []).forEach((p, j) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', X(p[0])); c.setAttribute('cy', Y(p[1])); c.setAttribute('r', sel >= 0 ? 7 : 5); c.setAttribute('fill', sel >= 0 ? 'rgba(217,104,43,.55)' : 'rgba(44,74,122,.25)'); c.setAttribute('stroke', sel >= 0 ? '#d9682b' : '#2c4a7a'); c.setAttribute('class', 'wbh-dot'); c.dataset.i = i; c.dataset.j = j; g.appendChild(c); }); });
+    list.forEach(i => { const o = objs[i]; (o && o.P || []).forEach((p, j) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', X(p[0])); c.setAttribute('cy', Y(p[1])); c.setAttribute('r', sel >= 0 ? 7 : 4); c.setAttribute('fill', sel >= 0 ? 'rgba(217,104,43,.55)' : 'rgba(44,74,122,.12)'); c.setAttribute('stroke', sel >= 0 ? '#d9682b' : 'rgba(44,74,122,.35)'); c.setAttribute('class', 'wbh-dot'); c.dataset.i = i; c.dataset.j = j; g.appendChild(c); }); });
     svg.appendChild(g);
   }
   let drag = null;
@@ -13553,6 +13553,68 @@ ${R}.b-box:is(.k-pmis,.k-punit){background:#fff;border:1px solid ${MX(40)};borde
   }
   hook(); setTimeout(hook, 500); setTimeout(hook, 2000);
   if (typeof scAdd === 'function') scAdd(IS_MAC ? '⌘⇧P' : 'Ctrl+Shift+P', 'ส่งออก PDF เฉพาะบางหน้า', 'ไฟล์', () => openPageExport(), e => (e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyP');
+})();
+
+/* ===================== ใช้งานง่ายขึ้น: คลังรูปแบบรูปย่อ + หน้าจอไม่กระโดดเมื่อแก้ไข =====================
+   1) หน้าต่างวาดรูป: หมวดด้านซ้ายมีสัญลักษณ์ · รายการรูปเป็นแถบรูปย่อเลื่อนซ้าย–ขวา (ชื่อเต็มอยู่ใน tooltip)
+   2) ปิด scroll anchoring ของเบราว์เซอร์ (ต้นเหตุหน้าจอเลื่อนลงเมื่อขยายรูป/ตาราง กด Enter ฯลฯ)
+      แล้วตรึงตำแหน่งเองให้บล็อกที่กำลังแก้อยู่ตำแหน่งเดิมบนจอ หลังวาดใหม่/จัดหน้าใหม่ทุกครั้ง */
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `
+#scroller,#scroller *{overflow-anchor:none!important}
+#lbCats{flex:0 0 168px!important}
+#lbCats button{display:flex;align-items:center;gap:8px;font-size:15.5px!important;padding:5px 8px!important;line-height:1.25}
+#lbCats button .ci{flex:0 0 26px;height:26px;border-radius:7px;background:#f6ece2;color:#7a3608;display:flex;align-items:center;justify-content:center;font-size:15px;font-family:KaTeX_Main,serif}
+#lbCats button.on .ci{background:var(--ui-accent,#7a3608);color:#fff}
+#lbCats button .cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#lbKinds{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:8px!important;padding:2px 2px 8px;scroll-snap-type:x proximity}
+#lbKinds .tb.kc{flex:0 0 118px!important;width:118px!important;max-width:118px!important;white-space:normal!important;height:auto!important;min-height:0!important;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px!important;border-radius:10px;scroll-snap-align:start;font-size:13px!important;line-height:1.2}
+#lbKinds .tb.kc .th{width:106px;height:70px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;overflow:hidden}
+#lbKinds .tb.kc .th svg{max-width:106px!important;max-height:70px!important;width:auto!important;height:auto!important}
+#lbKinds .tb.kc .kn{width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:center;color:#5d554d}
+#lbKinds .tb.kc.on{background:#fbe6d4;border-color:var(--ui-accent)}#lbKinds .tb.kc.on .kn{color:var(--ui-accent);font-weight:700}`;
+  document.head.appendChild(st);
+
+  /* ---------- สัญลักษณ์หมวด ---------- */
+  const ICON = [[/ใช้บ่อย/, '★'], [/เซต/, '⊂'], [/จำนวนจริง|เส้นจำนวน/, '↔'], [/ฟังก์ชัน/, 'ƒ'], [/ภาคตัดกรวย|เรขาคณิตวิเคราะห์/, '◯'], [/ตรีโกณ.*ประยุกต์|มุมเงย/, '⛰'], [/ตรีโกณ/, '∠'], [/เวกเตอร์/, '→'], [/เชิงซ้อน/, 'i'], [/หลักการนับ/, '!'], [/ความน่าจะเป็น/, '⚄'], [/ลำดับ|อนุกรม/, 'Σ'], [/แคลคูลัส/, '∫'], [/สถิติ/, '▥'], [/2 มิติ/, '△'], [/3 มิติ/, '⬡'], [/สถานการณ์|ฉาก/, '⛰'], [/วาดเอง/, '✎'], [/แยกตัวประกอบ|พหุนาม/, '▦'], [/ฟิสิกส์/, '⚛']];
+  const iconOf = n => (ICON.find(([r]) => r.test(n)) || [0, '•'])[1];
+  function decoCats() {
+    $$('#lbCats button[data-c]').forEach(b => { if (b.dataset.dc) return; b.dataset.dc = 1; const sm = b.querySelector('small'); const name = b.childNodes[0] ? b.childNodes[0].textContent.trim() : b.textContent.trim(); b.title = name; b.innerHTML = `<span class="ci">${iconOf(name)}</span><span class="cn">${esc(name.replace(/^★\s*/, '').replace(/\s*\(.*\)\s*$/, ''))}</span>` + (sm ? sm.outerHTML : ''); });
+  }
+  /* ---------- รูปย่อของแต่ละรูป ---------- */
+  const TH = {};
+  function thumb(k) { if (TH[k] !== undefined) return TH[k]; let s = ''; try { s = libSVG({ lib: { kind: k, p: {} } }) || ''; } catch (e) { } return TH[k] = s; }
+  function decoKinds() {
+    const box = $('#lbKinds'); if (!box) return;
+    const bs = $$('#lbKinds .tb[data-k]').filter(b => !b.classList.contains('kc')); if (!bs.length) return;
+    bs.forEach(b => { const k = b.dataset.k, name = (LIB[k] && LIB[k].name) || b.textContent; b.classList.add('kc'); b.title = name; b.innerHTML = `<span class="th">${thumb(k)}</span><span class="kn">${esc(name)}</span>`; });
+    const on = $('#lbKinds .tb.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  let busy = false;
+  const mo = new MutationObserver(() => { if (busy) return; busy = true; try { decoCats(); decoKinds(); } finally { busy = false; } });
+  const watch = () => { const a = $('#lbCats'), b = $('#lbKinds'); if (a) mo.observe(a, { childList: true }); if (b) mo.observe(b, { childList: true }); };
+  watch();
+  // เลื่อนแถบรูปด้วยล้อเมาส์แนวตั้งได้
+  document.addEventListener('wheel', e => { const k = e.target.closest && e.target.closest('#lbKinds'); if (!k || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; if (k.scrollWidth > k.clientWidth) { k.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+
+  /* ---------- ตรึงตำแหน่งจอขณะแก้ไข ---------- */
+  const sc = () => $('#scroller');
+  function anchorEl() {
+    const s = sc(); if (!s) return null; const R = s.getBoundingClientRect();
+    const vis = el => { if (!el || !el.isConnected) return false; const r = el.getBoundingClientRect(); return r.bottom > R.top + 4 && r.top < R.bottom - 4; };
+    const ae = document.activeElement; const a1 = ae && ae.closest && ae.closest('#flow .blk'); if (vis(a1)) return a1;
+    const a2 = $('#flow .blk.sel'); if (vis(a2)) return a2;
+    for (const el of $$('#flow > .blk')) { const r = el.getBoundingClientRect(); if (r.bottom > R.top + 40) return el; }
+    return null;
+  }
+  let depth = 0, saved = null;
+  function cap() { if (depth++ > 0) return; saved = null; if (document.body.classList.contains('exporting')) return; const el = anchorEl(); if (el) saved = { id: el.dataset.id, top: el.getBoundingClientRect().top }; }
+  function rest() { if (--depth > 0) return; const a = saved; saved = null; if (!a) return; const el = $(`#flow .blk[data-id="${a.id}"]`); const s = sc(); if (!el || !s) return; const d = el.getBoundingClientRect().top - a.top; if (Math.abs(d) > 1) s.scrollTop += d; }
+  const wrap = name => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { cap(); try { return f.apply(this, arguments); } finally { rest(); } }; };
+  ['rerender', 'paginate', 'renderAll'].forEach(wrap);
+  // ฟังก์ชันที่ประกาศแบบ function ถูกเรียกด้วยชื่อ: ผูกชื่อใหม่ให้ใช้ตัวที่ห่อแล้ว
+  try { rerender = window.rerender; paginate = window.paginate; renderAll = window.renderAll; } catch (e) { }
 })();
 
 /* ===================== ไฟล์ .npress: ดับเบิลคลิกในเครื่องแล้วเปิดใน Newton Press =====================
