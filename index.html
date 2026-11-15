@@ -8259,7 +8259,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794757003';
+const NP_BUILD = '1794761790';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13297,7 +13297,7 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
         let left = p * P + PAGE_H - BOT - bot() - 3; if (left < 10) return;
         // 1) ขยายกรอบทดในหน้านั้นเพิ่ม (รวมแล้วไม่เกิน 3 เท่าของขนาดที่ตั้งไว้)
         const ws = []; L.forEach(el => { const w = $('.b-work', el), bb = byId(el.dataset.id); if (w && bb) ws.push([w, (bb.h || 40) * 3.7795]); });
-        if (ws.length) { const room = ws.map(([w, h0]) => Math.max(0, h0 * 2.5 - w.offsetHeight)), tot = room.reduce((x, y) => x + y, 0);
+        if (ws.length) { const cap = (lastPg || nx.dataset.t === 'section' || nx.dataset.t === 'pagebreak') ? 4.5 : 2.5, room = ws.map(([w, h0]) => Math.max(0, h0 * cap - w.offsetHeight)), tot = room.reduce((x, y) => x + y, 0);
           if (tot > 0) { const o0 = nx.offsetTop, use = Math.min(left, tot); ws.forEach(([w], i) => { w.style.height = (w.offsetHeight + use * room[i] / tot) + 'px'; }); fix(); left = p * P + PAGE_H - BOT - bot() - 3; } }
         if (left < 10 || lastPg) return;
         // 2) ที่เหลือเฉลี่ยเป็นระยะห่างระหว่างกรอบ/ข้อ
