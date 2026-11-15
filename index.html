@@ -1631,6 +1631,7 @@ function buildInsertMenu() {
   h += grp('หน้าพิเศษ', btns(['cover', 'examcover', 'part', 'asheet'].concat(TYPES.scoresum ? ['scoresum'] : [])));
   h += grp('เฉลยข้อสอบ', btns(['soltitle', 'keytable', 'solhead', 'h3']));
   if (TYPES.wbban) h += grp('แบบฝึกทักษะ', btns(['wbban', 'skull', 'reflect']));
+  if (typeof npInsertMenuGroup === 'function') { const g = npInsertMenuGroup(); h = (typeof npMode === 'function' && npMode() === 'phys') ? h.replace('</div>', '</div>' + g) : h + g; }
   if (typeof QTYPES === 'object') h += grp('ข้อสอบ (แทรกทั้งข้อ)', Object.entries(QTYPES).map(([k, v]) => `<button data-qins="${k}">${v}</button>`).join(''));
   if (TYPES.pjch) h += grp('งานเอกสาร (โครงงาน · บันทึกข้อความ · ใบปะหน้า)', btns(['logohead', 'pjcover', 'pjch', 'pjsec', 'pjtext', 'pjinfo', 'toc', 'memohead', 'memocmt', 'cshead', 'signln'].filter(t => TYPES[t])));
   h += grp('แผนการสอน', `<button data-ins="lessonplan"><b>ตัวสร้างแผนการสอน…</b></button>` + btns(['lphead', 'lpsec', 'lpbar', 'lpstep', 'lpsign']));
@@ -8241,7 +8242,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794735378';
+const NP_BUILD = '1794737010';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13289,6 +13290,207 @@ td .skl,th .skl{color:var(--dark)}
     }, true);
     ed.addEventListener('change', e => { const t = e.target; const card = t.closest('.wbr'); if (!card) return; const o = objs[+card.dataset.i]; if (t.dataset.fl) { if (t.checked) o.flags[t.dataset.fl] = 1; else delete o.flags[t.dataset.fl]; e.stopPropagation(); push(false); } else if (t.tagName === 'SELECT' && t.dataset.o) { o.opt[t.dataset.o] = t.value; e.stopPropagation(); push(false); } }, true);
   };
+})();
+
+/* ===================== โหมดฟิสิกส์ (ระยะที่ 1) =====================
+   doc.settings.mode = 'math' | 'phys' | 'doc' (ไม่มี = คณิตศาสตร์) · โหมดเปลี่ยนแค่ค่าเริ่มต้น เครื่องมือทุกโหมดใช้ได้เสมอ
+   · ปริมาณ+หน่วย  · แถบสัญลักษณ์ฟิสิกส์ · ตารางค่าคงตัว · กล่องฟิสิกส์ · แม่แบบฟิสิกส์ · ข้อสอบ A-Level ฟิสิกส์ */
+(function () {
+  const MODES = { math: 'คณิตศาสตร์', phys: 'ฟิสิกส์', doc: 'เอกสารราชการ / วิชาการ' };
+  const modeOf = () => (doc && doc.settings && doc.settings.mode) || 'math';
+  window.npMode = modeOf;
+
+  /* ---------- แทรกสมการ/ข้อความที่ตำแหน่งเคอร์เซอร์ ---------- */
+  function edOf(r) { return r && (r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement).closest('[contenteditable="true"]'); }
+  function insTeX(tex) {
+    const r = lastRange, ed = edOf(r); if (!ed) { toast('คลิกตำแหน่งในข้อความก่อน'); return; }
+    const sp = mkMath(tex); r.deleteContents(); r.insertNode(document.createTextNode(' ')); r.insertNode(sp); renderMath(ed); syncFrom(ed);
+    const nr = document.createRange(); nr.setStartAfter(sp.nextSibling || sp); nr.collapse(true); ed.focus({ preventScroll: true }); const s = getSelection(); s.removeAllRanges(); s.addRange(nr); lastRange = nr.cloneRange();
+  }
+  window.npInsTeX = insTeX;
+
+  /* ---------- ปริมาณและหน่วย ---------- */
+  const UNIT_MAP = { 'Ω': '\\Omega', 'ohm': '\\Omega', '°': '^{\\circ}', 'deg': '^{\\circ}', 'μ': '\\mu', 'u': 'u' };
+  function unitTeX(u) {
+    u = String(u || '').trim(); if (!u) return '';
+    if (/^(°C|°|deg|degC)$/.test(u)) return u.includes('C') ? '^{\\circ}\\mathrm{C}' : '^{\\circ}';
+    let t = u.replace(/\s*[·*]\s*|\s+/g, '\\cdot ').replace(/\^\(?(-?\d+(?:\.\d+)?)\)?/g, '^{$1}').replace(/Ω|ohm/g, '\\Omega ').replace(/μ/g, '\\mu ').replace(/°/g, '^{\\circ}');
+    return `\\mathrm{${t}}`;
+  }
+  function numTeX(n) {
+    const m = /^\s*([-+−]?\d*[.,]?\d+)\s*(?:(?:e|E|×\s*10\^?|x\s*10\^?|\*10\^?)\s*([-+−]?\d+))?\s*$/.exec(n); if (!m) return null;
+    const a = m[1].replace('−', '-').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1{,}'); return m[2] !== undefined ? `${a}\\times10^{${m[2].replace('−', '-')}}` : a;
+  }
+  window.qtyTeX = function (s) {
+    s = String(s || '').trim(); const m = /^([-+−]?[\d.,]+(?:\s*(?:e|E|×\s*10\^?|x\s*10\^?|\*10\^?)\s*[-+−]?\d+)?)\s*(.*)$/.exec(s); if (!m) return null;
+    const n = numTeX(m[1]); if (n === null) return null; const u = unitTeX(m[2]); return u ? (u.startsWith('^') ? n + u : `${n}\\,${u}`) : n;
+  };
+  function qtyDialog() {
+    $$('#dQty').forEach(x => x.remove());
+    const d = document.createElement('div'); d.className = 'dlg-back open'; d.id = 'dQty';
+    d.innerHTML = `<div class="dlg" style="width:520px"><h3 style="margin:0 0 8px">ปริมาณและหน่วย</h3>
+<input id="qtyIn" type="text" style="width:100%;font-size:20px;padding:6px 10px;box-sizing:border-box" placeholder="เช่น 9.8 m/s^2 · 6.02e23 · 3 kΩ · 25 °C">
+<div id="qtyPv" style="font-size:24px;min-height:44px;margin:12px 0;text-align:center"></div>
+<div class="hint" style="font-size:14px">ยกกำลังพิมพ์ ^ (m/s^2) · คูณหน่วยเว้นวรรคหรือ · (N·m) · 10 ยกกำลังพิมพ์ e (6.02e23) · คำนำหน้า k M m μ n ใช้ได้ทันที</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="tb" data-q="x">ยกเลิก</button><button class="tb primary" data-q="ok">แทรก</button></div></div>`;
+    document.body.appendChild(d); const inp = $('#qtyIn', d), pv = $('#qtyPv', d); inp.focus();
+    const upd = () => { const t = qtyTeX(inp.value); pv.innerHTML = t ? kx(t) : (inp.value ? '<span style="color:#b03a2e;font-size:15px">พิมพ์ตัวเลขก่อน แล้วตามด้วยหน่วย</span>' : ''); };
+    const ok = () => { const t = qtyTeX(inp.value); if (!t) return; d.remove(); insTeX(t); };
+    inp.oninput = upd; inp.onkeydown = e => { if (e.key === 'Enter') ok(); if (e.key === 'Escape') d.remove(); };
+    d.onclick = e => { const b = e.target.closest('[data-q]'); if (e.target === d || (b && b.dataset.q === 'x')) d.remove(); else if (b) ok(); };
+  }
+  window.openQty = qtyDialog;
+
+  /* ---------- แถบสัญลักษณ์ฟิสิกส์ ---------- */
+  const SYM = [['Δ', '\\Delta'], ['ω', '\\omega'], ['λ', '\\lambda'], ['θ', '\\theta'], ['φ', '\\varphi'], ['ρ', '\\rho'], ['μ₀', '\\mu_{0}'], ['ε₀', '\\varepsilon_{0}'], ['Ω', '\\Omega'], ['°', '^{\\circ}'], ['⊗', '\\otimes'], ['⊙', '\\odot'], ['∝', '\\propto'], ['≈', '\\approx'], ['±', '\\pm']];
+  const UNITS = ['N', 'J', 'W', 'Pa', 'C', 'V', 'A', 'Ω', 'T', 'Hz', 'eV', 'm/s', 'm/s^2', 'kg'];
+  const st = document.createElement('style');
+  st.textContent = `#physBar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:60;display:none;gap:3px;align-items:center;flex-wrap:nowrap;overflow-x:auto;max-width:min(94vw,860px);background:#fff;border:1px solid var(--ui-line,#e3d6c8);border-radius:14px;padding:4px 6px;box-shadow:0 6px 24px rgba(60,30,10,.16)}
+body.physmode #physBar{display:flex}body.exporting #physBar{display:none!important}
+#physBar button{flex:0 0 auto;font:inherit;font-size:15px;min-width:28px;height:28px;padding:0 5px;border:1px solid #eadfd4;background:#fff;border-radius:8px;cursor:pointer}#physBar button:hover{background:#fdf0e3}
+#physBar .sep{width:1px;height:24px;background:#e6dcd2;margin:0 3px}#physBar .pb-main{background:var(--ui-accent,#7a3608);color:#fff;border-color:transparent}#physBar .pb-x{border:0;color:#999}
+.b-box.k-pext .bt::after{content:" (เกินหลักสูตร อ่านเพิ่มเติม)";font-weight:400;font-size:.85em;opacity:.75}
+.b-box .pcmp{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--sep,#ddd);border-radius:6px;overflow:hidden;margin-top:4px}.b-box .pcmp>div{padding:4px 8px;min-height:2em}.b-box .pcmp>div:nth-child(odd){border-right:1px solid var(--sep,#ddd)}.b-box .pcmp>div:nth-child(-n+2){font-weight:700;background:color-mix(in srgb,var(--brown) 8%,#fff)}
+.pblank{display:inline-block;min-width:8em;border-bottom:1.3px dotted #888;height:1.1em;vertical-align:-.15em}`;
+  document.head.appendChild(st);
+  const bar = document.createElement('div'); bar.id = 'physBar';
+  bar.innerHTML = `<button class="pb-main" data-pb="qty" title="ปริมาณและหน่วย">9.8 m/s²</button><button data-pb="vec" title="เวกเตอร์ (ลูกศรบนหัว)">${kx("\\vec{F}")}</button><button data-pb="const" title="ตารางค่าคงตัว">ค่าคงตัว</button><span class="sep"></span>${SYM.map(([s, t]) => `<button data-tex="${esc(t)}">${s}</button>`).join('')}<span class="sep"></span>${UNITS.map(u => `<button data-unit="${esc(u)}" style="font-size:14px">${u.replace('^2', '²')}</button>`).join('')}<button class="pb-x" data-pb="hide" title="ซ่อนแถบ (เปิดใหม่ในตั้งค่า)">✕</button>`;
+  document.body.appendChild(bar);
+  bar.addEventListener('mousedown', e => e.preventDefault());
+  bar.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tex) insTeX(b.dataset.tex);
+    else if (b.dataset.unit) insTeX(unitTeX(b.dataset.unit));
+    else if (b.dataset.pb === 'qty') qtyDialog();
+    else if (b.dataset.pb === 'const') openConsts();
+    else if (b.dataset.pb === 'vec') { const v = prompt('ชื่อเวกเตอร์ เช่น F, v, a, E', 'F'); if (v) insTeX(`\\vec{${v.trim()}}`); }
+    else if (b.dataset.pb === 'hide') { doc.settings.physbar = 'off'; applySettings(); changed(true); }
+  };
+
+  /* ---------- ตารางค่าคงตัว ---------- */
+  const CONSTS = [
+    ['g', 'ความเร่งโน้มถ่วงของโลก', 'g', '9.8\\,\\mathrm{m/s^{2}}'], ['c', 'อัตราเร็วแสงในสุญญากาศ', 'c', '3.0\\times10^{8}\\,\\mathrm{m/s}'], ['e', 'ประจุไฟฟ้าของอิเล็กตรอน (ขนาด)', 'e', '1.6\\times10^{-19}\\,\\mathrm{C}'],
+    ['me', 'มวลของอิเล็กตรอน', 'm_{e}', '9.1\\times10^{-31}\\,\\mathrm{kg}'], ['h', 'ค่าคงตัวของพลังค์', 'h', '6.6\\times10^{-34}\\,\\mathrm{J\\cdot s}'], ['k', 'ค่าคงตัวคูลอมบ์', 'k', '9.0\\times10^{9}\\,\\mathrm{N\\cdot m^{2}/C^{2}}'],
+    ['G', 'ค่าคงตัวความโน้มถ่วงสากล', 'G', '6.67\\times10^{-11}\\,\\mathrm{N\\cdot m^{2}/kg^{2}}'], ['mu0', 'สภาพให้ซึมผ่านได้ของสุญญากาศ', '\\mu_{0}', '4\\pi\\times10^{-7}\\,\\mathrm{T\\cdot m/A}'], ['eps0', 'สภาพยอมของสุญญากาศ', '\\varepsilon_{0}', '8.85\\times10^{-12}\\,\\mathrm{C^{2}/N\\cdot m^{2}}'],
+    ['NA', 'เลขอาโวกาโดร', 'N_{A}', '6.02\\times10^{23}\\,\\mathrm{mol^{-1}}'], ['R', 'ค่าคงตัวของแก๊ส', 'R', '8.31\\,\\mathrm{J/(mol\\cdot K)}']];
+  const ANG = [[30, '\\tfrac{1}{2}', '\\tfrac{\\sqrt3}{2}', '\\tfrac{1}{\\sqrt3}'], [37, '0.6', '0.8', '0.75'], [45, '\\tfrac{\\sqrt2}{2}', '\\tfrac{\\sqrt2}{2}', '1'], [53, '0.8', '0.6', '\\tfrac{4}{3}'], [60, '\\tfrac{\\sqrt3}{2}', '\\tfrac{1}{2}', '\\sqrt3']];
+  const M = t => `<span class="mx" contenteditable="false" data-tex="${esc(t)}"></span>`;
+  window.npConstBlocks = function (keys, angs, asLine) {
+    const C = CONSTS.filter(c => keys.includes(c[0])), A = ANG.filter(a => angs.includes(a[0])); const out = [];
+    if (asLine) { const parts = C.map(c => M(`${c[2]}=${c[3]}`)).concat(A.map(a => M(`\\sin${a[0]}^{\\circ}=${a[1]},\\ \\cos${a[0]}^{\\circ}=${a[2]}`))); if (parts.length) out.push(newBlock('para', { html: '<b>กำหนดให้</b> ' + parts.join(' , ') })); return out; }
+    if (C.length) out.push(newBlock('table', { rows: [['ปริมาณ', 'สัญลักษณ์', 'ค่า']].concat(C.map(c => [c[1], M(c[2]), M(c[3])])), full: true, cw: [46, 16, 38], tst: { k: 'soft', hr: 1 } }));
+    if (A.length) out.push(newBlock('table', { rows: [['มุม', 'sin', 'cos', 'tan']].concat(A.map(a => [M(a[0] + '^{\\circ}'), M(a[1]), M(a[2]), M(a[3])])), full: true, tst: { k: 'soft', hr: 1 } }));
+    return out;
+  };
+  function openConsts() {
+    $$('#dConst').forEach(x => x.remove());
+    const d = document.createElement('div'); d.className = 'dlg-back open'; d.id = 'dConst';
+    d.innerHTML = `<div class="dlg" style="width:640px"><h3 style="margin:0 0 8px">ตารางค่าคงตัว</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:16px">${CONSTS.map(c => `<label><input type="checkbox" data-c="${c[0]}" checked> ${kx(c[2])} ${c[1]}</label>`).join('')}</div>
+<div style="margin:10px 0 4px;font-weight:700">ค่าตรีโกณมิติ</div><div style="display:flex;gap:14px;font-size:16px">${ANG.map(a => `<label><input type="checkbox" data-a="${a[0]}" ${a[0] === 37 || a[0] === 53 ? 'checked' : ''}> ${a[0]}°</label>`).join('')}</div>
+<div style="margin-top:12px;display:flex;gap:16px;font-size:16px"><label><input type="radio" name="cAs" value="t" checked> แทรกเป็นตาราง</label><label><input type="radio" name="cAs" value="l"> แทรกเป็นบรรทัด “กำหนดให้ …” ในโจทย์</label></div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="tb" data-k="x">ยกเลิก</button><button class="tb primary" data-k="ok">แทรก</button></div></div>`;
+    document.body.appendChild(d);
+    d.onclick = e => { const b = e.target.closest('[data-k]'); if (e.target === d || (b && b.dataset.k === 'x')) return d.remove(); if (!b) return;
+      const keys = $$('[data-c]:checked', d).map(x => x.dataset.c), angs = $$('[data-a]:checked', d).map(x => +x.dataset.a), line = ($('input[name=cAs]:checked', d) || {}).value === 'l';
+      d.remove(); const bl = npConstBlocks(keys, angs, line); if (bl.length) insertBlocks(bl); };
+  }
+  window.openConsts = openConsts;
+
+  /* ---------- กล่องฟิสิกส์ ---------- */
+  Object.assign(BOXES, { plaw: 'นิยาม / กฎ', peq: 'สมการสำคัญ', pproof: 'การพิสูจน์สมการ', pext: 'ความรู้เสริม', pmis: 'ความเข้าใจผิดที่พบบ่อย', pcmp: 'เปรียบเทียบสถานการณ์', punit: 'ระวังหน่วย / ตัวเลขนัยสำคัญ' });
+  Object.assign(BOXCOL, { plaw: '#7F9CCF', peq: '#E0B060', pproof: '#B8B8B8', pext: '#86CCBE', pmis: '#E3A3A3', pcmp: '#A8B8C4', punit: '#EFA98A' });
+  const R = ':root.bxth #flow ', MX = p => `color-mix(in srgb,var(--brown) ${p}%,#fff)`;
+  const s2 = document.createElement('style');
+  s2.textContent = `${R}.b-box.k-plaw{background:${MX(7)};border:1.3px solid var(--dark);border-radius:7px}${R}.b-box.k-plaw .bt{color:#fff;background:var(--dark);margin:-4px -12px 5px;padding:2px 12px;border-radius:5px 5px 0 0}
+${R}.b-box.k-peq{background:${MX(5)};border:1.2px solid var(--brown);border-left:5px solid var(--brown);border-radius:4px}${R}.b-box.k-peq .bt{color:var(--brown)}
+${R}.b-box.k-pproof{background:transparent;border:0;border-left:3px solid ${MX(55)};border-radius:0}${R}.b-box.k-pproof .bt{color:var(--brown)}
+${R}.b-box:is(.k-pext,.k-pcmp){background:${MX(3)};border:1.3px dashed ${MX(65)};border-radius:10px}${R}.b-box:is(.k-pext,.k-pcmp) .bt{color:var(--dark)}
+${R}.b-box:is(.k-pmis,.k-punit){background:#fff;border:1px solid ${MX(40)};border-left:4px solid #c0392b}${R}.b-box:is(.k-pmis,.k-punit) .bt{color:#a33424}`;
+  document.head.appendChild(s2);
+  const _nb = extNewBlock; extNewBlock = function (b) { _nb(b); if (b.t === 'box' && b.kind === 'pcmp' && !b.html) b.html = '<div class="pcmp"><div>สถานการณ์ ก</div><div>สถานการณ์ ข</div><div>...</div><div>...</div></div>'; };
+  // ฉบับให้นักเรียนเติม: คัดลอกกล่องพิสูจน์ แล้วเปลี่ยนบรรทัดที่เลือกเป็นช่องว่าง
+  window.npProofBlank = function (id) {
+    const b = byId(id); if (!b) return; const lines = String(b.html || '').split(/<br\s*\/?>/i);
+    $$('#dPB').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'dlg-back open'; d.id = 'dPB';
+    d.innerHTML = `<div class="dlg" style="width:640px"><h3 style="margin:0 0 6px">สร้างฉบับให้นักเรียนเติม</h3><div class="hint" style="margin-bottom:8px">ติ๊กขั้นที่ต้องการเว้นให้นักเรียนเติม</div><div id="pbL" style="max-height:52vh;overflow:auto">${lines.map((l, i) => `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 2px;border-bottom:1px dashed #eee"><input type="checkbox" data-i="${i}" ${i && i % 2 === 0 ? 'checked' : ''}><span class="pbx">${l || '&nbsp;'}</span></label>`).join('')}</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="tb" data-k="x">ยกเลิก</button><button class="tb primary" data-k="ok">สร้างกล่องใหม่ต่อท้าย</button></div></div>`;
+    document.body.appendChild(d); renderMath(d);
+    d.onclick = e => { const k = e.target.closest('[data-k]'); if (e.target === d || (k && k.dataset.k === 'x')) return d.remove(); if (!k) return;
+      const pick = new Set($$('#pbL [data-i]:checked', d).map(x => +x.dataset.i)); d.remove();
+      const nb = newBlock('box', { kind: b.kind, title: (b.title || BOXES[b.kind]) + ' (ฉบับเติม)', html: lines.map((l, i) => pick.has(i) ? '<span class="pblank"></span>' : l).join('<br>') });
+      const at = doc.blocks.indexOf(b); doc.blocks.splice(at + 1, 0, nb); renderAll(); changed(true); };
+  };
+  const _ei = extInspector; extInspector = function (b) { let h = _ei(b); if (b.t === 'box' && b.kind === 'pproof') h += `<div class="ir"><button class="tb" onclick="npProofBlank('${b.id}')">สร้างฉบับให้นักเรียนเติม…</button></div>`; return h; };
+
+  /* ---------- โหมด: ตั้งค่า · เอกสารใหม่ · ผลต่อค่าเริ่มต้น ---------- */
+  const _as = applySettings;
+  applySettings = function () { const r = _as.apply(this, arguments); document.body.classList.toggle('physmode', modeOf() === 'phys' && doc.settings.physbar !== 'off'); return r; };
+  const _os = openSettings;
+  openSettings = function () {
+    const r = _os.apply(this, arguments); const box = $('#sThemes'); if (!box) return r;
+    let w = $('#sMode');
+    if (!w) { w = document.createElement('div'); w.id = 'sMode'; w.style.cssText = 'display:flex;gap:8px;align-items:center;margin:4px 0 10px;flex-wrap:wrap'; w.innerHTML = `<b>โหมดเอกสาร</b><select>${Object.entries(MODES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select><label style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-pbar> แสดงแถบสัญลักษณ์ฟิสิกส์</label>`;
+      box.parentNode.insertBefore(w, box);
+      $('select', w).onchange = e => { doc.settings.mode = e.target.value === 'math' ? undefined : e.target.value; applySettings(); changed(true); };
+      $('[data-pbar]', w).onchange = e => { doc.settings.physbar = e.target.checked ? undefined : 'off'; applySettings(); changed(true); }; }
+    $('select', w).value = modeOf(); $('[data-pbar]', w).checked = doc.settings.physbar !== 'off'; return r;
+  };
+  // เอกสารใหม่: เลือกโหมดก่อนเลือกแม่แบบ
+  let pend = null;
+  const _ot = openTemplates;
+  openTemplates = function () {
+    const r = _ot.apply(this, arguments); const list = $('#tplList'); if (!list) return r;
+    let m = $('#tplMode'); if (!m) { m = document.createElement('div'); m.id = 'tplMode'; m.style.cssText = 'display:flex;gap:6px;align-items:center;margin:0 0 10px;flex-wrap:wrap;font-size:16px'; list.parentNode.insertBefore(m, list); }
+    pend = pend || modeOf();
+    const draw = () => { m.innerHTML = '<b>โหมด</b> ' + Object.entries(MODES).map(([k, v]) => `<button class="tb${pend === k ? ' primary' : ''}" data-md="${k}">${v}</button>`).join(''); const g = $$('#tplList .tplg'); const first = { phys: 'ฟิสิกส์', doc: 'งานเอกสาร', math: '' }[pend]; g.forEach(x => { const h = (x.querySelector('.tplgh b') || {}).textContent || ''; x.style.order = first && h.includes(first) ? -1 : 0; }); list.style.display = 'flex'; list.style.flexDirection = 'column'; };
+    m.onclick = e => { const b = e.target.closest('[data-md]'); if (!b) return; pend = b.dataset.md; draw(); };
+    draw(); return r;
+  };
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#tplList button')) window.__npPendMode = pend || 'math'; }, true);
+  const _ra = renderAll;
+  renderAll = function () {
+    if (window.__npPendMode && doc && doc.settings) { const md = window.__npPendMode; window.__npPendMode = null; pend = null; doc.settings.mode = md === 'math' ? undefined : md; if (md === 'phys' && (!doc.settings.theme || doc.settings.theme === 'brown')) doc.settings.theme = 'navy'; applySettings(); }
+    return _ra.apply(this, arguments);
+  };
+  // คลังรูป: โหมดฟิสิกส์เปิดหมวดฟิสิกส์ก่อน
+  if (!LIBCAT.some(c => c[0] === '— ฟิสิกส์ —')) LIBCAT.push(['— ฟิสิกส์ —'], ['ฟิสิกส์: กราฟและรูปทั่วไป', ['wbfree', 'combo', 'fgraph', 'vec2']]);
+  const _ol = openLibrary; openLibrary = function (id) { if (!id && modeOf() === 'phys') { const c = LIBCAT.find(x => x[0] === 'ฟิสิกส์: กราฟและรูปทั่วไป'); if (c && c[1].length) libKind = c[1][0]; } return _ol.apply(this, arguments); };
+
+  /* ---------- แม่แบบโหมดฟิสิกส์ ---------- */
+  const P = h => newBlock('para', { html: h });
+  const LV = ['ระดับ 1 : พื้นฐาน', 'ระดับ 2 : ประยุกต์', 'ระดับ 3 : วิเคราะห์', 'ระดับ 4 : ท้าทาย'];
+  DOC_TEMPLATES.push(
+    ['แบบฝึกฟิสิกส์รายบท', 'เนื้อหา · พิสูจน์สมการ · ฝึกทันที · แบบฝึก 4 ระดับ · แบบทดสอบแนว A-Level', () => ({
+      settings: { name: 'แบบฝึกฟิสิกส์', hl: 'แบบฝึกทักษะ ฟิสิกส์ เรื่อง ...', hr: 'ฟิสิกส์ ม.6', size: 'book', mode: 'phys', theme: 'navy', bxth: true, wbh: true, wdist: true },
+      blocks: [newBlock('cover', { badge: 'แบบฝึกทักษะ', grade: 'ม.6', num: 'บทที่ ...', title: 'ชื่อบท', suf: '', subj: 'รายวิชาเพิ่มเติม ฟิสิกส์', f0: M('\\Sigma\\vec{F}=m\\vec{a}'), f1: M('v=f\\lambda'), f2: M('E=mc^{2}'), f3: M('W=Fs') }),
+        newBlock('section', { html: '1.1 ชื่อหัวข้อ' }), newBlock('box', { kind: 'obj', title: 'จุดประสงค์การเรียนรู้', html: '1) ...<br>2) ...' }), P('เนื้อหา...'),
+        newBlock('box', { kind: 'plaw', title: 'นิยาม / กฎ', html: '...' }), newBlock('box', { kind: 'peq', title: 'สมการสำคัญ', html: '<span class="mx" contenteditable="false" data-tex="F=ma" data-disp="1"></span>' }),
+        newBlock('box', { kind: 'pproof', title: 'การพิสูจน์สมการ', html: 'ขั้นที่ 1 ...<br>ขั้นที่ 2 ...<br>ขั้นที่ 3 ...' }), newBlock('box', { kind: 'pmis', title: 'ความเข้าใจผิดที่พบบ่อย', html: '...' }),
+        newBlock('activity', { html: 'ฝึกทันที 1.1', icon: '✎' }), newBlock('problem', { html: 'ข้อ 1' }), newBlock('question', { html: '...' }), newBlock('work', { h: 30, ans: true }), newBlock('actend'),
+        newBlock('wbban', { html: 'แบบฝึกทักษะ 1.1', sub: 'ชื่อหัวข้อ · เรียงจากง่ายไปยาก', icon: 'pen' })].concat(...LV.map((l, i) => [newBlock('subsection', { html: l }), newBlock('problem', { html: 'ข้อ ' + (i + 1) }), newBlock('question', { html: '...' }), newBlock('work', { h: 35, ans: true })]))
+        .concat([newBlock('section', { html: 'แบบทดสอบท้ายบท (แนว A-Level)' }), newBlock('problem', { html: 'ข้อ 1', pts: '' }), newBlock('question', { html: '...' }), newBlock('choices', { items: ['', '', '', '', ''] })])
+    })],
+    ['ใบกิจกรรมการทดลอง (ฟิสิกส์)', 'จุดประสงค์ · อุปกรณ์ · วิธีทดลอง · ตารางบันทึกผล · กราฟ · สรุปผล', () => ({
+      settings: { name: 'ใบกิจกรรมการทดลอง', hl: 'ใบกิจกรรมการทดลอง เรื่อง ...', hr: 'ฟิสิกส์', size: 'book', mode: 'phys', theme: 'navy', bxth: true, wbh: true },
+      blocks: [newBlock('section', { html: 'กิจกรรมการทดลอง เรื่อง ...' }), newBlock('table', { rows: [['ชื่อ–สกุล', '', 'ชั้น', '', 'เลขที่', '']], full: true, cw: [16, 44, 10, 12, 10, 8] }),
+        newBlock('subsection', { html: 'จุดประสงค์' }), P('1) ...<br>2) ...'), newBlock('subsection', { html: 'อุปกรณ์' }), P('1) ...<br>2) ...'), newBlock('work', { h: 40, wl: 'ภาพอุปกรณ์ / การจัดอุปกรณ์' }),
+        newBlock('subsection', { html: 'วิธีทดลอง' }), P('1) ...<br>2) ...<br>3) ...'), newBlock('subsection', { html: 'ตารางบันทึกผล' }),
+        newBlock('table', { rows: [['ครั้งที่', 'ปริมาณที่ 1 (หน่วย)', 'ปริมาณที่ 2 (หน่วย)', 'ปริมาณที่ 3 (หน่วย)'], ['1', '', '', ''], ['2', '', '', ''], ['3', '', '', ''], ['ค่าเฉลี่ย', '', '', '']], full: true, tst: { k: 'soft', hr: 1 } }),
+        newBlock('subsection', { html: 'กราฟ' }), newBlock('figure', { lib: { kind: 'wbfree', p: { src: 'axes: 0 10 0 10', x0: '-0.8', x1: '11', y0: '-0.8', y1: '10.8', sx: '34', ax: 'yes', tx: '1', ty: '1', grid: 'yes', xl: 'x (หน่วย)', yl: 'y (หน่วย)' } }, w: 70 }),
+        newBlock('subsection', { html: 'สรุปผลการทดลอง' }), newBlock('work', { h: 30, wl: 'สรุปผล' }), newBlock('subsection', { html: 'คำถามท้ายการทดลอง' }), newBlock('question', { html: '1) ...' }), newBlock('work', { h: 25 })]
+    })]);
+  if (typeof TPL_META === 'object' && typeof TPL_GROUPS2 === 'object') {
+    if (!TPL_GROUPS2.some(g => g[0] === 'phys')) TPL_GROUPS2.splice(1, 0, ['phys', 'ฟิสิกส์', 'แบบฝึกรายบท · ใบกิจกรรมการทดลอง · ข้อสอบ A-Level']);
+    TPL_META['แบบฝึกฟิสิกส์รายบท'] = ['phys', 'เนื้อหา พิสูจน์สมการ ฝึกทันที แบบฝึก 4 ระดับ ทดสอบท้ายบท', 'workbook'];
+    TPL_META['ใบกิจกรรมการทดลอง (ฟิสิกส์)'] = ['phys', 'จุดประสงค์ อุปกรณ์ วิธีทดลอง ตาราง กราฟ สรุปผล', 'book'];
+  }
+  // ข้อสอบ A-Level ฟิสิกส์: ปรนัย 5 ตัวเลือก 25 ข้อ + ระบายตัวเลข 5 ข้อ (xxxx.xx) · ตารางค่าคงตัวหน้าแรก
+  if (typeof EXAM_PRESETS === 'object') EXAM_PRESETS.aphys = { name: 'A-Level ฟิสิกส์ (มีตารางค่าคงตัว)', subj: 'ฟิสิกส์ (A-Level)', set: 'ชุดที่ 1 · แนวข้อสอบปี 2569', time: 90, lab: '(1)', phys: true,
+    parts: [{ n: 'ตอนที่ 1 แบบปรนัย 5 ตัวเลือก', c: 25, t: 'mc5', p: 3, w: 'third' }, { n: 'ตอนที่ 2 แบบระบายตัวเลข', c: 5, t: 'dec', d: 4, f: 2, p: 5, w: 'half' }] };
+  if (typeof buildExam === 'function') { const _be = buildExam; buildExam = function (c) { const out = _be.apply(this, arguments); if (c && /ฟิสิกส์/.test(c.subj || '')) { const i = out.findIndex(b => b.t === 'examcover'); const cb = [newBlock('subsection', { html: 'ค่าคงตัวและข้อมูลที่ใช้' })].concat(npConstBlocks(CONSTS.map(x => x[0]), [37, 53], false)); out.splice(i + 1, 0, ...cb); } return out; }; }
+  // ปุ่มในเมนูแทรก
+  window.npInsertMenuGroup = () => `<div class="g"><div class="hd">ฟิสิกส์</div><button data-np="qty">ปริมาณและหน่วย (9.8 m/s²)</button><button data-np="const">ตารางค่าคงตัว…</button>${['plaw', 'peq', 'pproof', 'pext', 'pmis', 'pcmp', 'punit'].map(k => `<button data-box="${k}"><span class="dot" style="background:${BOXCOL[k]}"></span>${BOXES[k]}</button>`).join('')}</div>`;
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#mInsert [data-np]'); if (!b) return; e.stopPropagation(); closeMenus(); if (b.dataset.np === 'qty') qtyDialog(); else openConsts(); }, true);
 })();
 
 /* ===================== ส่งออก PDF เฉพาะบางหน้า =====================
