@@ -8267,7 +8267,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794783075';
+const NP_BUILD = '1794783898';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13928,7 +13928,7 @@ body.board #bdBar{display:flex}#bdBar button{font:inherit;font-size:15px;border:
   const _pg = paginate;
   paginate = function () { if (isBoard()) { try { return boardLayout(); } catch (e) { console.error('board', e); } return; } const stg = $('#stage'); if (stg && stg.style.width) { stg.style.width = ''; $('#flow').style.height = ''; } return _pg.apply(this, arguments); };
   const _as = applySettings;
-  applySettings = function () { const r = _as.apply(this, arguments); const on = isBoard(); document.body.classList.toggle('board', on); if (!on) $$('#flow > .blk').forEach(el => { el.style.left = el.style.top = el.style.width = el.style.fontSize = ''; }); return r; };
+  applySettings = function () { const r = _as.apply(this, arguments); const on = isBoard(); document.body.classList.toggle('board', on); if (!on) $$('#flow > .blk').forEach(el => { el.style.left = el.style.top = el.style.width = ''; const bb = byId(el.dataset.id), fs = bb && bb.st && bb.st.fs; el.style.fontSize = fs && fs != 1 ? fs + 'em' : ''; }); return r; };
   // ซูมพอดีจอเมื่อเปิดบอร์ด
   function fitZoom() { const sc = $('#scroller'), zs = $('#zoom'); if (!sc || !zs) return; const z = Math.max(.05, Math.min(1, (sc.clientWidth - 40) / geom().W)); const v = (Math.floor(z * 100) / 100).toFixed(2); if (![...zs.options].some(o => o.value === v)) { const o = document.createElement('option'); o.value = v; o.textContent = Math.round(v * 100) + '%'; zs.insertBefore(o, zs.firstChild); } zs.value = v; $('#zoomwrap').style.zoom = v; }
   window.boardFit = fitZoom;
@@ -14163,6 +14163,32 @@ body.board #bdBar{display:flex}#bdBar button{font:inherit;font-size:15px;border:
       } catch (e) { toast('เปิดไฟล์ไม่ได้: ' + ((e && e.message) || e)); }
     }
   });
+})();
+</script>
+<script>
+(function () {
+  const css = document.createElement('style');
+  css.textContent = '.b-toc .toc-cont .tc-t{text-align:center;font-weight:700;font-size:1.25em;padding-top:29px;margin:0 0 15px}.b-toc .toc-cont .toc-h{margin-bottom:0}';
+  document.head.appendChild(css);
+  const _tu = tblUnsplit;
+  tblUnsplit = function () { $$('#flow .toc-cont').forEach(x => x.remove()); return _tu.apply(this, arguments); };
+  const NAME = { '': 'สารบัญ', tbl: 'สารบัญตาราง', fig: 'สารบัญรูปภาพ' };
+  window.tocSplit = function (el) {
+    $$('.toc-cont', el).forEach(x => x.remove());
+    const flow = $('#flow'), fr = flow.getBoundingClientRect(), z = (fr.height / flow.offsetHeight) || 1, P = PAGE_H + PAGE_G;
+    const b = byId(el.dataset.id), k = doc.blocks.indexOf(b), pv = doc.blocks[k - 1];
+    const pt = pv && pv.t === 'pjch' ? plainText(pv.title || '').trim() : '';
+    const ttl = (/^สารบัญ/.test(pt) ? pt : NAME[(b && b.kind) || '']) + ' (ต่อ)';
+    const hd = $('.toc-h', el), head = hd ? hd.innerHTML : '<span>เรื่อง</span><span>หน้า</span>';
+    $$('.toc-r', el).forEach(r => {
+      const rc = r.getBoundingClientRect(), y = (rc.top - fr.top) / z, h = rc.height / z, p = Math.floor(y / P), re = p * P + PAGE_H - BOT;
+      if (y + h <= re) return;
+      const c = document.createElement('div'); c.className = 'toc-cont'; c.contentEditable = 'false';
+      c.innerHTML = '<div class="tc-t">' + esc(ttl) + '</div><div class="toc-h">' + head + '</div>';
+      c.style.marginTop = Math.max(0, (p + 1) * P + TOP - y) + 'px';
+      r.parentNode.insertBefore(c, r);
+    });
+  };
 })();
 </script>
 </body>
