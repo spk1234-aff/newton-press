@@ -597,7 +597,7 @@ body.tzdragging{cursor:col-resize}.exporting .tz{display:none!important}
     <button class="tb" id="bNew" title="เริ่มเอกสารใหม่">ใหม่</button>
     <button class="tb" id="bOpen" title="เปิดไฟล์งานที่บันทึกไว้">เปิด</button>
     <button class="tb" id="bSave" title="บันทึกงานเป็นไฟล์">บันทึก</button>
-    <input type="file" id="fileOpen" accept=".json,application/json" hidden>
+    <input type="file" id="fileOpen" accept=".npress,.json,application/json" hidden>
   </div>
   <div class="grp">
     <button class="tb" id="bUndo" title="ย้อนกลับ">↶</button>
@@ -1740,11 +1740,11 @@ function fname(ext) { return (doc.settings.name || 'เอกสาร').replace
 $('#bSave').onclick = async () => {
   const name = await askName(); if (!name) return;
   doc.settings.name = name; changed(true);
-  saveFile(fname('json'), JSON.stringify(doc));
+  saveFile(fname('npress'), JSON.stringify(doc));
 };
 function askName() {
   return new Promise(res => {
-    ask('บันทึกงาน', `<div class="row"><label for="askName">ชื่อไฟล์</label><input type="text" id="askName" style="flex:1" value="${esc(doc.settings.name || 'เอกสาร')}"></div><p style="font-size:16px;color:#7b746c;margin:4px 0">ได้ไฟล์ .json เก็บไว้ในเครื่อง แล้วกด “เปิด” เพื่อแก้ต่อภายหลัง</p>`, 'บันทึก')
+    ask('บันทึกงาน', `<div class="row"><label for="askName">ชื่อไฟล์</label><input type="text" id="askName" style="flex:1" value="${esc(doc.settings.name || 'เอกสาร')}"></div><p style="font-size:16px;color:#7b746c;margin:4px 0">ได้ไฟล์ .npress เก็บไว้ในเครื่อง แล้วกด “เปิด” เพื่อแก้ต่อภายหลัง</p>`, 'บันทึก')
       .then(ok => res(ok ? ($('#askName').value.trim() || 'เอกสาร') : null));
   });
 }
@@ -1754,7 +1754,7 @@ $('#fileOpen').onchange = e => {
   const rd = new FileReader();
   rd.onload = () => setTimeout(() => {
     try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; delete d.cloud; delete d.lfid; d.lfl = 1; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); toast('เปิด ' + f.name + ' แล้ว'); }
-    catch (err) { toast('เปิดไฟล์นี้ไม่ได้ ต้องเป็นไฟล์ .json ที่บันทึกจากโปรแกรมนี้'); }
+    catch (err) { toast('เปิดไฟล์นี้ไม่ได้ ต้องเป็นไฟล์ .npress หรือ .json ที่บันทึกจากโปรแกรมนี้'); }
     busy(false);
   }, 60);
   busy(true, 'กำลังเปิดไฟล์ “' + f.name + '”'); rd.onerror = () => { busy(false); toast('อ่านไฟล์ไม่ได้'); };
@@ -7949,7 +7949,7 @@ async function ensureRoot() {
   const f = await gd(DRIVE + '?fields=id,appProperties', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Newton Press', mimeType: FOLDER, appProperties: { np: 'root' } }) });
   CLD.root = f.id; CLD.rootProps = f.appProperties || {}; return CLD.root;
 }
-const stripExt = n => String(n || '').replace(/\.json$/i, '');
+const stripExt = n => String(n || '').replace(/\.(json|npress)$/i, '');
 async function clRefresh() {
   if (!CLD.user) return;
   try {
@@ -8141,7 +8141,7 @@ function openCloud(mode = 'open') {
   if (CLD.user && tokOk() && CLD.loaded) clRefresh();
   if (!CLD.ready) fbLoad().then(clRender).catch(e => { $('#clMain').innerHTML = `<p class="hint">เชื่อมต่อคลังงานไม่ได้ (${esc(e.message || e)}) ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่</p>` + localBox(); bindLocal(); });
 }
-function localBox() { return `<div class="cl-local"><b>ไฟล์ในเครื่อง</b><button class="tb" id="clFOpen">เปิดไฟล์ .json จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button></div>`; }
+function localBox() { return `<div class="cl-local"><b>ไฟล์ในเครื่อง</b><button class="tb" id="clFOpen">เปิดไฟล์จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button></div>`; }
 function bindLocal() { const a = $('#clFOpen'), b = $('#clFSave'); if (a) a.onclick = () => { closeDlg('#dCloud'); $('#fileOpen').click(); }; if (b) b.onclick = async () => { closeDlg('#dCloud'); const name = await askName(); if (!name) return; doc.settings.name = name; changed(true); const data = Object.assign({}, doc); delete data.cloud; saveFile(fname('json'), JSON.stringify(data)); }; }
 function clRender() {
   const d = $('#dCloud'); if (!d || !d.classList.contains('open')) return;
@@ -8175,7 +8175,7 @@ function clRender() {
   const row = x => `<div class="cl-d${x.id === curId2 ? ' cur' : ''}" data-d="${x.id}" draggable="true"><div class="cl-dn">📄 <b>${esc(x.name || 'ไม่มีชื่อ')}</b>${x.id === curId2 ? '<em>กำลังเปิดอยู่</em>' : ''}<small>${clTime(x.ts)}${x.dev ? ' · ' + esc(x.dev) : ''}${x.pages ? ' · ' + x.pages + ' หน้า' : ''}${(q || CLD.view === 'recent') && x.folder ? ' · 📁 ' + esc(fPath(x.folder).join(' › ')) : ''}</small></div><div class="cl-da">${x.trash ? `<button class="tb" data-a="restore">กู้คืน</button><button class="tb" data-a="purge">ลบถาวร</button>` : `<button class="tb primary" data-a="open">เปิด</button><button class="tb" data-a="more" title="ตัวเลือก">⋯</button>`}</div></div>`;
   const body = subs.map(f => `<div class="cl-d cl-sub" data-f="${f.id}"><div class="cl-dn">📁 <b>${esc(f.name)}</b><small>${CLD.docs.filter(x => (x.folder || '') === f.id && !x.trash).length} งาน</small></div><div class="cl-da"><button class="tb" data-fa="ren" title="เปลี่ยนชื่อ">✎</button><button class="tb" data-fa="del" title="ลบโฟลเดอร์">🗑</button></div></div>`).join('') + list.map(row).join('');
   const saveBar = CLD.view === 'trash' ? '' : `<div class="cl-save"><label>บันทึกงานที่เปิดอยู่ลงใน <b>${esc(['คลังงาน'].concat(fPath(CLD.cur)).join(' › '))}</b></label><div class="row"><input type="text" id="clName" value="${esc(doc.settings.name || 'เอกสาร')}" placeholder="ชื่องาน"><button class="tb primary" id="clSaveHere">${curId2 ? 'บันทึกเป็นงานใหม่ที่นี่' : 'บันทึกที่นี่'}</button>${curId2 ? '<button class="tb" id="clSaveNow">บันทึกทับงานเดิม</button>' : ''}</div></div>`;
-  main.innerHTML = `<div class="cl-wrap">${side}<div class="cl-mainc"><div class="cl-bar"><div class="cl-crumb">${crumbs}</div><input type="search" id="clQ" placeholder="ค้นหาชื่องาน" value="${esc(CLD.q)}"></div>${CLD.mode === 'save' ? saveBar : ''}<div class="cl-list">${body || `<p class="hint cl-empty">${CLD.view === 'trash' ? 'ถังขยะว่าง' : q ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงานในโฟลเดอร์นี้'}</p>`}</div>${CLD.mode !== 'save' ? saveBar : ''}<div class="cl-foot"><button class="tb" id="clFOpen">เปิดไฟล์ .json จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button><button class="tb" id="clBak" title="ดาวน์โหลดงานทั้งหมดในคลังเป็นไฟล์เดียว เก็บสำรองไว้">สำรองทั้งคลัง</button><button class="tb" id="clRef" title="โหลดรายการใหม่จาก Drive">↻ รีเฟรช</button><a class="tb" href="https://drive.google.com/drive/folders/${CLD.root}" target="_blank" rel="noopener">เปิดใน Google Drive ↗</a></div></div></div>`;
+  main.innerHTML = `<div class="cl-wrap">${side}<div class="cl-mainc"><div class="cl-bar"><div class="cl-crumb">${crumbs}</div><input type="search" id="clQ" placeholder="ค้นหาชื่องาน" value="${esc(CLD.q)}"></div>${CLD.mode === 'save' ? saveBar : ''}<div class="cl-list">${body || `<p class="hint cl-empty">${CLD.view === 'trash' ? 'ถังขยะว่าง' : q ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงานในโฟลเดอร์นี้'}</p>`}</div>${CLD.mode !== 'save' ? saveBar : ''}<div class="cl-foot"><button class="tb" id="clFOpen">เปิดไฟล์จากเครื่อง</button><button class="tb" id="clFSave">บันทึกเป็นไฟล์ .json</button><button class="tb" id="clBak" title="ดาวน์โหลดงานทั้งหมดในคลังเป็นไฟล์เดียว เก็บสำรองไว้">สำรองทั้งคลัง</button><button class="tb" id="clRef" title="โหลดรายการใหม่จาก Drive">↻ รีเฟรช</button><a class="tb" href="https://drive.google.com/drive/folders/${CLD.root}" target="_blank" rel="noopener">เปิดใน Google Drive ↗</a></div></div></div>`;
   bindLocal(); $('#clBak').onclick = clBackup; $('#clRef').onclick = () => clRefresh(); $('#clNF').onclick = clNewFolder;
   const qi = $('#clQ'); qi.oninput = () => { CLD.q = qi.value; const p = qi.selectionStart; clRender(); const n = $('#clQ'); n.focus(); n.setSelectionRange(p, p); };
   $$('[data-f]', main).forEach(e => { if (e.matches('.cl-d') ) return; e.onclick = () => { CLD.cur = e.dataset.f; CLD.view = 'all'; CLD.q = ''; clRender(); }; });
@@ -8228,7 +8228,7 @@ function clStatus(t, warn) {
   const st = document.createElement('span'); st.id = 'clStat'; st.style.display = 'none';
   st.onclick = async () => { if (CLD.user && !tokOk()) { if (await clSignIn()) { if (isDirty()) clSave(); } return; } openCloud(doc.cloud && doc.cloud.id ? 'open' : 'save'); }; bSave.after(st);
   // ปุ่มเปิดไฟล์จากเครื่อง (ไฟล์ที่ยังไม่อยู่ในคลัง) — ยังเชื่อม Google Drive อยู่ กดบันทึกเพื่อเก็บเข้าคลังได้
-  const bFile = document.createElement('button'); bFile.className = 'tb'; bFile.id = 'bFile'; bFile.textContent = 'เปิดไฟล์'; bFile.title = 'เปิดไฟล์ .json จากเครื่อง (ไฟล์ที่ไม่ได้อยู่ในคลังงาน)'; bFile.onclick = () => $('#fileOpen').click(); bOpen.after(bFile);
+  const bFile = document.createElement('button'); bFile.className = 'tb'; bFile.id = 'bFile'; bFile.textContent = 'เปิดไฟล์'; bFile.title = 'เปิดไฟล์จากเครื่อง (ไฟล์ที่ไม่ได้อยู่ในคลังงาน)'; bFile.onclick = () => $('#fileOpen').click(); bOpen.after(bFile);
   const nb = $('#bNew'); if (nb) { const o = nb.onclick; nb.onclick = async () => { if (isDirty() && CLD.user) await clSave({ silent: true }); return o(); }; }
   // ไฟล์ที่เปิดจากเครื่องไม่ผูกกับคลังงาน
   const fo = $('#fileOpen'); if (fo) fo.addEventListener('change', () => setTimeout(() => { clStatus(); if (CLD.user) toast('เปิดไฟล์จากเครื่องแล้ว · กด “บันทึก” เพื่อเก็บเข้าคลังงานใน Google Drive', 4000); }, 300));
@@ -8238,7 +8238,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794708229';
+const NP_BUILD = '1794710308';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -10537,17 +10537,17 @@ async function lfLoad() { if (LFH.loaded) return; LFH.loaded = true; try { const
 async function lfStore() { try { await tabIdbSet('lfiles', Object.fromEntries(LFH.map)); } catch (e) { } }
 function lfGet() { return lfKey() ? LFH.map.get(lfKey()) : null; }
 async function lfSet(h) { if (h) { if (!doc.lfid) doc.lfid = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); LFH.map.set(doc.lfid, h); } else if (doc.lfid) LFH.map.delete(doc.lfid); await lfStore(); lfBadge(); }
-function lfBadge() { const b = $('#bLocal'); if (!b) return; const h = lfGet(); b.textContent = h ? '💾 ' + h.name.replace(/\.json$/i, '').slice(0, 18) : '💾 ลงเครื่อง'; b.title = h ? `บันทึกทับไฟล์ “${h.name}” (${IS_MAC ? '⌘S' : 'Ctrl+S'}) · Option+คลิก = บันทึกเป็นไฟล์ใหม่` : 'บันทึกเป็นไฟล์ลงเครื่อง'; }
+function lfBadge() { const b = $('#bLocal'); if (!b) return; const h = lfGet(); b.textContent = h ? '💾 ' + h.name.replace(/\.(json|npress)$/i, '').slice(0, 18) : '💾 ลงเครื่อง'; b.title = h ? `บันทึกทับไฟล์ “${h.name}” (${IS_MAC ? '⌘S' : 'Ctrl+S'}) · Option+คลิก = บันทึกเป็นไฟล์ใหม่` : 'บันทึกเป็นไฟล์ลงเครื่อง'; }
 let lfData = () => { const d = Object.assign({}, doc); if (d.cloud && d.cloud.id) d.cloud = { id: d.cloud.id, folder: d.cloud.folder || '' }; else delete d.cloud; return JSON.stringify(d); };
 async function saveLocal(asNew) {
   await lfLoad();
   if (!window.showSaveFilePicker) { // Safari / iPad / แอปจาก Dock: เขียนทับไม่ได้ → ดาวน์โหลดไฟล์
-    const ok = await saveFile(fname('json'), lfData()); if (ok) setTimeout(() => toast('Safari บันทึกทับไฟล์เดิมไม่ได้ · ใช้ Chrome จะบันทึกทับไฟล์เดิมได้'), 2500); return ok;
+    const ok = await saveFile(fname('npress'), lfData()); if (ok) setTimeout(() => toast('Safari บันทึกทับไฟล์เดิมไม่ได้ · ใช้ Chrome จะบันทึกทับไฟล์เดิมได้'), 2500); return ok;
   }
   try {
     let h = !asNew && lfGet();
     if (h && h.queryPermission && (await h.queryPermission({ mode: 'readwrite' })) !== 'granted') { if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') h = null; }
-    if (!h) { h = await showSaveFilePicker({ suggestedName: fname('json'), types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] }); const nm = h.name.replace(/\.json$/i, ''); if (nm && nm !== doc.settings.name) { doc.settings.name = nm; changed(true); } }
+    if (!h) { h = await showSaveFilePicker({ suggestedName: fname('npress'), types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/x-newton-press': ['.npress'] } }] }); const nm = h.name.replace(/\.(json|npress)$/i, ''); if (nm && nm !== doc.settings.name) { doc.settings.name = nm; changed(true); } }
     await lfSet(h); const w = await h.createWritable(); await w.write(lfData()); await w.close();
     toast(`บันทึกทับไฟล์ “${h.name}” แล้ว`); return true;
   } catch (e) { if (e && e.name === 'AbortError') return false; toast('บันทึกไม่สำเร็จ: ' + (e.message || e)); return false; }
@@ -10555,7 +10555,7 @@ async function saveLocal(asNew) {
 async function openLocal() {
   try {
     const [h] = await showOpenFilePicker({ types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] }); const f = await h.getFile(); const data = JSON.parse(await f.text()); if (!data.blocks) throw new Error('ไม่ใช่ไฟล์ของ Newton Press');
-    doc = data; doc.settings = Object.assign(sampleDoc().settings, data.settings || {}); doc.settings.name = doc.settings.name || f.name.replace(/\.json$/i, ''); if (!(doc.cloud && doc.cloud.id)) delete doc.cloud;
+    doc = data; doc.settings = Object.assign(sampleDoc().settings, data.settings || {}); doc.settings.name = doc.settings.name || f.name.replace(/\.(json|npress)$/i, ''); if (!(doc.cloud && doc.cloud.id)) delete doc.cloud;
     curId = null; applySettings(); renderAll(); hist.stack = []; hist.pos = -1; snapshot(); autosave(); refreshInspector(); $('#scroller').scrollTop = 0; if (typeof clStatus === 'function') clStatus();
     await lfLoad(); delete doc.lfid; await lfSet(h); toast(`เปิด “${f.name}” แล้ว · กด “บันทึก” จะบันทึกทับไฟล์นี้`);
   } catch (e) { if (!(e && e.name === 'AbortError')) toast('เปิดไฟล์ไม่ได้: ' + (e.message || e)); }
@@ -11932,7 +11932,7 @@ const lfxTime = () => { const d = new Date(); return String(d.getHours()).padSta
 function lfxStat() {
   let el = $('#lfStat'); if (!el) { const a = $('#clStat'); if (!a) return; el = document.createElement('span'); el.id = 'lfStat'; el.style.cssText = 'font-size:14px;white-space:nowrap;cursor:pointer;padding:2px 8px;border-radius:999px'; a.after(el); el.onclick = () => $('#bSave').click(); }
   const h = typeof lfGet === 'function' && lfGet(), k = doc && doc.lfid; if (!h) { el.style.display = 'none'; return; }
-  el.style.display = ''; const nm = h.name.replace(/\.json$/i, '');
+  el.style.display = ''; const nm = h.name.replace(/\.(json|npress)$/i, '');
   let t, c = '#6b7280', bg = 'transparent';
   if (LFX.err[k]) { t = '💾 บันทึกลงเครื่องไม่ได้ · กดเพื่อบันทึก'; c = '#b91c1c'; bg = '#fee2e2'; }
   else if (LFX.dirty.has(k)) { if (LFX.need[k]) { t = '💾 ยังไม่ได้บันทึกลงเครื่อง · กดเพื่อบันทึก'; c = '#9a3412'; bg = '#ffedd5'; } else t = '💾 กำลังจะบันทึก…'; }
@@ -11953,11 +11953,11 @@ async function lfxFlush() {
   lfxStat();
 }
 (function () {
-  const pick = () => showSaveFilePicker({ suggestedName: fname('json'), types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] });
+  const pick = () => showSaveFilePicker({ suggestedName: fname('npress'), types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/x-newton-press': ['.npress'] } }] });
   saveLocal = async function (asNew) {
     await lfLoad();
     if (!window.showSaveFilePicker) { // Safari / iPad: เบราว์เซอร์ไม่ยอมให้เขียนทับไฟล์เดิม → ได้เป็นไฟล์ดาวน์โหลด
-      doc.lfl = 1; const ok = await saveFile(fname('json'), lfData()); if (ok) setTimeout(() => toast('บันทึกเป็นไฟล์ดาวน์โหลดแล้ว · Safari เขียนทับไฟล์เดิมไม่ได้ (ถ้าต้องการบันทึกทับไฟล์เดิม ให้เปิดแอปด้วย Chrome)', 6000), 800); return ok;
+      doc.lfl = 1; const ok = await saveFile(fname('npress'), lfData()); if (ok) setTimeout(() => toast('บันทึกเป็นไฟล์ดาวน์โหลดแล้ว · Safari เขียนทับไฟล์เดิมไม่ได้ (ถ้าต้องการบันทึกทับไฟล์เดิม ให้เปิดแอปด้วย Chrome)', 6000), 800); return ok;
     }
     let h = !asNew && lfGet(), k0 = doc.lfid;
     try {
@@ -11965,7 +11965,7 @@ async function lfxFlush() {
       if (h) { try { await lfxWrite(h, lfData()); } catch (e) { if (e && e.name === 'AbortError') throw e; const nm = h.name; h = null; toast(`เขียนทับ “${nm}” ไม่ได้ (ไฟล์อาจถูกย้าย ลบ หรือเปลี่ยนชื่อ) · เลือกที่เก็บใหม่`, 5000); } }
       if (!h) {
         try { h = await pick(); } catch (e) { if (e && e.name === 'AbortError') return false; if (k0) { LFX.err[k0] = 1; lfxStat(); } toast('กด “บันทึก” อีกครั้งเพื่อเลือกที่เก็บไฟล์ใหม่'); if (k0 && LFH.map.has(k0) && !asNew) { LFH.map.delete(k0); await lfStore(); } return false; }
-        if (asNew) delete doc.lfid; await lfSet(h); const nm = h.name.replace(/\.json$/i, ''); if (nm && nm !== doc.settings.name) { doc.settings.name = nm; changed(true); }
+        if (asNew) delete doc.lfid; await lfSet(h); const nm = h.name.replace(/\.(json|npress)$/i, ''); if (nm && nm !== doc.settings.name) { doc.settings.name = nm; changed(true); }
         await lfxWrite(h, lfData());
       }
       const k = doc.lfid; LFX.dirty.delete(k); delete LFX.need[k]; delete LFX.err[k]; LFX.saved[k] = lfxTime(); doc.lfl = 1; lfBadge(); lfxStat();
@@ -11975,11 +11975,18 @@ async function lfxFlush() {
   openLocal = async function () {
     if (typeof tabFull === 'function' && tabFull()) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return; }
     try {
-      const [h] = await showOpenFilePicker({ types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/json': ['.json'] } }] }); await lfLoad();
+      const [h] = await showOpenFilePicker({ types: [{ description: 'ไฟล์ Newton Press', accept: { 'application/x-newton-press': ['.npress'], 'application/json': ['.json'] } }] }); await lfOpenHandle(h);
+    } catch (e) { if (!(e && e.name === 'AbortError')) toast('เปิดไฟล์ไม่ได้: ' + (e.message || e)); }
+  };
+  // เปิดไฟล์จาก handle (ใช้ทั้งปุ่มเปิดไฟล์ และดับเบิลคลิกไฟล์ .npress ในเครื่อง)
+  window.lfOpenHandle = async function (h) {
+    if (typeof tabFull === 'function' && tabFull()) { toast(`เปิดได้พร้อมกันสูงสุด ${TABMAX} แท็บ · ปิดแท็บที่ไม่ใช้ก่อน`, 3500); return; }
+    try {
+      await lfLoad();
       // ไฟล์นี้เปิดอยู่แล้วในอีกแท็บ → สลับไปแท็บนั้น (กันสองแท็บบันทึกทับกัน)
       if (typeof TB !== 'undefined') for (let j = 0; j < TB.list.length; j++) { const d = j === TB.i ? doc : TB.list[j].doc, o = d && d.lfid && LFH.map.get(d.lfid); let same = false; try { same = !!o && await o.isSameEntry(h); } catch (e) { } if (same) { if (j !== TB.i) await tabGo(j); toast(`“${h.name}” เปิดอยู่แล้วในแท็บนี้`); return; } }
       const f = await h.getFile(); let data; try { data = JSON.parse(await f.text()); } catch (e) { throw new Error('ไฟล์เสียหายหรือไม่ใช่ไฟล์ของ Newton Press'); } if (!data || !data.blocks) throw new Error('ไม่ใช่ไฟล์ของ Newton Press');
-      delete data.lfid; data.lfl = 1; data.settings = Object.assign(sampleDoc().settings, data.settings || {}); data.settings.name = f.name.replace(/\.json$/i, '') || data.settings.name; if (!(data.cloud && data.cloud.id)) delete data.cloud;
+      delete data.lfid; data.lfl = 1; data.settings = Object.assign(sampleDoc().settings, data.settings || {}); data.settings.name = f.name.replace(/\.(json|npress)$/i, '') || data.settings.name; if (!(data.cloud && data.cloud.id)) delete data.cloud;
       doc = data; curId = null; applySettings(); renderAll();
       if (doc !== data) return; // เปิดไม่ได้ (เช่น แท็บเต็ม) → ไม่ผูกไฟล์กับงานเดิม
       await lfSet(h); hist.stack = []; hist.pos = -1; snapshot(); autosave(); refreshInspector(); $('#scroller').scrollTop = 0; if (typeof clStatus === 'function') clStatus();
@@ -12802,6 +12809,21 @@ ${R}.mx:not([data-disp]):has(.mfrac,.mop.op-limits){display:inline-block;margin:
 document.addEventListener('load', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.closest && t.closest('#flow')) schedulePaginate(); }, true);
 // กล่องที่มีพื้นที่เขียนในกรอบ (b.minh มม.)
 (function () { const _fb = fillBlock; fillBlock = function (el, b) { _fb(el, b); if (b && b.t === 'box') { const bx = $('.b-box', el); if (bx) bx.style.minHeight = b.minh ? (b.minh + 'mm') : ''; } }; })();
+
+/* ===================== ไฟล์ .npress: ดับเบิลคลิกในเครื่องแล้วเปิดใน Newton Press =====================
+   ใช้ได้เมื่อติดตั้งแอปผ่าน Chrome / Edge (manifest มี file_handlers) · macOS ส่งไฟล์มาทาง launchQueue */
+(function () {
+  if (!('launchQueue' in window) || !window.launchQueue || typeof launchQueue.setConsumer !== 'function') return;
+  launchQueue.setConsumer(async params => {
+    const files = (params && params.files) || [];
+    for (const h of files) {
+      try {
+        if (typeof lfOpenHandle === 'function') await lfOpenHandle(h);
+        else { const f = await h.getFile(); const d = JSON.parse(await f.text()); if (!d.blocks) throw 0; doc = d; doc.settings = Object.assign(sampleDoc().settings, d.settings || {}); renderAll(); }
+      } catch (e) { toast('เปิดไฟล์ไม่ได้: ' + ((e && e.message) || e)); }
+    }
+  });
+})();
 </script>
 </body>
 </html>
