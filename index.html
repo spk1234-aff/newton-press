@@ -8257,7 +8257,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794755589';
+const NP_BUILD = '1794756655';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13331,6 +13331,11 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
 .wbr .pt{display:inline-flex;align-items:center;gap:3px;background:#faf6f1;border-radius:7px;padding:2px 5px}.wbr .pt small{color:#999}
 .wbe details.wbframe{margin-top:10px;border-top:1px solid #eee;padding-top:6px}.wbe details.wbframe summary{cursor:pointer;font-weight:700;color:#7a3608}
 .wbe .wbcode{width:100%;min-height:200px;font-size:15px;font-family:ui-monospace,Menlo,monospace}
+#lbPrev .wbh-g{opacity:0;transition:opacity .12s}#lbPrev:hover .wbh-g,#lbPrev .wbh-g.sel{opacity:1}
+.wbq{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center;margin:0 0 10px}.wbq label{font-size:14.5px;color:#6b6158;white-space:nowrap}
+.wbq input{font:inherit;font-size:16.5px;padding:5px 8px;min-width:0;width:100%;box-sizing:border-box}.wbq .qh{grid-column:1/-1;font-weight:700;color:#7a3608;font-size:14.5px;margin-top:4px}
+.wbq-t{font-weight:700;color:#7a3608;margin:0 0 6px}.wbq-t small{font-weight:400;color:#8a8078}
+.wbe details.wbadv{border-top:1px solid #eee;padding-top:6px;margin-top:4px}.wbe details.wbadv>summary{cursor:pointer;font-weight:700;color:#7a3608;margin-bottom:6px}
 #lbPrev .wbh-dot{cursor:grab}#lbPrev .wbh-dot:hover{r:9}
 .wbhint{font-size:14px;color:#8a6d55;margin:2px 0 8px}
 .wbr.ov{border-color:#e39a3c}.wbr .ovt{flex:0 0 auto;font-size:13px;color:#b45f06;background:#fff3e0;border-radius:6px;padding:1px 6px}`;
@@ -13417,7 +13422,16 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
     });
     return h;
   }
-  function cards() { setTimeout(() => { if (typeof markOv === 'function') markOv(); }, 0);
+  const QK = { text: ['ข้อความ', 'rest'], pt: ['ชื่อจุด', 'rest'], node: ['ชื่อในวงกลม', 'rest'], rect: ['ข้อความในกล่อง', 'rest'], f: ['กราฟ y =', 'expr'], tree: ['กิ่งแต่ละชั้น', 'lv'] };
+  function quick() { // ค่าที่แก้บ่อย (ข้อความ ชื่อจุด สูตรกราฟ) รวมไว้ด้านบน ไม่ต้องยุ่งกับพิกัด
+    const box = $('#wbQuick'); if (!box) return; if (box.contains(document.activeElement)) return;
+    let h = '', n = 0;
+    objs.forEach((o, i) => { if (o.k === '#') { if (o.note) h += `<div class="qh">${esc(o.note)}</div>`; return; } const q = QK[o.k]; if (!q) return; const v = o[q[1]] || ''; if (!v && o.k !== 'text' && o.k !== 'f') return; n++; h += `<label>${q[0]}</label><input type="text" data-q="${i}" data-qf="${q[1]}" value="${esc(v)}">`; });
+    h = h.replace(/(<div class="qh">[^<]*<\/div>)+(?=<div class="qh">|$)/g, '');
+    box.innerHTML = n ? `<div class="wbq-t">ข้อความและสูตรในรูป <small>พิมพ์แก้ได้เลย · ตัวยก x^2 ตัวห้อย x_1</small></div><div class="wbq">${h}</div>` : '';
+    const adv = $('.wbe details.wbadv'); if (adv && !n) adv.open = true;
+  }
+  function cards() { quick(); setTimeout(() => { if (typeof markOv === 'function') markOv(); }, 0);
     const box = $('#wbCards'); if (!box) return;
     box.innerHTML = objs.map((o, i) => `<div class="wbr${i === sel ? ' on' : ''}" data-i="${i}"><div class="wh"><b>${(T[o.k] || ['คำสั่ง'])[0]}</b><span class="sum">${esc(sumOf(o))}</span><button data-mv="-1" title="เลื่อนขึ้น">↑</button><button data-mv="1" title="เลื่อนลง">↓</button><button data-dup="1" title="ทำซ้ำ">⧉</button><button data-del="1" title="ลบ">✕</button></div><div class="wf">${i === sel ? fields(o, i) : ''}</div></div>`).join('') || '<p class="wbhint">ยังไม่มีของในรูป กด “+ เพิ่ม” เพื่อเริ่ม</p>';
   }
@@ -13441,7 +13455,7 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
     const svg = $('#lbPrev svg'); if (!svg || !isWB()) return;
     $$('.wbh-g', svg).forEach(g => g.remove());
     const F = frame(), pT = F.ax ? 26 : 14, X = x => 14 + (x - F.x0) * F.sx, Y = y => pT + (F.y1 - y) * F.sy;
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'wbh-g');
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'wbh-g' + (sel >= 0 ? ' sel' : ''));
     const list = sel >= 0 ? [sel] : objs.map((_, i) => i);
     list.forEach(i => { const o = objs[i]; (o && o.P || []).forEach((p, j) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', X(p[0])); c.setAttribute('cy', Y(p[1])); c.setAttribute('r', sel >= 0 ? 7 : 4); c.setAttribute('fill', sel >= 0 ? 'rgba(217,104,43,.55)' : 'rgba(44,74,122,.12)'); c.setAttribute('stroke', sel >= 0 ? '#d9682b' : 'rgba(44,74,122,.35)'); c.setAttribute('class', 'wbh-dot'); c.dataset.i = i; c.dataset.j = j; g.appendChild(c); }); });
     svg.appendChild(g);
@@ -13449,7 +13463,7 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
   let drag = null;
   document.addEventListener('pointerdown', e => {
     const d = e.target.closest && e.target.closest('#lbPrev .wbh-dot'); if (!d || !isWB()) return;
-    e.preventDefault(); const svg = d.ownerSVGElement; const i = +d.dataset.i; if (sel !== i) { sel = i; cards(); }
+    e.preventDefault(); const svg = d.ownerSVGElement; const i = +d.dataset.i; { const adv = $('.wbe details.wbadv'); if (adv) adv.open = true; } if (sel !== i) { sel = i; cards(); }
     drag = { svg, i, j: +d.dataset.j }; svg.setPointerCapture && svg.setPointerCapture(e.pointerId);
   });
   document.addEventListener('pointermove', e => {
@@ -13482,14 +13496,15 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
     const srcRow = ta.closest('.row'); const rows = $$('#lbForm > .row').filter(r => r !== srcRow);
     const help = $('#lbForm .fnhelpbox'); if (help) help.remove();
     const ed = document.createElement('div'); ed.className = 'wbe';
-    ed.innerHTML = `<div class="wbhint">คลิกการ์ดเพื่อแก้ · <b>ลากจุดบนภาพตัวอย่าง</b>เพื่อย้ายตำแหน่ง · ตัวยก/ตัวห้อยพิมพ์ x^2, x_1</div>
+    ed.innerHTML = `<div id="wbQuick"></div><details class="wbadv"><summary>ตำแหน่ง สี เพิ่มหรือลบชิ้นส่วน (แก้ละเอียด)</summary><div class="wbhint">คลิกการ์ดเพื่อแก้ · <b>ลากจุดบนภาพตัวอย่าง</b>เพื่อย้ายตำแหน่ง</div>
 <div class="wbtop"><button class="tb primary" data-wb="add">+ เพิ่ม</button><button class="tb" data-wb="code">แก้แบบโค้ด (ขั้นสูง)</button></div>
 <div class="wbadd" style="display:none">${ADD.map(k => `<button data-new="${k}">${T[k][0]}</button>`).join('')}</div>
-<div id="wbCards"></div><textarea class="wbcode" style="display:none"></textarea>
+<div id="wbCards"></div><textarea class="wbcode" style="display:none"></textarea></details>
 <details class="wbframe"><summary>ขนาดรูป แกน และเส้นตาราง</summary></details>`;
     srcRow.style.display = 'none'; form.insertBefore(ed, form.firstChild);
     const det = $('details.wbframe', ed); rows.forEach(r => det.appendChild(r));
     cards(); handles();
+    ed.addEventListener('focusin', e => { const t = e.target; if (t.dataset && t.dataset.q !== undefined) { sel = +t.dataset.q; handles(); } });
     const code = $('.wbcode', ed);
     ed.onclick = e => {
       const b = e.target.closest('button'), card = e.target.closest('.wbr'); if (!b && !card) return;
@@ -13507,6 +13522,7 @@ body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
     };
     ed.addEventListener('input', e => {
       const t = e.target; if (t === code) { ta.value = code.value; libPrev(); return; }
+      if (t.dataset.q !== undefined) { const o = objs[+t.dataset.q]; if (o) { o[t.dataset.qf] = t.value; e.stopPropagation(); ta.value = objs.map(ser).join('\n'); libPrev(); cards(); } return; }
       const card = t.closest('.wbr'); if (!card) return; const o = objs[+card.dataset.i]; const d = t.dataset;
       if (d.px !== undefined) o.P[+d.px][0] = num(t.value || 0); else if (d.py !== undefined) o.P[+d.py][1] = num(t.value || 0);
       else if (d.f) o[d.f] = t.value; else if (d.o) o.opt[d.o] = t.value; else if (d.arc !== undefined) { o.arcv = o.arcv || ['2', '1', '0', '180']; o.arcv[+d.arc] = t.value; }
@@ -13977,7 +13993,7 @@ body.board #bdBar{display:flex}#bdBar button{font:inherit;font-size:15px;border:
   function decoKinds() {
     const box = $('#lbKinds'); if (!box) return;
     const bs = $$('#lbKinds .tb[data-k]').filter(b => !b.classList.contains('kc')); if (!bs.length) return;
-    bs.forEach(b => { const k = b.dataset.k, name = (LIB[k] && LIB[k].name) || b.textContent; b.classList.add('kc'); b.title = name; b.innerHTML = `<span class="th">${thumb(k)}</span><span class="kn">${esc(name)}</span>`; });
+    bs.forEach(b => { const k = b.dataset.k, name = (LIB[k] && LIB[k].name) || b.textContent; b.classList.add('kc'); b.title = name; const np = typeof libNameParts === 'function' ? libNameParts(name) : [name, '']; b.innerHTML = `<span class="th">${thumb(k)}</span><span class="kn${np[1] ? '' : ' l3'}">${esc(np[0])}</span>` + (np[1] ? `<span class="ks">${esc(np[1])}</span>` : ''); });
     const on = $('#lbKinds .tb.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   let busy = false;
@@ -14004,6 +14020,99 @@ body.board #bdBar{display:flex}#bdBar button{font:inherit;font-size:15px;border:
   ['rerender', 'paginate', 'renderAll'].forEach(wrap);
   // ฟังก์ชันที่ประกาศแบบ function ถูกเรียกด้วยชื่อ: ผูกชื่อใหม่ให้ใช้ตัวที่ห่อแล้ว
   try { rerender = window.rerender; paginate = window.paginate; renderAll = window.renderAll; } catch (e) { }
+})();
+
+/* ===================== หน้าต่างวาดรูป: อ่านง่าย กรอกง่าย ใช้ได้กับทุกแม่แบบ (รวมแม่แบบที่เพิ่มภายหลัง) =====================
+   1) ชื่อหมวด/ชื่อการ์ดไม่ถูกตัดกลางตัวอักษร: การ์ดแสดงชื่อหลัก + คำขยายบรรทัดเล็ก ชื่อเต็มแสดงเป็นหัวเรื่องเหนือช่องกรอก
+   2) ช่องกรอก: ป้ายอยู่เหนือช่อง คำอธิบายในวงเล็บแยกเป็นบรรทัดเล็ก ช่องสั้นวางคู่กัน 2 ช่องต่อแถว
+   3) ช่องตามชนิด: แม่แบบใดมีกฎ when (LIB[kind].when หรือ LIB_WHEN[kind]) จะแสดงเฉพาะช่องที่ใช้กับชนิดที่เลือก พร้อมป้ายเฉพาะชนิด
+      รูปแบบ: { dep:'ชื่อช่องที่เป็นตัวเลือกชนิด', show:{ช่อง:[ค่าของ dep ที่ให้แสดง]}, label:{ช่อง:{ค่า:'ป้าย'}}, opts:{ช่อง:{ค่า:[ตัวเลือกที่ให้เลือกได้]}} } */
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `
+#lbCats{flex:0 0 196px!important}
+#lbCats button{align-items:flex-start!important;line-height:1.35!important;padding:6px 8px!important}
+#lbCats button .cn{display:block!important;overflow:visible!important;white-space:normal!important;overflow-wrap:anywhere;-webkit-line-clamp:unset!important;text-overflow:clip!important}
+#lbCats button small{flex:0 0 auto;margin-top:2px}
+#lbKinds .tb.kc{flex:0 0 132px!important;width:132px!important;max-width:132px!important;padding:6px 5px 7px!important;gap:2px!important;line-height:1.4!important;justify-content:flex-start}
+#lbKinds .tb.kc .th{width:118px}#lbKinds .tb.kc .th svg{max-width:118px!important}
+#lbKinds .tb.kc .kn{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.4!important;padding:1px 0 2px;font-size:13.5px;overflow-wrap:anywhere;flex:0 0 auto}
+#lbKinds .tb.kc .kn.l3{-webkit-line-clamp:3}
+#lbKinds .tb.kc .ks{display:block;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;line-height:1.5;color:#9a9087;text-align:center;flex:0 0 auto}
+#lbTitle{margin:8px 0 0;font-weight:700;font-size:17px;line-height:1.4;color:var(--ui-accent,#7a3608)}#lbTitle small{font-weight:400;color:#8a8078;font-size:14px}
+#lbForm{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px;align-content:start;padding-right:6px;box-sizing:border-box}
+#lbForm>*{grid-column:1/-1;min-width:0}
+#lbForm .row.half{grid-column:auto;justify-content:flex-end}
+#lbForm .row{display:flex;flex-direction:column;align-items:stretch!important;gap:3px;margin:0!important}
+#lbForm .row>label{width:auto!important;font-size:15px!important;color:#4f463e;line-height:1.35}
+#lbForm .row>label .lh{display:block;font-size:12.5px;color:#9a9087;line-height:1.35}
+#lbForm .row>input[type=text],#lbForm .row>select,#lbForm .row>textarea{width:100%;box-sizing:border-box;flex:none!important}
+#lbForm details.wbframe[open]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px}#lbForm details.wbframe>summary{grid-column:1/-1}
+#lbForm details.wbframe>.row{grid-column:auto}
+.lbsty .lbsh{line-height:1.4}`;
+  document.head.appendChild(st);
+
+  /* ---------- ชื่อการ์ด: ชื่อหลัก + คำขยาย ---------- */
+  window.libNameParts = function (name) {
+    name = String(name || '');
+    let m = /^(.*\S)\s*\(([^()]*[ก-๙][^()]*)\)\s*$/.exec(name); if (m && m[1].length >= 4) return [m[1], m[2]];
+    m = /^([^:]{4,}?):\s+(.+)$/.exec(name); if (m) return [m[1], m[2]];
+    return [name, ''];
+  };
+
+  /* ---------- กฎช่องตามชนิดของแม่แบบที่มีอยู่ ---------- */
+  window.LIB_WHEN = Object.assign(window.LIB_WHEN || {}, {
+    conic: { dep: 'kind',
+      show: { b: ['ellipse', 'hyper'], dir: ['parab', 'ellipse', 'hyper'], f: ['parab', 'ellipse', 'hyper'], ax: ['parab', 'ellipse', 'hyper'], as: ['hyper'] },
+      label: { h: { circle: 'จุดศูนย์กลาง h', ellipse: 'จุดศูนย์กลาง h', hyper: 'จุดศูนย์กลาง h', parab: 'จุดยอด h' }, k: { circle: 'จุดศูนย์กลาง k', ellipse: 'จุดศูนย์กลาง k', hyper: 'จุดศูนย์กลาง k', parab: 'จุดยอด k' },
+        a: { circle: 'รัศมี r', parab: 'ระยะโฟกัส c', ellipse: 'ครึ่งแกนเอก a', hyper: 'ครึ่งแกนตามขวาง a' }, b: { ellipse: 'ครึ่งแกนโท b', hyper: 'ครึ่งแกนสังยุค b' },
+        dir: { parab: 'ทิศเปิด', ellipse: 'แนวแกนเอก', hyper: 'แนวแกนตามขวาง' }, ax: { parab: 'เส้นไดเรกตริกซ์', ellipse: 'แกนเอกและแกนโท', hyper: 'แกนตามขวางและแกนสังยุค' }, as: { hyper: 'เส้นกำกับ' } },
+      opts: { dir: { ellipse: ['h', 'v'], hyper: ['h', 'v'] } } },
+    trim: { dep: 'mode', show: { a: ['sss', 'asa', 'aas'], b: ['sss', 'sas'], c: ['sss', 'sas'], A: ['sas', 'aas'], B: ['asa', 'aas'], C: ['asa'] } }
+  });
+
+  const rowOf = k => { const el = $(`#lbForm [data-k="${k}"]`); return el ? el.closest('.row') : null; };
+  function setLabel(row, text) {
+    const lb = row && row.querySelector('label'); if (!lb) return;
+    if (lb.dataset.full === undefined) lb.dataset.full = lb.textContent;
+    const t = text || lb.dataset.full; let main = t, hint = '';
+    const m = /^(.*?\S)\s+\((.+)\)\s*(.*)$/.exec(t); if (m) { main = m[1]; hint = m[2] + (m[3] ? ' · ' + m[3] : ''); }
+    lb.title = t; lb.innerHTML = esc(main) + (hint ? `<span class="lh">${esc(hint)}</span>` : '');
+  }
+  function layout() {
+    const form = $('#lbForm'); if (!form) return; const L = LIB[libKind] || {}; const W = L.when || LIB_WHEN[libKind];
+    const dep = W && $(`#lbForm [data-k="${W.dep}"]`), v = dep ? dep.value : null;
+    $$('#lbForm .row').forEach(r => { const el = r.querySelector('[data-k]'); if (!el) return; const k = el.dataset.k;
+      if (r.dataset.wh) { r.style.display = ''; delete r.dataset.wh; }
+      let text = null;
+      if (W && v !== null) {
+        if (W.show && W.show[k] && !W.show[k].includes(v)) { r.style.display = 'none'; r.dataset.wh = 1; }
+        if (W.label && W.label[k] && W.label[k][v]) text = W.label[k][v];
+        if (el.tagName === 'SELECT' && W.opts && W.opts[k]) { const allow = W.opts[k][v];
+          [...el.options].forEach(o => { if (o.dataset.t0 === undefined) o.dataset.t0 = o.textContent; const ok = !allow || allow.includes(o.value); o.hidden = !ok; o.disabled = !ok; o.textContent = allow ? o.dataset.t0.replace(/\s*\(.*\)\s*$/, '') : o.dataset.t0; });
+          if (allow && !allow.includes(el.value)) { el.value = allow.find(a => el.value.startsWith(a)) || allow[0]; } }
+      }
+      setLabel(r, text);
+    });
+    // ช่องสั้นวางคู่กัน (ช่องที่เหลือเศษให้เต็มแถว)
+    const rows = $$('#lbForm > .row').filter(r => r.style.display !== 'none'); let run = [];
+    const flush = () => { if (run.length % 2) run.pop().classList.remove('half'); run = []; };
+    rows.forEach(r => { const el = r.querySelector('[data-k]'), lb = r.querySelector('label'); const nx = r.nextElementSibling;
+      const main = lb ? (lb.firstChild ? lb.firstChild.textContent : '') : '', hint = lb && lb.querySelector('.lh') ? lb.querySelector('.lh').textContent : '';
+      const short = el && (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && (el.type === 'color' || String(el.getAttribute('value') || '').length <= 9))) && main.length <= 24 && hint.length <= 30 && !(nx && nx.classList.contains('fnbox')) && !(el.tagName === 'SELECT' && [...el.options].some(o => (o.dataset.t0 || o.textContent).length > 22));
+      r.classList.toggle('half', !!short); if (short) run.push(r); else flush(); });
+    flush();
+  }
+  function title() {
+    let t = $('#lbTitle'); const kinds = $('#lbKinds'); if (!kinds) return;
+    if (!t) { t = document.createElement('div'); t.id = 'lbTitle'; kinds.after(t); }
+    const L = LIB[libKind]; if (!L || !$('#lbForm [data-k]')) { t.innerHTML = ''; return; }
+    const [a, b] = libNameParts(L.name); t.innerHTML = esc(a) + (b ? ` <small>${esc(b)}</small>` : '');
+  }
+  const _le = libEnhance;
+  libEnhance = function () { const r = _le.apply(this, arguments); try { title(); layout(); } catch (e) { console.error('drawui', e); } return r; };
+  const f = $('#lbForm'); if (f) f.addEventListener('change', e => { const W = (LIB[libKind] || {}).when || LIB_WHEN[libKind]; if (W && e.target.dataset && e.target.dataset.k === W.dep) { layout(); libPrev(); } });
+  const _sc = showLibCat; showLibCat = function () { const r = _sc.apply(this, arguments); try { title(); } catch (e) { } return r; };
 })();
 
 /* ===================== ไฟล์ .npress: ดับเบิลคลิกในเครื่องแล้วเปิดใน Newton Press =====================
