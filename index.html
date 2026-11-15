@@ -2881,7 +2881,8 @@ function buildIconMenu() {
 const T = (x, y, s, o = {}) => (!o.up && o.f !== 0 && !/[\u0E00-\u0E7F]/.test(String(s)) && /[A-Za-z0-9α-ωΑ-Ω]/.test(String(s))) ? svgMath(x, y, String(s), o) : `<text x="${x}" y="${y}" font-family="${o.m ? 'KaTeX_Math' : o.r ? 'KaTeX_Main' : 'THS'}" font-size="${o.fs || 15}"${o.m ? ' font-style="italic"' : ''} text-anchor="${o.a || 'middle'}" fill="${o.c || CL.dark}"${o.b ? ' font-weight="700"' : ''}>${esc(String(s))}</text>`;
 const isVar = s => /^[A-Za-z]('|_\w)?$/.test(s);
 const lab = (x, y, s, o = {}) => T(x, y, s, Object.assign({ m: isVar(s), r: /^[\d.\-−+]+$/.test(s) }, o));
-const svgW = (w, h, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w)}" height="${Math.round(h)}" viewBox="0 0 ${Math.round(w)} ${Math.round(h)}">${body}</svg>`;
+const svgTop = body => { let top = ''; body = String(body).replace(/<g class="plnum"[^>]*>[\s\S]*?<\/g>/g, m => { top += m; return ''; }); return body + top; };
+const svgW = (w, h, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w)}" height="${Math.round(h)}" viewBox="0 0 ${Math.round(w)} ${Math.round(h)}">${svgTop(body)}</svg>`;
 const list = s => String(s ?? '').split(',').map(x => x.trim()).filter(x => x !== '');
 const LIB = {
   venn2: { name: 'แผนภาพเวนน์ 2 เซต', p: [['A', 'ชื่อเซตซ้าย', 'A'], ['B', 'ชื่อเซตขวา', 'B'], ['U', 'เอกภพสัมพัทธ์', 'U'], ['n1', 'ในส่วน A อย่างเดียว', ''], ['n2', 'ในส่วน A∩B', ''], ['n3', 'ในส่วน B อย่างเดียว', ''], ['n4', 'นอกทั้งสองเซต', ''], ['sh', 'ระบายสีบริเวณ', 'none', ['none:ไม่ระบาย', 'AB:A∩B', 'AuB:A∪B', 'A-B:A−B', 'B-A:B−A', 'out:(A∪B)′', 'A:A', 'B:B', 'Ac:A′', 'Bc:B′', 'sym:A Δ B', 'nAB:(A∩B)′', 'ex:พิมพ์เอง (ช่องด้านล่าง)']], ['ex', 'บริเวณที่ระบาย (พิมพ์เอง) เช่น A∪B′', ''], ['pat', 'ลักษณะการระบาย', 'fill', ['fill:ระบายทึบ', 'hatch:เส้นทแยง', 'dot:จุด']], ['ppl', 'ใส่ไอคอนคนตามจำนวน', 'no', ['no:ไม่ใส่', 'yes:ใส่']]],
@@ -3104,10 +3105,11 @@ function plane(p, W = 440, H = 360) {
   s += `<path d="M${X(x0) - 8} ${ay}H${X(x1) + 12}" stroke="${CL.dark}" stroke-width="1.3"/><path d="M${X(x1) + 14} ${ay}l-8 -4v8z" fill="${CL.dark}"/>`;
   s += `<path d="M${ax} ${Y(y0) + 8}V${Y(y1) - 12}" stroke="${CL.dark}" stroke-width="1.3"/><path d="M${ax} ${Y(y1) - 14}l-4 8h8z" fill="${CL.dark}"/>`;
   s += T(X(x1) + 16, ay + 18, 'x', { m: 1, fs: 16 }) + T(ax - 12, Y(y1) - 10, 'y', { m: 1, fs: 16 });
-  if (ON(p.num)) {
-    for (let x = Math.ceil(x0 / st) * st; x <= x1 + 1e-9; x += st) { const v = Math.round(x * 1e6) / 1e6; if (v === 0) continue; s += `<path d="M${X(v)} ${ay - 3}V${ay + 3}" stroke="${CL.dark}"/>` + T(X(v), ay + 15, v < 0 ? '−' + (-v) : v, { r: 1, fs: 11.5 }); }
-    for (let y = Math.ceil(y0 / st) * st; y <= y1 + 1e-9; y += st) { const v = Math.round(y * 1e6) / 1e6; if (v === 0) continue; s += `<path d="M${ax - 3} ${Y(v)}H${ax + 3}" stroke="${CL.dark}"/>` + T(ax - 6, Y(v) + 4, v < 0 ? '−' + (-v) : v, { r: 1, fs: 11.5, a: 'end' }); }
-    s += T(ax - 7, ay + 15, 'O', { m: 1, fs: 13, a: 'end' });
+  if (ON(p.num)) { let nm = '';
+    for (let x = Math.ceil(x0 / st) * st; x <= x1 + 1e-9; x += st) { const v = Math.round(x * 1e6) / 1e6; if (v === 0) continue; s += `<path d="M${X(v)} ${ay - 3}V${ay + 3}" stroke="${CL.dark}"/>`; nm += T(X(v), ay + 15, v < 0 ? '−' + (-v) : v, { r: 1, fs: 11.5 }); }
+    for (let y = Math.ceil(y0 / st) * st; y <= y1 + 1e-9; y += st) { const v = Math.round(y * 1e6) / 1e6; if (v === 0) continue; s += `<path d="M${ax - 3} ${Y(v)}H${ax + 3}" stroke="${CL.dark}"/>`; nm += T(ax - 6, Y(v) + 4, v < 0 ? '−' + (-v) : v, { r: 1, fs: 11.5, a: 'end' }); }
+    nm += T(ax - 7, ay + 15, 'O', { m: 1, fs: 13, a: 'end' });
+    s += `<g class="plnum" paint-order="stroke" stroke="#fff" stroke-width="3" stroke-linejoin="round">${nm}</g>`; // ตัวเลขบนแกน: svgW ย้ายไปวาดทับบนสุด มีขอบขาว จึงไม่ถูกเส้นกราฟทับ
   }
   return { s, X, Y, k, w: w + 14, h, x0, x1, y0, y1, cid };
 }
@@ -3315,14 +3317,14 @@ Object.assign(LIB, {
   conic: { name: 'ภาคตัดกรวย (วงกลม พาราโบลา วงรี ไฮเพอร์โบลา)', p: [['kind', 'ชนิด', 'ellipse', ['circle:วงกลม', 'parab:พาราโบลา', 'ellipse:วงรี', 'hyper:ไฮเพอร์โบลา']], ['h', 'จุดศูนย์กลาง/จุดยอด h', '0'], ['k', 'จุดศูนย์กลาง/จุดยอด k', '0'], ['a', 'a (รัศมี / ครึ่งแกนเอก / ระยะโฟกัส c ของพาราโบลา)', '4'], ['b', 'b (ครึ่งแกนโท)', '2.5'], ['dir', 'แนวแกน / ทิศเปิด', 'h', ['h:แนวนอน (เปิดขวา)', 'v:แนวตั้ง (เปิดขึ้น)', 'hn:แนวนอน (เปิดซ้าย)', 'vn:แนวตั้ง (เปิดลง)']], yn('f', 'โฟกัส'), yn('ax', 'แกนเอก/แกนโท หรือเส้นไดเรกตริกซ์'), yn('as', 'เส้นกำกับ (ไฮเพอร์โบลา)'), ['x0', 'x น้อยสุด', '-6'], ['x1', 'x มากสุด', '6'], ['y0', 'y น้อยสุด', '-5'], ['y1', 'y มากสุด', '5'], ['st', 'ระยะห่างของสเกล', '1'], yn('grid', 'เส้นตาราง'), yn('num', 'ตัวเลขบนแกน')],
     gen: p => {
       const A = plane(p); let s = A.s; const h = +p.h || 0, k = +p.k || 0, a = Math.abs(+p.a || 1), b = Math.abs(+p.b || 1); const V = p.dir[0] === 'v', sg = p.dir.endsWith('n') ? -1 : 1; const C = CL.navy;
-      const F = (x, y, n) => ON(p.f) ? ptLab(A, x, y, n, CL.red, 6, -6) : '';
-      if (p.kind === 'circle') { s += pcurve(t => h + a * Math.cos(t), t => k + a * Math.sin(t), 0, 2 * Math.PI, A, C) + ptLab(A, h, k, 'C', CL.dark) + pl([[A.X(h), A.Y(k)], [A.X(h + a * Math.cos(.6)), A.Y(k + a * Math.sin(.6))]], STK(CL.teal, 1.5)) + T(A.X(h + a / 2 * Math.cos(.6)) - 4, A.Y(k + a / 2 * Math.sin(.6)) - 6, 'r', { m: 1, fs: 15, c: CL.teal }); }
-      if (p.kind === 'parab') { const c = a; const R = Math.max(A.x1 - A.x0, A.y1 - A.y0); if (V) { s += curve(x => k + sg * (x - h) ** 2 / (4 * c), A, C); s += F(h, k + sg * c, 'F'); if (ON(p.ax)) s += pl([[A.X(A.x0), A.Y(k - sg * c)], [A.X(A.x1), A.Y(k - sg * c)]], STK(CL.purple, 1.5, 1)); } else { s += pcurve(t => h + sg * t * t / (4 * c), t => k + t, -R, R, A, C); s += F(h + sg * c, k, 'F'); if (ON(p.ax)) s += pl([[A.X(h - sg * c), A.Y(A.y0)], [A.X(h - sg * c), A.Y(A.y1)]], STK(CL.purple, 1.5, 1)); } s += ptLab(A, h, k, 'V', CL.dark, 8, 16); }
-      if (p.kind === 'ellipse') { const [ra, rb] = V ? [b, a] : [a, b]; s += pcurve(t => h + ra * Math.cos(t), t => k + rb * Math.sin(t), 0, 2 * Math.PI, A, C); const c = Math.sqrt(Math.abs(a * a - b * b)); if (ON(p.ax)) s += pl([[A.X(h - ra), A.Y(k)], [A.X(h + ra), A.Y(k)]], STK(CL.teal, 1.3, 1)) + pl([[A.X(h), A.Y(k - rb)], [A.X(h), A.Y(k + rb)]], STK(CL.teal, 1.3, 1)); s += V ? F(h, k + c, 'F₁') + F(h, k - c, 'F₂') : F(h + c, k, 'F₁') + F(h - c, k, 'F₂'); s += ptLab(A, h, k, 'C', CL.dark, 6, 16); }
+      const F = (x, y, n, dx = 6) => ON(p.f) ? ptLab(A, x, y, n, CL.red, dx, -6) : '';
+      if (p.kind === 'circle') { s += pcurve(t => h + a * Math.cos(t), t => k + a * Math.sin(t), 0, 2 * Math.PI, A, C) + ptLab(A, h, k, 'C', CL.dark, -17, -8) + pl([[A.X(h), A.Y(k)], [A.X(h + a * Math.cos(.6)), A.Y(k + a * Math.sin(.6))]], STK(CL.teal, 1.5)) + T(A.X(h + a / 2 * Math.cos(.6)) - 4, A.Y(k + a / 2 * Math.sin(.6)) - 6, 'r', { m: 1, fs: 15, c: CL.teal }); }
+      if (p.kind === 'parab') { const c = a; const R = Math.max(A.x1 - A.x0, A.y1 - A.y0); if (V) { s += curve(x => k + sg * (x - h) ** 2 / (4 * c), A, C); s += F(h, k + sg * c, 'F'); if (ON(p.ax)) s += pl([[A.X(A.x0), A.Y(k - sg * c)], [A.X(A.x1), A.Y(k - sg * c)]], STK(CL.purple, 1.5, 1)); } else { s += pcurve(t => h + sg * t * t / (4 * c), t => k + t, -R, R, A, C); s += F(h + sg * c, k, 'F'); if (ON(p.ax)) s += pl([[A.X(h - sg * c), A.Y(A.y0)], [A.X(h - sg * c), A.Y(A.y1)]], STK(CL.purple, 1.5, 1)); } s += (h || k) ? ptLab(A, h, k, 'V', CL.dark, 8, 16) : ptLab(A, h, k, 'V', CL.dark, V ? 8 : sg * 9 - 4, V ? -sg * 12 + 4 : -9); }
+      if (p.kind === 'ellipse') { const [ra, rb] = V ? [b, a] : [a, b]; s += pcurve(t => h + ra * Math.cos(t), t => k + rb * Math.sin(t), 0, 2 * Math.PI, A, C); const c = Math.sqrt(Math.abs(a * a - b * b)); if (ON(p.ax)) s += pl([[A.X(h - ra), A.Y(k)], [A.X(h + ra), A.Y(k)]], STK(CL.teal, 1.3, 1)) + pl([[A.X(h), A.Y(k - rb)], [A.X(h), A.Y(k + rb)]], STK(CL.teal, 1.3, 1)); s += V ? F(h, k + c, 'F₁') + F(h, k - c, 'F₂') : F(h + c, k, 'F₁') + F(h - c, k, 'F₂'); s += ptLab(A, h, k, 'C', CL.dark, 7, (h || k) ? 16 : -8); }
       if (p.kind === 'hyper') { const R = 4; if (V) { s += pcurve(t => h + b * Math.sinh(t), t => k + a * Math.cosh(t), -R, R, A, C) + pcurve(t => h + b * Math.sinh(t), t => k - a * Math.cosh(t), -R, R, A, C); } else { s += pcurve(t => h + a * Math.cosh(t), t => k + b * Math.sinh(t), -R, R, A, C) + pcurve(t => h - a * Math.cosh(t), t => k + b * Math.sinh(t), -R, R, A, C); } const c = Math.sqrt(a * a + b * b);
         if (ON(p.as)) { const m = V ? a / b : b / a; s += curve(x => k + m * (x - h), A, CL.gray, 1.3, 1) + curve(x => k - m * (x - h), A, CL.gray, 1.3, 1); }
         if (ON(p.ax)) s += V ? pl([[A.X(h - b), A.Y(k - a)], [A.X(h + b), A.Y(k - a)], [A.X(h + b), A.Y(k + a)], [A.X(h - b), A.Y(k + a)], [A.X(h - b), A.Y(k - a)]], STK(CL.teal, 1.1, 1)) : pl([[A.X(h - a), A.Y(k - b)], [A.X(h + a), A.Y(k - b)], [A.X(h + a), A.Y(k + b)], [A.X(h - a), A.Y(k + b)], [A.X(h - a), A.Y(k - b)]], STK(CL.teal, 1.1, 1));
-        s += V ? F(h, k + c, 'F₁') + F(h, k - c, 'F₂') : F(h + c, k, 'F₁') + F(h - c, k, 'F₂'); }
+        s += V ? F(h, k + c, 'F₁') + F(h, k - c, 'F₂') : F(h + c, k, 'F₁') + F(h - c, k, 'F₂', -22); }
       return svgW(A.w, A.h, s);
     } },
 });
@@ -8257,7 +8259,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794756655';
+const NP_BUILD = '1794757003';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
