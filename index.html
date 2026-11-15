@@ -8242,7 +8242,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794740593';
+const NP_BUILD = '1794741074';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13591,6 +13591,168 @@ ${R}.b-box:is(.k-pmis,.k-punit){background:#fff;border:1px solid ${MX(40)};borde
   }
   hook(); setTimeout(hook, 500); setTimeout(hook, 2000);
   if (typeof scAdd === 'function') scAdd(IS_MAC ? '⌘⇧P' : 'Ctrl+Shift+P', 'ส่งออก PDF เฉพาะบางหน้า', 'ไฟล์', () => openPageExport(), e => (e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyP');
+})();
+
+/* ===================== บอร์ดโครงงาน (ระยะที่ 1) =====================
+   doc.settings.tpl = 'board' · settings.board = { layout:1|3, panels:[{name,w,h}] (ซม.), fs:[..] }
+   บล็อก: bpanel (เริ่มแผง: จำนวนคอลัมน์ สัดส่วน ขนาดตัวอักษร) · bcol (ขึ้นคอลัมน์ถัดไป) · bcard (หัวการ์ด มีเลขในวงกลม)
+   บล็อกเดิมทุกชนิด (ย่อหน้า ตาราง สมการ รูป กล่อง) วางใต้หัวการ์ดได้ → อยู่ในการ์ดเดียวกันจนถึงหัวการ์ด/คอลัมน์/แผงถัดไป
+   ส่งออก: PDF ขนาดจริงทีละแผง (พิมพ์แบบเวกเตอร์ @page ตามขนาดแผง ชื่อไฟล์ตั้งอัตโนมัติ) */
+(function () {
+  const CM = 37.8, GAP_PANEL = 90, TOPM = 70, PAD = 50, CGAP = 30, BGAP = 6, CARDGAP = 26;
+  const isBoard = () => !!(doc && doc.settings && doc.settings.tpl === 'board');
+  window.isBoard = isBoard;
+  const defBoard = () => ({ layout: 3, panels: [{ name: 'แผงซ้าย', w: 60, h: 60 }, { name: 'แผงกลาง', w: 120, h: 60 }, { name: 'แผงขวา', w: 60, h: 60 }] });
+  const BD = () => { const s = doc.settings; if (!s.board) s.board = defBoard(); return s.board; };
+
+  const st = document.createElement('style');
+  st.textContent = `
+body.board #stage{width:auto}
+body.board #flow{margin:0!important;padding:0!important;width:100%!important;position:relative;color:#13294B;line-height:1.45}
+body.board #flow>.blk{position:absolute!important;box-sizing:border-box;margin:0!important}
+body.board .bsheet{position:absolute;border-radius:6px;background:linear-gradient(160deg,#f3f8fe,#dceafa);box-shadow:0 2px 6px rgba(0,0,0,.12),0 14px 40px rgba(0,0,0,.10)}
+body.board .bcardbg{position:absolute;background:#fff;border-radius:18px;box-shadow:0 3px 12px rgba(14,44,94,.13);border:1px solid #d8e4f4}
+body.board .bcardbg.over{border:3px solid #d93025}
+body.board .bplabel{position:absolute;font:600 22px var(--dfont,'THS');color:#5a6b85}
+.b-bpanel{font-size:20px!important;color:#5a6b85;border:1.5px dashed #9fb3cf;border-radius:10px;padding:4px 12px;background:#fff}
+.b-bcol{font-size:16px!important;color:#9fb3cf;border-top:2px dashed #c4d3e8;text-align:right;padding-top:2px}
+.b-bcard{display:flex;align-items:center;gap:12px;color:#0E2C5E;font-weight:700;font-size:1.3em;padding:2px 0 6px;border-bottom:3px solid #D9822B}
+.b-bcard .bn{flex:0 0 auto;width:1.45em;height:1.45em;border-radius:50%;background:#1D4E9E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85em}
+.b-bcard .bn:empty{display:none}.b-bcard>div{flex:1}
+body.exporting .b-bpanel,body.exporting .b-bcol,body.bdprinting .b-bpanel,body.bdprinting .b-bcol,body.bdprinting .bplabel{visibility:hidden}
+#bdBar{position:fixed;left:50%;transform:translateX(-50%);top:62px;z-index:59;display:none;gap:6px;background:#fff;border:1px solid #d8e4f4;border-radius:12px;padding:4px 6px;box-shadow:0 4px 16px rgba(14,44,94,.14)}
+body.board #bdBar{display:flex}#bdBar button{font:inherit;font-size:15px;border:1px solid #d8e4f4;background:#fff;border-radius:8px;padding:3px 10px;cursor:pointer}#bdBar button:hover{background:#eef4fc}
+@media print{html.bdprint body>*:not(#bdPrint){display:none!important}html.bdprint #bdPrint{display:block!important;position:absolute;left:0;top:0;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+#bdPrint{display:none}`;
+  document.head.appendChild(st);
+
+  /* ---------- บล็อก ---------- */
+  Object.assign(TYPES, { bpanel: 'บอร์ด: เริ่มแผง', bcol: 'บอร์ด: ขึ้นคอลัมน์ถัดไป', bcard: 'บอร์ด: หัวการ์ด' });
+  const _nb = extNewBlock; extNewBlock = function (b) { _nb(b); if (b.t === 'bpanel') Object.assign(b, { html: 'แผง', cols: 2, ratio: '1,1', fs: 32 }); if (b.t === 'bcard') Object.assign(b, { html: 'หัวข้อ', num: '' }); };
+  const _bh = extBlockHTML; extBlockHTML = function (b) {
+    const r = _bh(b); if (r) return r;
+    if (b.t === 'bpanel') return `<div class="b-bpanel"><span contenteditable="true" data-f="html" data-ph="ชื่อแผง"></span> · ${b.cols || 1} คอลัมน์</div>`;
+    if (b.t === 'bcol') return `<div class="b-bcol">คอลัมน์ถัดไป ↦</div>`;
+    if (b.t === 'bcard') return `<div class="b-bcard"><span class="bn" contenteditable="true" data-f="num"></span><div contenteditable="true" data-f="html" data-ph="หัวข้อการ์ด"></div></div>`;
+    return '';
+  };
+  const _ei = extInspector; extInspector = function (b) {
+    let h = _ei(b); const num = (k, lab, v, mn, mx, stp = 1) => `<div class="ir"><label>${lab}</label><input type="number" min="${mn}" max="${mx}" step="${stp}" data-bn="${k}" value="${v}"></div>`;
+    if (b.t === 'bpanel') h += num('cols', 'จำนวนคอลัมน์', b.cols || 1, 1, 3) + `<div class="ir"><label>สัดส่วนความกว้าง เช่น 1,1,2</label><input type="text" data-bt="ratio" value="${esc(b.ratio || '')}"></div>` + num('fs', 'ขนาดตัวอักษรของแผง (px)', b.fs || 32, 10, 80);
+    if (b.t === 'bcard') h += `<div class="ir"><label><input type="checkbox" data-bc2="span" ${b.span ? 'checked' : ''}> การ์ดยาวเต็มแถว (ทุกคอลัมน์)</label></div><div class="ir"><label>เลขในวงกลม (เว้นว่าง = ไม่แสดง)</label><input type="text" data-bt="num" value="${esc(b.num || '')}"></div>`;
+    return h;
+  };
+
+  /* ---------- จัดวางบอร์ด ---------- */
+  function geom() { // ตำแหน่งแผง (px) แผงข้างชิดขอบล่างของแผงกลาง
+    const B = BD(), P = (B.layout === 1 ? B.panels.slice(1, 2) : B.panels).map(p => ({ name: p.name, w: (+p.w || 60) * CM, h: (+p.h || 60) * CM, wcm: +p.w || 60, hcm: +p.h || 60 }));
+    const H = Math.max(...P.map(p => p.h)); let x = 40;
+    P.forEach(p => { p.x = x; p.y = TOPM + (H - p.h); x += p.w + GAP_PANEL; });
+    return { P, W: x - GAP_PANEL + 40, H: TOPM + H + 40 };
+  }
+  window.boardGeom = geom;
+  function boardLayout() {
+    const G = geom(), flow = $('#flow'), sh = $('#sheets'); let html = '';
+    G.P.forEach(p => { html += `<div class="bsheet" style="left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px"></div><div class="bplabel" style="left:${p.x}px;top:${p.y - 34}px">${esc(p.name)} ${p.wcm}×${p.hcm} ซม.</div>`; });
+    const els = $$('#flow > .blk'); let pi = -1, cfg = null, cols = [], cur = 0, card = null; const bgs = [];
+    const closeCard = () => { if (!card) return; const c = cols[card.col]; const top = card.top - 14, bot = c.y + 10; bgs.push({ x: card.x - 18, y: top, w: card.w + 36, h: bot - top, over: bot > cfg.bottom }); c.y = bot + CARDGAP; if (card.span) cols.forEach(cc => cc.y = c.y); card = null; };
+    const startPanel = (b) => {
+      closeCard(); pi = Math.min(pi + 1, G.P.length - 1); const p = G.P[pi]; const n = Math.max(1, Math.min(3, +b.cols || 1));
+      let rr = String(b.ratio || '').split(',').map(Number).filter(v => v > 0); while (rr.length < n) rr.push(1); rr = rr.slice(0, n); const sum = rr.reduce((a, c) => a + c, 0);
+      const inner = p.w - 2 * PAD - (n - 1) * CGAP; let x = p.x + PAD; cols = rr.map(r => { const w = inner * r / sum; const c = { x, w, y: p.y + PAD }; x += w + CGAP; return c; });
+      cfg = { fs: +b.fs || 32, bottom: p.y + p.h - PAD, p }; cur = 0;
+    };
+    els.forEach(el => {
+      const b = byId(el.dataset.id); if (!b) return; const t = b.t;
+      if (t === 'bpanel') { startPanel(b); const p = G.P[pi]; Object.assign(el.style, { left: (p.x + p.w - 330) + 'px', top: (p.y - 38) + 'px', width: '330px', fontSize: '' }); return; }
+      if (!cfg) startPanel({ cols: 1 });
+      el.style.fontSize = cfg.fs + 'px';
+      if (t === 'bcol') { closeCard(); cur = Math.min(cur + 1, cols.length - 1); const c = cols[cur]; Object.assign(el.style, { left: c.x + 'px', top: (c.y - 22) + 'px', width: c.w + 'px', fontSize: '' }); return; }
+      if (t === 'bcard') {
+        closeCard();
+        if (b.span) { const y = Math.max(...cols.map(c => c.y)); cols.forEach(c => c.y = y); const L = cols[0].x, R = cols[cols.length - 1].x + cols[cols.length - 1].w; card = { col: 0, x: L, w: R - L, top: y, span: true }; }
+        else { const c = cols[cur]; card = { col: cur, x: c.x, w: c.w, top: c.y }; }
+      }
+      const c = cols[card ? card.col : cur]; const x = card ? card.x : c.x, w = card ? card.w : c.w;
+      Object.assign(el.style, { left: x + 'px', top: c.y + 'px', width: w + 'px' });
+      c.y += el.offsetHeight + BGAP;
+      if (card && card.span) cols.forEach(cc => cc.y = c.y);
+    });
+    closeCard();
+    bgs.forEach(g => { html += `<div class="bcardbg${g.over ? ' over' : ''}" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"></div>`; });
+    sh.innerHTML = html; sh.dataset.sig = 'board';
+    const stg = $('#stage'); stg.style.width = G.W + 'px'; stg.style.height = G.H + 'px'; flow.style.height = G.H + 'px';
+    status(`บอร์ด ${G.P.length} แผง`);
+  }
+  window.boardLayout = boardLayout;
+  const _pg = paginate;
+  paginate = function () { if (isBoard()) { try { return boardLayout(); } catch (e) { console.error('board', e); } return; } const stg = $('#stage'); if (stg && stg.style.width) { stg.style.width = ''; $('#flow').style.height = ''; } return _pg.apply(this, arguments); };
+  const _as = applySettings;
+  applySettings = function () { const r = _as.apply(this, arguments); const on = isBoard(); document.body.classList.toggle('board', on); if (!on) $$('#flow > .blk').forEach(el => { el.style.left = el.style.top = el.style.width = el.style.fontSize = ''; }); return r; };
+  // ซูมพอดีจอเมื่อเปิดบอร์ด
+  function fitZoom() { const sc = $('#scroller'), zs = $('#zoom'); if (!sc || !zs) return; const z = Math.max(.05, Math.min(1, (sc.clientWidth - 40) / geom().W)); const v = (Math.floor(z * 100) / 100).toFixed(2); if (![...zs.options].some(o => o.value === v)) { const o = document.createElement('option'); o.value = v; o.textContent = Math.round(v * 100) + '%'; zs.insertBefore(o, zs.firstChild); } zs.value = v; $('#zoomwrap').style.zoom = v; }
+  window.boardFit = fitZoom;
+  let wasBoard = false;
+  const _ra = renderAll; renderAll = function () { const r = _ra.apply(this, arguments); const on = isBoard(); if (on && !wasBoard) setTimeout(fitZoom, 60); if (!on && wasBoard) { const zs = $('#zoom'); if (zs) { zs.value = '1'; if (zs.value !== '1') zs.selectedIndex = [...zs.options].findIndex(o => +o.value === 1); $('#zoomwrap').style.zoom = 1; } } wasBoard = on; return r; };
+
+  /* ---------- แถบบอร์ด + ตั้งค่า ---------- */
+  const bar = document.createElement('div'); bar.id = 'bdBar';
+  bar.innerHTML = '<button data-bd="set">⚙ ตั้งค่าบอร์ด</button><button data-bd="fit">⤢ พอดีจอ</button><button data-bd="pdf">⬇ PDF ขนาดจริง</button>';
+  document.body.appendChild(bar);
+  bar.onclick = e => { const b = e.target.closest('[data-bd]'); if (!b) return; ({ set: openBoardSettings, fit: fitZoom, pdf: openBoardExport })[b.dataset.bd](); };
+  function dlg(id, w, html) { $$('#' + id).forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'dlg-back open'; d.id = id; d.innerHTML = `<div class="dlg" style="width:${w}px">${html}</div>`; document.body.appendChild(d); d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-x]')) d.remove(); }); return d; }
+  function openBoardSettings() {
+    const B = BD(); const row = (p, i) => `<tr><td><input type="text" data-pn="${i}" value="${esc(p.name)}" style="width:110px"></td><td><input type="number" data-pw="${i}" value="${p.w}" min="10" max="300" style="width:70px"> ×</td><td><input type="number" data-ph="${i}" value="${p.h}" min="10" max="300" style="width:70px"> ซม.</td></tr>`;
+    const d = dlg('dBoard', 520, `<h3 style="margin:0 0 10px">ตั้งค่าบอร์ด</h3>
+<div style="display:flex;gap:14px;font-size:16px;margin-bottom:10px"><label><input type="radio" name="bdl" value="3" ${B.layout !== 1 ? 'checked' : ''}> 3 แผง (ซ้าย | กลาง | ขวา)</label><label><input type="radio" name="bdl" value="1" ${B.layout === 1 ? 'checked' : ''}> 1 แผง</label></div>
+<table style="font-size:16px;border-spacing:6px 4px">${B.panels.map(row).join('')}</table>
+<div class="hint" style="margin:6px 0">แบบ 1 แผงใช้ขนาดของแผงกลาง · จำนวนคอลัมน์และขนาดตัวอักษรตั้งที่บล็อก “เริ่มแผง” ของแต่ละแผง</div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="tb" data-x>ยกเลิก</button><button class="tb primary" data-ok>บันทึก</button></div>`);
+    $('[data-ok]', d).onclick = () => { B.layout = +($('input[name=bdl]:checked', d).value); B.panels.forEach((p, i) => { p.name = $(`[data-pn="${i}"]`, d).value || p.name; p.w = Math.max(10, +$(`[data-pw="${i}"]`, d).value || p.w); p.h = Math.max(10, +$(`[data-ph="${i}"]`, d).value || p.h); }); d.remove(); changed(true); paginate(); fitZoom(); };
+  }
+  window.openBoardSettings = openBoardSettings;
+
+  /* ---------- ส่งออก PDF ขนาดจริง (ทีละแผง) ---------- */
+  const shortName = () => String(doc.settings.name || 'โครงงาน').replace(/^บอร์ด\s*/, '').replace(/[\\/:*?"<>|]/g, ' ').trim().slice(0, 30);
+  function openBoardExport() {
+    paginate(); const G = geom();
+    const d = dlg('dBoardX', 520, `<h3 style="margin:0 0 6px">ส่งออก PDF ขนาดจริง</h3><div class="hint" style="margin-bottom:10px">กดทีละแผง → หน้าต่างพิมพ์ → เลือก “บันทึกเป็น PDF” (ขนาดกระดาษตั้งให้แล้ว ระยะขอบ: ไม่มี · เปิด “กราฟิกพื้นหลัง”)</div>${G.P.map((p, i) => `<button class="tb" data-pi="${i}" style="display:block;width:100%;margin:5px 0;font-size:17px;text-align:left">⬇ ${esc(p.name)} · ${p.wcm}×${p.hcm} ซม.</button>`).join('')}<div style="text-align:right;margin-top:8px"><button class="tb" data-x>ปิด</button></div>`);
+    d.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => printPanel(+b.dataset.pi));
+  }
+  window.openBoardExport = openBoardExport;
+  function printPanel(i) {
+    const G = geom(), p = G.P[i]; if (!p) return;
+    const zw = $('#zoomwrap'), oldZ = zw.style.zoom; zw.style.zoom = 1; $$('.blk.sel').forEach(x => x.classList.remove('sel')); if (document.activeElement) document.activeElement.blur();
+    paginate();
+    $$('#bdPrint').forEach(x => x.remove());
+    const root = document.createElement('div'); root.id = 'bdPrint'; root.className = document.body.className + ' board bdprinting';
+    root.style.width = p.w + 'px'; root.style.height = p.h + 'px';
+    const stg = $('#stage').cloneNode(true); stg.removeAttribute('id'); stg.style.position = 'absolute'; stg.style.left = (-p.x) + 'px'; stg.style.top = (-p.y) + 'px';
+    $$('.tools,.wh,.grip,.band,.dropline,.vgrip', stg).forEach(e => e.remove());
+    const box = document.createElement('div'); box.id = 'stage'; box.style.cssText = `position:relative;width:${p.w}px;height:${p.h}px;overflow:hidden`; box.appendChild(stg);
+    // id #flow/#sheets ใน clone ยังอยู่ (ใช้ CSS เดิม) — root เดียวที่แสดงตอนพิมพ์
+    root.appendChild(box); document.body.appendChild(root);
+    const ps = document.createElement('style'); ps.id = 'bdPage'; ps.textContent = `@page{size:${p.wcm}cm ${p.hcm}cm;margin:0}html.bdprint,html.bdprint body{width:${p.w}px;height:${p.h}px;margin:0;padding:0;background:#fff}`;
+    document.head.appendChild(ps); document.documentElement.classList.add('bdprint'); document.body.classList.add('bdprinting');
+    const oldT = document.title; document.title = `บอร์ด${shortName()} ${p.name} ${p.wcm}x${p.hcm} ซม.`;
+    let done = false; const clean = () => { if (done) return; done = true; document.title = oldT; root.remove(); ps.remove(); document.documentElement.classList.remove('bdprint'); document.body.classList.remove('bdprinting'); zw.style.zoom = oldZ; removeEventListener('afterprint', clean); paginate(); };
+    addEventListener('afterprint', clean);
+    setTimeout(() => { document.title = `บอร์ด${shortName()} ${p.name} ${p.wcm}x${p.hcm} ซม.`; window.print(); setTimeout(() => { if (!done) document.addEventListener('pointerdown', function f() { document.removeEventListener('pointerdown', f, true); clean(); }, true); }, 800); }, 120);
+  }
+  window.boardPrintPanel = printPanel;
+
+  /* ---------- แม่แบบ: บอร์ดโครงงาน (โครงเริ่มต้น) ---------- */
+  const card = (n, t) => newBlock('bcard', { num: n ? String(n) : '', html: t });
+  const P = h => newBlock('para', { html: h });
+  DOC_TEMPLATES.push(['บอร์ดโครงงาน (3 แผง)', 'แผงซ้าย 60×60 · แผงกลาง 120×60 · แผงขวา 60×60 ซม. · การ์ดหัวข้อพร้อมเลข', () => ({
+    settings: { name: 'บอร์ดโครงงาน', hl: '', hr: '', size: 'book', tpl: 'board', board: defBoard(), nologo: true },
+    blocks: [newBlock('bpanel', { html: 'แผงซ้าย', cols: 1, fs: 32 }), card(1, 'ที่มาและความสำคัญ'), P('...'), card(2, 'วัตถุประสงค์'), P('1) ...<br>2) ...'), card(3, 'ขอบเขตของโครงงาน'), P('...'), card(4, 'นิยามศัพท์เฉพาะ'), P('...'), card(5, 'เอกสารที่เกี่ยวข้อง'), P('...'),
+      newBlock('bpanel', { html: 'แผงกลาง', cols: 3, ratio: '1,1,1', fs: 32 }), newBlock('bcard', { html: 'ชื่อโครงงาน', num: '', span: true }), P('ผู้จัดทำ ... · ครูที่ปรึกษา ...'), newBlock('bcard', { html: 'วิธีการดำเนินการ', num: '6', span: true }), P('ขั้นที่ 1 ... → ขั้นที่ 2 ... → ขั้นที่ 3 ...'),
+      card(7, 'ผลการศึกษา (1)'), P('...'), newBlock('bcol'), card('', 'ผลการศึกษา (2)'), P('...'), newBlock('bcol'), card('', 'ผลการศึกษา (3)'), P('...'),
+      newBlock('bpanel', { html: 'แผงขวา', cols: 1, fs: 32 }), card(8, 'การนำไปใช้'), P('...'), card(9, 'สรุปผล'), P('...'), card(10, 'อภิปรายผล'), P('...'), card(11, 'ข้อเสนอแนะ'), P('...'), card(12, 'ประโยชน์ที่ได้รับ'), P('...')]
+  })]);
+  if (typeof TPL_META === 'object') TPL_META['บอร์ดโครงงาน (3 แผง)'] = ['teach', 'บอร์ดนำเสนอโครงงาน ขนาดจริงเป็นเซนติเมตร', 'book'];
+  if (typeof npInsertMenuGroup === 'function') { const _g = npInsertMenuGroup; window.npInsertMenuGroup = () => _g() + `<div class="g"><div class="hd">บอร์ดโครงงาน</div><button data-ins="bpanel">เริ่มแผง</button><button data-ins="bcol">ขึ้นคอลัมน์ถัดไป</button><button data-ins="bcard">หัวการ์ด</button></div>`; }
 })();
 
 /* ===================== ใช้งานง่ายขึ้น: คลังรูปแบบรูปย่อ + หน้าจอไม่กระโดดเมื่อแก้ไข =====================
