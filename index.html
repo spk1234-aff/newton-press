@@ -1630,6 +1630,7 @@ function buildInsertMenu() {
   h += grp('รูป ตาราง และสื่อ', `<button data-ins="lib">วาดรูป…</button><button data-ins="image">รูปภาพจากเครื่อง</button>` + btns(['table', 'divide', 'timeline', 'people']));
   h += grp('หน้าพิเศษ', btns(['cover', 'examcover', 'part', 'asheet'].concat(TYPES.scoresum ? ['scoresum'] : [])));
   h += grp('เฉลยข้อสอบ', btns(['soltitle', 'keytable', 'solhead', 'h3']));
+  if (TYPES.wbban) h += grp('แบบฝึกทักษะ', btns(['wbban', 'skull', 'reflect']));
   if (typeof QTYPES === 'object') h += grp('ข้อสอบ (แทรกทั้งข้อ)', Object.entries(QTYPES).map(([k, v]) => `<button data-qins="${k}">${v}</button>`).join(''));
   if (TYPES.pjch) h += grp('งานเอกสาร (โครงงาน · บันทึกข้อความ · ใบปะหน้า)', btns(['logohead', 'pjcover', 'pjch', 'pjsec', 'pjtext', 'pjinfo', 'toc', 'memohead', 'memocmt', 'cshead', 'signln'].filter(t => TYPES[t])));
   h += grp('แผนการสอน', `<button data-ins="lessonplan"><b>ตัวสร้างแผนการสอน…</b></button>` + btns(['lphead', 'lpsec', 'lpbar', 'lpstep', 'lpsign']));
@@ -7380,23 +7381,24 @@ async function exportPDF() {
   try {
     let render = null;
     try { render = await pageRenderer(2.5); await render(0); } catch (e) { console.warn('foreignObject failed', e); render = null; }
-    for (let i = 0; i < n; i++) {
-      busy(true, `กำลังสร้าง PDF หน้า ${i + 1}/${n}`);
+    const LIST = (window.NP_PAGES && NP_PAGES.length) ? NP_PAGES.filter(i => i < n) : Array.from({ length: n }, (_, i) => i); let cnt = 0;
+    for (const i of LIST) {
+      busy(true, `กำลังสร้าง PDF หน้า ${i + 1} (${++cnt}/${LIST.length})`);
       let cv;
       if (render) cv = await render(i);
       else cv = await html2canvas($('#stage'), { scale: 2, backgroundColor: '#ffffff', x: 0, y: i * P, width: 794, height: PAGE_H, scrollX: 0, scrollY: 0, windowWidth: 1000, windowHeight: 1200, logging: false,
         onclone: d => { const s2 = d.getElementById('stage'), b = d.body; b.innerHTML = ''; b.style.margin = '0'; b.style.overflow = 'visible'; b.style.height = 'auto'; d.documentElement.style.overflow = 'visible'; b.appendChild(s2); s2.style.position = 'absolute'; s2.style.left = '0'; s2.style.top = '0'; } });
-      if (i) pdf.addPage();
+      if (cnt > 1) pdf.addPage();
       pdf.addImage(await cvJPEG(cv, 0.93), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
       cv.width = cv.height = 0; await npYield();
     }
     // บุ๊กมาร์กใน PDF จากหัวบท หัวข้อ หัวข้อย่อย และหัวกิจกรรม (ข้อความไทยเข้ารหัส UTF-16)
-    try {
+    if (LIST.length === n) try {
       pdf.outline.makeString = v => '<FEFF' + Array.from(String(v)).map(ch => { let h = ''; for (let i = 0; i < ch.length; i++) h += ch.charCodeAt(i).toString(16).padStart(4, '0'); return h; }).join('').toUpperCase() + '>';
       const par = [];
       outline().forEach(x => { let p = null; for (let l = x.lv - 1; l >= 0; l--) if (par[l]) { p = par[l]; break; } const node = pdf.outline.add(p, x.title, { pageNumber: Math.min(x.page, n) }); par[x.lv] = node; for (let l = x.lv + 1; l < 6; l++) par[l] = null; });
     } catch (e) { console.warn('outline', e); }
-    try { if (typeof tocPdfLinks === 'function') tocPdfLinks(pdf, n); } catch (e) { console.warn('toc links', e); }
+    if (LIST.length === n) try { if (typeof tocPdfLinks === 'function') tocPdfLinks(pdf, n); } catch (e) { console.warn('toc links', e); }
     busy(true, 'กำลังรวมไฟล์ PDF…'); await npYield();
     const blob = pdf.output('blob');
     await saveFile(fname('pdf'), blob);
@@ -8238,7 +8240,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794720102';
+const NP_BUILD = '1794721514';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9551,7 +9553,9 @@ async function exportPrintPDF() {
     const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });
     const full = cl.map(e => e.innerHTML), sh = $$('#sheets > *', st), shFull = sh.map(e => e.innerHTML);
     root = document.createElement('div'); root.id = 'npPrint'; root.className = 'exporting';
+    const PSET = (window.NP_PAGES && NP_PAGES.length) ? new Set(NP_PAGES) : null;
     for (let i = 0; i < n; i++) {
+      if (PSET && !PSET.has(i)) continue;
       if (i % 8 === 0) { busy(true, `กำลังเตรียมหน้า ${i + 1}/${n}`); await npYield(); }
       cl.forEach((e, k) => { const on = !!(rng[k] && rng[k][1] >= i && rng[k][0] <= i); e.innerHTML = on ? full[k] : ''; });
       sh.forEach((e, k) => { e.innerHTML = k === i ? shFull[k] : ''; });
@@ -12992,6 +12996,145 @@ document.addEventListener('load', e => { const t = e.target; if (t && t.tagName 
 /* ===================== รูปจากแบบฝึกทักษะ (สร้างใหม่ด้วยตัววาดสไตล์แบบฝึก แก้ไขได้) ===================== */
 wbAdd("แบบฝึกทักษะ: บทที่ 11 หลักการนับ", [["wb11_routes", "ทางถนน–ทางเรือ บ้านไปโรงเรียน", "# ทางถนน (เส้นโค้งสีแดง)\ncurve: (2,0.15) (8,5.8) (13,0.15) | rd\ncurve: (2,0.1) (8,4.4) (13,0.1) | rd\ncurve: (2,0.05) (8,3.0) (13,0.05) | rd\ntext: (8,3.3) r_1 | rd\ntext: (8,2.6) r_2 | rd\ntext: (8,1.9) r_3 | rd\ntext: (3.4,3.4) ทางถนน | rd bold\n# ทางเรือ (เส้นคลื่นสีน้ำเงิน)\nsmooth: (2,-0.05) (3,-0.9) (4.3,-1.3) (5.3,-0.8) (6.4,-1.45) (7.6,-0.9) (8.7,-1.5) (9.8,-0.9) (11,-1.35) (12,-0.8) (13,-0.05) | nv\nsmooth: (2,-0.1) (3,-1.6) (4.3,-2.3) (5.3,-1.8) (6.4,-2.5) (7.6,-1.9) (8.7,-2.6) (9.8,-1.9) (11,-2.3) (12,-1.6) (13,-0.1) | nv\ntext: (8.7,-0.85) c_1 | nv\ntext: (8.7,-1.95) c_2 | nv\ntext: (4,-3.3) ทางเรือ | nv bold\n# สถานที่\nrect: (-0.4,-0.55) (2,0.55) บ้าน | bk r=6 fill=wh w=2\nrect: (13,-0.55) (15.7,0.55) โรงเรียน | bk r=6 fill=wh w=2", {"x0": "-0.6", "x1": "15.9", "y0": "-3.8", "y1": "3.8", "sx": "32", "fs": "19"}], ["wb11_venn", "แผนภาพเวนน์ สมาชิกชมรม (รูปคน)", "rect: (0,0) (10,7) | bk w=2.4\ntext: (0.45,6.45) U | bk size=20\ncircle: (3.6,3.0) 2.55 | rd fill=pk op=0.75\ncircle: (6.4,3.0) 2.55 | nv fill=bl op=0.75\ntext: (2.5,6.0) ชมรมกีฬา | rd bold size=19\ntext: (7.6,6.0) ชมรมดนตรี | nv bold size=19\n# คนในชมรมกีฬาอย่างเดียว\nperson: (2.3,4.0) | rd\nperson: (2.0,2.1) | rd\nperson: (2.9,2.5) | rd\n# คนที่อยู่ทั้งสองชมรม\nperson: (5.0,3.8) | pu\nperson: (5.0,2.1) | pu\n# คนในชมรมดนตรีอย่างเดียว\nperson: (7.4,4.0) | nv\nperson: (7.8,2.4) | nv", {"x0": "-0.1", "x1": "10.1", "y0": "-0.1", "y1": "7.1", "sx": "40", "fs": "17"}], ["wb11_shirt", "แผนภาพต้นไม้ เสื้อ–กางเกง", "text: (4,9.7) เสื้อ | rd bold\ntext: (8,9.7) กางเกง | nv bold\ntext: (10.6,9.7) ชุดที่ได้ | bk bold\ntree: s_1,s_2,s_3 ; p_1,p_2 | at=(0,9) w=12 h=9 mode=node cols=rd,nv outbox", {"x0": "-0.5", "x1": "12.4", "y0": "-0.2", "y1": "10.3", "sx": "40", "fs": "16"}], ["wb11_subset", "แผนภาพต้นไม้ การสร้างสับเซต", "text: (3.5,9.7) ตัดสินใจเรื่อง a | rd bold size=15\ntext: (7,9.7) ตัดสินใจเรื่อง b | or bold size=15\ntext: (10.5,9.7) ตัดสินใจเรื่อง c | rd bold size=15\ntext: (14.4,9.7) สับเซตที่ได้ | bk bold\ntree: ใส่,ไม่ใส่ ; ใส่,ไม่ใส่ ; ใส่,ไม่ใส่ | at=(0,9) w=14 h=9 mode=edge cols=rd,or,nv out={a,b,c};{a,b};{a,c};{a};{b,c};{b};{c};∅", {"x0": "-0.4", "x1": "15.8", "y0": "-0.2", "y1": "10.3", "sx": "40", "fs": "17"}], ["wb11_cards", "บัตรตัวเลข 0–4 และหลักของจำนวน", "text: (5.2,3.3) บัตรตัวเลข | bk\nrect: (0,0) (1.7,2.2) 0 | rd r=8 shadow fill=wh\nrect: (2.2,0) (3.9,2.2) 1 | rd r=8 shadow fill=wh\nrect: (4.4,0) (6.1,2.2) 2 | rd r=8 shadow fill=wh\nrect: (6.6,0) (8.3,2.2) 3 | rd r=8 shadow fill=wh\nrect: (8.8,0) (10.5,2.2) 4 | rd r=8 shadow fill=wh\nseg: (11.1,1.1) (12.3,1.1) | gr arrow w=1.6\ntext: (14.0,2.75) หลักร้อย | bk\ntext: (17.1,2.75) หลักสิบ | bk\ntext: (20.2,2.75) หลักหน่วย | bk\nrect: (12.8,0.1) (15.2,2.0) | rd r=8 fill=pk\nrect: (15.9,0.1) (18.3,2.0) | rd r=8 fill=lr\nrect: (19.0,0.1) (21.4,2.0) | rd r=8 fill=pk", {"x0": "-0.3", "x1": "21.7", "y0": "-0.4", "y1": "3.9", "sx": "36", "fs": "21"}], ["wb11_cities", "ถนนระหว่างเมือง A, B, C", "# A ไป B: 2 สาย · B ไป C: 3 สาย (สีแดง)\ncurve: (0,0) (2.4,3.7) (6.5,4.2) | rd\ncurve: (0,0) (3.6,2.9) (6.5,4.2) | rd\ncurve: (6.5,4.2) (10.8,3.8) (13,0) | rd\ncurve: (6.5,4.2) (10.2,3.2) (13,0) | rd\ncurve: (6.5,4.2) (9.6,2.5) (13,0) | rd\n# A ไป C โดยไม่ผ่าน B: 2 สาย (สีน้ำเงิน)\ncurve: (0,0) (6.5,-2.6) (13,0) | nv\ncurve: (0,0) (6.5,-4.4) (13,0) | nv\nnode: (0,0) A | r=18\nnode: (6.5,4.2) B | r=18\nnode: (13,0) C | r=18\ntext: (6.5,-3.4) ถนนระหว่างเมือง A, B และ C | #444444 size=20", {"x0": "-0.8", "x1": "13.8", "y0": "-3.9", "y1": "5", "sx": "34", "fs": "19"}], ["wb11_flag3", "ธงแถบแนวตั้ง 3 แถบ", "seg: (-0.08,1.75) (-0.08,-0.65) | gr w=7\nrect: (0,0) (1.1,1.6) | rd w=3\nrect: (1.1,0) (2.2,1.6) | rd w=3\nrect: (2.2,0) (3.3,1.6) | rd w=3\ntext: (0.55,-0.33) แถบที่ 1 | bk\ntext: (1.65,-0.33) แถบที่ 2 | bk\ntext: (2.75,-0.33) แถบที่ 3 | bk", {"x0": "-0.2", "x1": "3.4", "y0": "-0.7", "y1": "1.8", "sx": "100", "fs": "22"}], ["wb11_flag4", "ธงแถบแนวนอน 4 แถบ", "seg: (-0.08,1.75) (-0.08,-0.15) | gr w=7\nrect: (0,1.275) (2.2,1.7) | rd w=3\nrect: (0,0.85) (2.2,1.275) | rd w=3\nrect: (0,0.425) (2.2,0.85) | rd w=3\nrect: (0,0) (2.2,0.425) | rd w=3\ntext: (2.35,1.49) แถบที่ 1 | bk anchor=start\ntext: (2.35,1.06) แถบที่ 2 | bk anchor=start\ntext: (2.35,0.64) แถบที่ 3 | bk anchor=start\ntext: (2.35,0.21) แถบที่ 4 | bk anchor=start", {"x0": "-0.2", "x1": "3.15", "y0": "-0.2", "y1": "1.8", "sx": "120", "fs": "22"}], ["wb11_tri3", "สามเหลี่ยมด้านเท่าแบ่ง 9 รูป", "poly: (0,0.000) (1,0.000) (0.5,0.866) | rd fill=lr w=2.6\npoly: (1,0.000) (2,0.000) (1.5,0.866) | rd fill=lr w=2.6\npoly: (2,0.000) (3,0.000) (2.5,0.866) | rd fill=lr w=2.6\npoly: (0.5,0.866) (1.5,0.866) (1,1.732) | rd fill=lr w=2.6\npoly: (1.5,0.866) (2.5,0.866) (2,1.732) | rd fill=lr w=2.6\npoly: (1,1.732) (2,1.732) (1.5,2.598) | rd fill=lr w=2.6\npoly: (0,0) (3,0) (1.5,2.598) | rd w=2.8", {"x0": "-0.05", "x1": "3.05", "y0": "-0.05", "y1": "2.65", "sx": "120", "fs": "18"}], ["wb11_tri4", "สามเหลี่ยมด้านเท่าแบ่ง 16 รูป", "poly: (0,0.000) (1,0.000) (0.5,0.866) | rd fill=lr w=2.6\npoly: (1,0.000) (2,0.000) (1.5,0.866) | rd fill=lr w=2.6\npoly: (2,0.000) (3,0.000) (2.5,0.866) | rd fill=lr w=2.6\npoly: (3,0.000) (4,0.000) (3.5,0.866) | rd fill=lr w=2.6\npoly: (0.5,0.866) (1.5,0.866) (1,1.732) | rd fill=lr w=2.6\npoly: (1.5,0.866) (2.5,0.866) (2,1.732) | rd fill=lr w=2.6\npoly: (2.5,0.866) (3.5,0.866) (3,1.732) | rd fill=lr w=2.6\npoly: (1,1.732) (2,1.732) (1.5,2.598) | rd fill=lr w=2.6\npoly: (2,1.732) (3,1.732) (2.5,2.598) | rd fill=lr w=2.6\npoly: (1.5,2.598) (2.5,2.598) (2,3.464) | rd fill=lr w=2.6\npoly: (0,0) (4,0) (2,3.464) | rd w=2.8", {"x0": "-0.05", "x1": "4.05", "y0": "-0.05", "y1": "3.51", "sx": "90", "fs": "18"}], ["wb11_map", "แผนที่ 4 เขต A, B, C, D", "rect: (0,0) (2,3) A | rd fill=lr w=2.8\nrect: (2,1.5) (4.5,3) B | rd fill=bl w=2.8\nrect: (2,0) (4.5,1.5) C | rd fill=lr w=2.8\nrect: (4.5,0) (6.5,3) D | rd fill=bl w=2.8", {"x0": "-0.1", "x1": "6.6", "y0": "-0.1", "y1": "3.1", "sx": "70", "fs": "26"}]]);
 wbAdd("แบบฝึกทักษะ: บทที่ 14 แคลคูลัส", [["wb14_secant", "เส้นตัดโค้งเข้าใกล้เส้นสัมผัส (y = x²)", "axes: -1.15 2.45 -0.35 5.1\nf: x^2 ; -1.1 ; 2.3 | or\nline: (1,1) (2,4) | or w=1.8 from=0.62 to=2.28\nline: (1,1) (1.5,2.25) | lo w=1.8 from=0.45 to=2.42\nline: (1,1) (0,0) | #d9a066 w=1.6 from=-0.45 to=2.5\nline: (0,-1) (1,1) | nv dash from=0.35 to=2.4\npt: (2,4) Q_1 | lo pos=w tc=or\npt: (1.5,2.25) Q_2 | lo pos=w tc=or\npt: (0,0) Q_3 | lo pos=nw tc=or\npt: (1,1) P(1, 1) | or pos=se\ntext: (-0.62,1.15) y = x^2 | or size=18", {"x0": "-1.25", "x1": "2.75", "y0": "-0.45", "y1": "5.3", "sx": "88", "sy": "54", "tx": "1,2", "ty": "1,4", "grid": "no", "ax": "yes"}], ["wb14_tangents", "เส้นสัมผัส y = x² ที่ x = −2 ถึง 3", "f: x^2 ; -2.55 ; 3.37 | or\nseg: (-2.4,5.6) (-1.6,2.4) | nv w=2.6\nseg: (-1.4,1.8) (-0.6,0.2) | nv w=2.6\nseg: (-0.4,0) (0.4,0) | nv w=2.6\nseg: (0.6,0.2) (1.4,1.8) | nv w=2.6\nseg: (1.6,2.4) (2.4,5.6) | nv w=2.6\nseg: (2.65,6.9) (3.35,11.1) | nv w=2.6\npt: (-2,4) | or\npt: (-1,1) | or\npt: (0,0) | or\npt: (1,1) | or\npt: (2,4) | or\npt: (3,9) | or", {"x0": "-2.9", "x1": "3.9", "y0": "-0.7", "y1": "11.6", "sx": "52", "sy": "27", "tx": "1", "ty": "2", "ax": "yes", "grid": "no"}], ["wb14_grid", "ตารางพิกัดเปล่า (แกน a, m)", "axes: -3.3 4.4 -7 9", {"x0": "-3.6", "x1": "4.9", "y0": "-7.4", "y1": "9.6", "sx": "36", "sy": "18", "tx": "1", "ty": "2", "gx": "1", "gy": "1", "xl": "a", "yl": "m", "ax": "yes", "grid": "yes"}], ["wb14_absx", "y = |x| และการขยายรอบจุด O", "axes: -2.2 2.35 -0.15 2.5\nseg: (-2.1,2.1) (0,0) | nv w=3\nseg: (0,0) (2.1,2.1) | or w=3\npt: (-1.9,1.9) | nv\npt: (-1.3,1.3) | nv\npt: (-0.6,0.6) | nv\npt: (0.6,0.6) | or\npt: (1.3,1.3) | or\npt: (1.9,1.9) | or\npt: (0,0) | bk r=7\ntext: (-1.4,2.5) ความชัน −1 | nv\ntext: (1.35,2.5) ความชัน 1 | or\nseg: (0.4,0.25) (3.15,0.42) | gr arrow w=1.5\nrect: (3.35,-0.22) (6.6,2.3) | gr fill=cr w=1.6\nseg: (3.35,1.65) (4.97,0.4) | nv w=3\nseg: (4.97,0.4) (6.6,1.7) | or w=3\npt: (4.97,0.4) | bk r=7\ntext: (4.97,-0.6) ขยายรอบ O 10 เท่า: ยังเป็นมุม | bk", {"x0": "-2.45", "x1": "6.75", "y0": "-0.85", "y1": "2.75", "sx": "70", "sy": "70", "tx": "1", "ty": "1", "grid": "no", "ax": "yes", "fs": "19"}], ["wb14_tangentP", "กราฟ y = f(x) และเส้นสัมผัสที่ P(2,3)", "f: x^2/2+1 ; -1.6 ; 4.8 | or w=3\nline: (0,-1) (2,3) | nv dash from=-0.6 to=4.7\npt: (2,3) P(2, 3) | or pos=se\ntext: (2.6,7.6) y = f(x) | or size=19", {"x0": "-1.75", "x1": "5.6", "y0": "-2.6", "y1": "9.1", "sx": "54", "sy": "23", "tx": "1", "ty": "2", "gy": "1", "ax": "yes", "grid": "yes"}], ["wb14_temp", "อุณหภูมิ T(t) แกนตั้งเริ่มที่ 25", "axes: 0 5.35 24 35.3\nf: 30+4x-x^2 ; 0 ; 5 | or w=3.4\npt: (0,30) | or r=6.5\npt: (5,25) | or r=6.5\ntext: (4.25,31.3) T(t) | or size=24", {"x0": "-0.7", "x1": "5.8", "y0": "23.4", "y1": "35.9", "sx": "62", "sy": "22", "tx": "1", "ty": "2", "grid": "no", "ax": "yes", "yb": "yes", "xl": "", "yl": "", "fs": "20"}], ["wb14_cone", "กรวยสูง 6 ซม. รัศมี r", "poly: (-2.4,0) (0,6) (2.4,0) | or fill=cr w=2.6\narc: (0,0) 2.4 0.62 180 360 | or w=2.6 fill=cr\narc: (0,0) 2.4 0.62 0 180 | or w=1.8 dash\nseg: (-2.4,0) (0,0) | or w=1.4\nseg: (0,6) (0,0) | nv w=2.2 dash\nseg: (0,0) (2.4,0) | nv w=2.8\ntext: (0.95,2.6) 6 ซม. | nv size=24\ntext: (1.3,-0.3) r | nv size=26", {"x0": "-2.6", "x1": "2.6", "y0": "-0.85", "y1": "6.15", "sx": "44", "fs": "20"}], ["wb14_corners", "กราฟมีจุดหักและจุดไม่ต่อเนื่อง", "seg: (-1,0) (1,2) (3,0) | or w=3\nseg: (3,3) (5,2) | or w=3\npt: (-1,0) | or r=6.5\npt: (3,0) | or r=6.5 open\npt: (3,3) | or r=6.5\npt: (5,2) | or r=6.5", {"x0": "-1.5", "x1": "5.6", "y0": "-0.7", "y1": "3.45", "sx": "62", "sy": "56", "tx": "1", "ty": "1", "xl": "", "yl": "", "fs": "20", "ax": "yes", "grid": "yes"}], ["wb14_tangent06", "เส้นโค้ง y = f(x) และเส้นผ่าน P กับ (4,6)", "f: 3+1.5(x-2)-0.25(x-2)^2 ; 0.2 ; 5.3 | or w=3\nline: (0,0) (4,6) | nv from=-0.12 to=4.3\npt: (2,3) P | or pos=se tc=or\npt: (4,6) (4, 6) | nv pos=w tc=nv\ntext: (4.5,4.6) y = f(x) | or size=19", {"x0": "-0.6", "x1": "5.9", "y0": "-0.6", "y1": "6.7", "sx": "52", "sy": "40", "tx": "1", "ty": "1", "ax": "yes", "grid": "yes"}]]);
+
+/* ===================== ส่วนประกอบแบบฝึกทักษะ: แถบแบบฝึก · ป้ายระดับ (หัวกะโหลก) · บันทึกหลังเรียน · หัวข้อขนาดใหญ่ =====================
+   wbban   แถบใหญ่ "แบบฝึกทักษะ 11.1" มีไอคอนและคำอธิบาย
+   skull   ป้ายระดับความยาก 1–5 หัวกะโหลก (คลิกที่ป้ายเพื่อเปลี่ยนระดับ)
+   reflect บันทึกหลังเรียน: หัวข้อมีไอคอน + หัวข้อย่อยพร้อมช่องเขียน
+   settings.wbh = หัวข้อ (section/subsection/กิจกรรม) ตัวใหญ่กว่าเนื้อหา แบบแบบฝึกทักษะ
+   <span class="skl" style="--n:3"></span> = หัวกะโหลก 3 หัว ใช้ในตาราง/ข้อความได้ */
+(function () {
+  const SK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2.2C6.9 2.2 3.3 5.7 3.3 10.2c0 2.6 1.2 4.6 3 5.8v3c0 .6.4 1 1 1h1.9v-2.2h1.7V20h2.2v-2.2h1.7V20h1.9c.6 0 1-.4 1-1v-3c1.8-1.2 3-3.2 3-5.8 0-4.5-3.6-8-8.7-8zM8.6 9.4a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2zm6.8 0a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2zM12 13.6l-1.3 2.2h2.6z'/%3E%3C/svg%3E";
+  const PEN = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M13.8 6.8l3.4 3.4" stroke="#fff" stroke-width="2.2"/></svg>';
+  const BOOK = '<svg viewBox="0 0 24 24" width="17" height="17"><path d="M5 3.5h11.5a1.5 1.5 0 0 1 1.5 1.5v14.5H6.5A1.5 1.5 0 0 1 5 18z M5 18a1.5 1.5 0 0 1 1.5-1.5H18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>';
+  const ICONS = { pen: PEN, book: BOOK.replace(/17/g, '26').replace('currentColor', '#fff'), star: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 3l2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.8z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>', link: '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>' };
+  window.WB_SKULL = n => `<span class="skl" contenteditable="false" style="--n:${n}"></span>`;
+  const s = document.createElement('style');
+  const M = p => `color-mix(in srgb,var(--brown) ${p}%,#fff)`;
+  s.textContent = `
+.skl{display:inline-block;vertical-align:-.18em;height:1.12em;width:calc(var(--n,1)*1.16em);background:currentColor;-webkit-mask:url("${SK}") left center/1.16em 1.12em repeat-x;mask:url("${SK}") left center/1.16em 1.12em repeat-x}
+td .skl,th .skl{color:var(--dark)}
+.b-wbban{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,var(--dark),var(--brown) 68%,${M(72)});color:#fff;border-radius:11px;padding:9px 18px 10px 12px;box-shadow:0 4px 0 ${M(62)};margin:12px 0 12px}
+.b-wbban .wi{flex:0 0 auto;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.17);display:flex;align-items:center;justify-content:center}
+.b-wbban .wb{flex:1;min-width:0}.b-wbban .wt{font-size:1.62em;font-weight:700;line-height:1.25}.b-wbban .ws{font-size:.93em;opacity:.92;line-height:1.35}
+.b-wbban [contenteditable]:empty::before{color:#f1d9c6}
+.b-skull{display:flex;align-items:center;margin:10px 0 4px;padding-bottom:7px;border-bottom:1.2px dashed ${M(42)}}
+.b-skull .pill{display:inline-flex;align-items:center;background:var(--dark);color:#fff;border-radius:999px;padding:3px 13px 3px 12px;cursor:pointer;font-size:1.05em}
+.b-skull .sk-t{margin-left:10px;color:var(--brown);font-weight:700}
+.b-reflect{--rc:#2c4a7a;border:1.4px solid var(--rc);border-radius:10px;padding:5px 14px 11px;color:var(--rc);margin:8px 0}
+.b-reflect .rh{display:flex;align-items:center;gap:7px;font-weight:700;font-size:1.02em}.b-reflect .rh>div{flex:1}
+.b-reflect .rl{font-weight:700;margin-top:5px}
+.b-reflect .ra{border:1.2px dashed #9a9a9a;border-radius:9px;margin-top:3px}
+:root.wbh #flow .b-section{font-size:1.5em;color:#fff;background:linear-gradient(90deg,var(--dark),var(--brown) 75%,${M(78)});border:0;border-radius:9px;padding:5px 16px 6px;margin:12px 0 10px;line-height:1.3}
+:root.wbh #flow .b-section:empty::before{color:#f1d9c6}
+:root.wbh #flow .b-subsection{font-size:1.3em;color:var(--dark);border-bottom:2px solid ${M(70)};padding-bottom:3px;margin:12px 0 7px}
+:root.wbh #flow .b-activity{font-size:1.08em;padding:5px 13px}
+`;
+  document.head.appendChild(s);
+
+  Object.assign(TYPES, { wbban: 'แถบแบบฝึกทักษะ (หัวใหญ่ มีไอคอน)', skull: 'ป้ายระดับความยาก (หัวกะโหลก 1–5)', reflect: 'บันทึกหลังเรียน (มีไอคอน แบ่งหัวข้อ)' });
+  try { HEADINGS.add('wbban'); HEADINGS.add('skull'); } catch (e) { }
+  try { OUT_LV.wbban = 2; } catch (e) { }
+  const _nb = extNewBlock;
+  extNewBlock = function (b) {
+    _nb(b);
+    if (b.t === 'wbban') Object.assign(b, { html: 'แบบฝึกทักษะ 1.1', sub: 'ชื่อหัวข้อ · 20 ข้อ เรียงจากง่ายไปยาก', icon: 'pen' });
+    if (b.t === 'skull') Object.assign(b, { n: 1, txt: '' });
+    if (b.t === 'reflect') Object.assign(b, { html: 'บันทึกหลังเรียน หัวข้อ ...', n: 3, h: 12, l0: 'สิ่งที่ฉันเข้าใจแล้ว', l1: 'สิ่งที่ฉันยังสงสัย', l2: 'ข้อผิดพลาดที่ฉันทำบ่อย และวิธีป้องกัน' });
+  };
+  const _bh = extBlockHTML;
+  extBlockHTML = function (b) {
+    const r = _bh(b); if (r) return r;
+    const E = (f, ph, cls = '') => `<div class="${cls}" contenteditable="true" data-f="${f}" data-ph="${ph}"></div>`;
+    if (b.t === 'wbban') return `<div class="b-wbban"><div class="wi">${ICONS[b.icon] || PEN}</div><div class="wb">${E('html', 'แบบฝึกทักษะ ...', 'wt')}${E('sub', 'คำอธิบาย (เว้นว่างได้)', 'ws')}</div></div>`;
+    if (b.t === 'skull') { const n = Math.max(1, Math.min(5, +b.n || 1)); return `<div class="b-skull"><span class="pill" title="คลิกเพื่อเปลี่ยนระดับ (1–5)">${WB_SKULL(n)}</span>${E('txt', '', 'sk-t')}</div>`; }
+    if (b.t === 'reflect') { const n = Math.max(1, Math.min(8, +b.n || 3)), h = Math.max(6, +b.h || 12);
+      return `<div class="b-reflect"${b.rc ? ` style="--rc:${esc(b.rc)}"` : ''}><div class="rh">${BOOK}${E('html', 'บันทึกหลังเรียน', '')}</div>${Array.from({ length: n }, (_, i) => E('l' + i, 'หัวข้อ', 'rl') + `<div class="ra" style="height:${h}mm"></div>`).join('')}</div>`; }
+    return '';
+  };
+  const _ei = extInspector;
+  extInspector = function (b) {
+    let h = _ei(b); const num = (k, lab, v, mn, mx) => `<div class="ir"><label>${lab}</label><input type="number" min="${mn}" max="${mx}" data-bn="${k}" value="${v}"></div>`;
+    if (b.t === 'skull') h += num('n', 'จำนวนหัวกะโหลก (ระดับ)', b.n || 1, 1, 5);
+    if (b.t === 'reflect') h += num('n', 'จำนวนหัวข้อ', b.n || 3, 1, 8) + num('h', 'ความสูงช่องเขียน (มม.)', b.h || 12, 6, 80);
+    if (b.t === 'wbban') h += `<div class="ir"><label>ไอคอน</label><select data-bt="icon">${[['pen', 'ดินสอ'], ['book', 'หนังสือ'], ['star', 'ดาว'], ['link', 'ข้อต่อ']].map(([k, v]) => `<option value="${k}"${(b.icon || 'pen') === k ? ' selected' : ''}>${v}</option>`).join('')}</select></div>`;
+    return h;
+  };
+  // คลิกป้ายหัวกะโหลก = เพิ่มระดับ (5 → 1)
+  document.addEventListener('click', e => { const p = e.target.closest && e.target.closest('#flow .b-skull .pill'); if (!p) return; const blk = p.closest('.blk'); const b = blk && byId(blk.dataset.id); if (!b) return; b.n = (Math.max(1, Math.min(5, +b.n || 1)) % 5) + 1; rerender(b.id); changed(true); });
+  // หัวข้อตัวใหญ่ (settings.wbh)
+  const _as = applySettings;
+  applySettings = function () { const r = _as.apply(this, arguments); document.documentElement.classList.toggle('wbh', !!(doc && doc.settings && doc.settings.wbh)); return r; };
+  const _os = openSettings;
+  openSettings = function () {
+    const r = _os.apply(this, arguments); const box = $('#sThemes'); if (!box) return r;
+    let w = $('#sWbh');
+    if (!w) { w = document.createElement('label'); w.id = 'sWbh'; w.style.cssText = 'display:flex;gap:6px;align-items:center;margin-top:6px'; w.innerHTML = '<input type="checkbox"> หัวข้อตัวใหญ่แบบแบบฝึกทักษะ (หัวข้อเป็นแถบสี หัวข้อย่อยมีเส้นใต้)'; const ref = $('#sBxth') || box; ref.parentNode.insertBefore(w, ref.nextSibling); $('input', w).onchange = e => { doc.settings.wbh = e.target.checked || undefined; applySettings(); changed(true); }; }
+    $('input', w).checked = !!doc.settings.wbh; return r;
+  };
+})();
+
+/* ===================== ส่งออก PDF เฉพาะบางหน้า =====================
+   ส่งออก → "PDF เฉพาะบางหน้า…" · พิมพ์ช่วงหน้า เช่น 3-5, 8 หรือกด "หน้านี้" (หน้าที่กำลังดู)
+   window.NP_PAGES = [ลำดับหน้าเริ่ม 0] ระหว่างส่งออก (exportPDF / exportPrintPDF อ่านค่านี้) */
+(function () {
+  window.NP_PAGES = null;
+  const total = () => $('#sheets').childElementCount;
+  function curPage() {
+    const sc = $('#scroller'), zw = $('#zoomwrap'); const z = parseFloat(zw && zw.style.zoom) || 1; const P = (PAGE_H + PAGE_G) * z;
+    return Math.max(1, Math.min(total(), Math.floor(((sc ? sc.scrollTop : 0) + (sc ? sc.clientHeight : 800) * 0.35) / P) + 1));
+  }
+  function parse(str, n) {
+    const out = new Set(); String(str || '').replace(/[–—]/g, '-').split(/[,\s]+/).filter(Boolean).forEach(t => {
+      const m = /^(\d+)(?:-(\d*))?$/.exec(t); if (!m) throw new Error('รูปแบบไม่ถูกต้อง: ' + t);
+      const a = +m[1], b = m[2] === undefined ? a : (m[2] === '' ? n : +m[2]);
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) if (i >= 1 && i <= n) out.add(i - 1);
+    });
+    return [...out].sort((x, y) => x - y);
+  }
+  const label = L => { const r = []; let s = null, p = null; L.forEach(i => { if (s === null) { s = p = i; } else if (i === p + 1) p = i; else { r.push(s === p ? s + 1 : `${s + 1}-${p + 1}`); s = p = i; } }); if (s !== null) r.push(s === p ? s + 1 : `${s + 1}-${p + 1}`); return r.join(','); };
+  // ชื่อไฟล์บอกช่วงหน้า
+  const _fn = fname; fname = function (ext) { const f = _fn(ext); if (!window.NP_PAGES || !NP_PAGES.length) return f; return f.replace(/(\.[^.]+)$/, ` (หน้า ${label(NP_PAGES)})$1`); };
+  async function run(kind, L) {
+    window.NP_PAGES = L;
+    try { if (kind === 'vec') await exportPrintPDF(); else await exportPDF(); }
+    finally { window.NP_PAGES = null; }
+  }
+  window.openPageExport = function () {
+    $$('#dPgr').forEach(x => x.remove());
+    paginate(); const n = total(), c = curPage();
+    const d = document.createElement('div'); d.className = 'dlg-back'; d.id = 'dPgr';
+    d.innerHTML = `<div class="dlg" style="width:520px"><h3 style="margin:0 0 10px">ส่งออก PDF เฉพาะบางหน้า</h3>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label>หน้าที่ต้องการ</label><input id="pgrIn" type="text" value="${c}" style="flex:1;min-width:160px;font:inherit;font-size:18px;padding:4px 8px" placeholder="เช่น 3-5, 8">
+<button class="tb" data-p="cur">หน้านี้ (${c})</button><button class="tb" data-p="all">ทั้งหมด</button></div>
+<div class="hint" style="margin:6px 0 10px">เอกสารนี้มี ${n} หน้า · ใช้ - สำหรับช่วง และ , คั่นหลายช่วง เช่น <code>1, 4-6, 10-</code> (10- = หน้า 10 ถึงหน้าสุดท้าย)</div>
+<label style="display:block;margin:4px 0"><input type="radio" name="pgrK" value="img" checked> PDF ภาพความละเอียดสูง (หน้าตาตรงกับจอ)</label>
+<label style="display:block;margin:4px 0"><input type="radio" name="pgrK" value="vec"> PDF แบบเวกเตอร์ (เปิดหน้าต่างพิมพ์ → บันทึกเป็น PDF)</label>
+<div id="pgrErr" style="color:#b03a2e;min-height:1.2em;margin-top:6px"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="tb" data-p="x">ยกเลิก</button><button class="tb primary" data-p="go">ส่งออก</button></div></div>`;
+    document.body.appendChild(d); d.classList.add('open');
+    const inp = $('#pgrIn', d); inp.focus(); inp.select();
+    const close = () => d.remove();
+    const go = () => { let L; try { L = parse(inp.value, n); } catch (e) { $('#pgrErr', d).textContent = e.message; return; } if (!L.length) { $('#pgrErr', d).textContent = `ไม่มีหน้าในช่วงนี้ (มี ${n} หน้า)`; return; } const k = ($('input[name=pgrK]:checked', d) || {}).value; close(); run(k, L.length === n ? null : L); };
+    d.onclick = e => { const b = e.target.closest('[data-p]'); if (e.target === d) return close(); if (!b) return; const p = b.dataset.p; if (p === 'cur') inp.value = String(curPage()); else if (p === 'all') inp.value = `1-${n}`; else if (p === 'x') close(); else if (p === 'go') go(); };
+    inp.onkeydown = e => { if (e.key === 'Enter') go(); if (e.key === 'Escape') close(); };
+  };
+  // เพิ่มในเมนู "ส่งออก" (แถบเครื่องมือ) และเมนูปุ่ม PDF
+  function hook() {
+    const bx = $('#bExp');
+    if (bx && !bx.dataset.pgr && typeof uiMenu === 'function') {
+      bx.dataset.pgr = 1; const K = IS_MAC ? '⌘' : 'Ctrl+';
+      bx.onclick = () => uiMenu(bx, [['PDF (ภาพความละเอียดสูง)', () => exportPDF()], ['PDF แบบเวกเตอร์ (พิมพ์)', () => exportPrintPDF(), K + 'P'], ['PDF เฉพาะบางหน้า / ช่วงหน้า…', () => openPageExport()], ['Word (.docx)', () => exportDOCX()], '-', ['📤 ส่งข้อสอบไป Sir’Earth Class…', () => (typeof sndOpen === 'function' ? sndOpen() : 0)], '-', ['ตรวจการจัดหน้า…', () => openLayoutCheck()]]);
+    }
+    const bp = $('#bPdf');
+    if (bp && !bp.dataset.pgr) {
+      bp.dataset.pgr = 1; const _c = bp.onclick;
+      bp.onclick = function (ev) { const r = _c && _c.call(this, ev); const m = $('#pdfMenu'); if (m) { const b = document.createElement('button'); b.dataset.k = 'pgr'; b.innerHTML = '<b>PDF เฉพาะบางหน้า / ช่วงหน้า…</b><small>เลือกหน้าที่กำลังดู หรือพิมพ์ช่วงหน้า เช่น 3-5, 8</small>'; b.onclick = e => { e.stopPropagation(); m.remove(); openPageExport(); }; m.insertBefore(b, m.querySelector('hr')); } return r; };
+    }
+  }
+  hook(); setTimeout(hook, 500); setTimeout(hook, 2000);
+  if (typeof scAdd === 'function') scAdd(IS_MAC ? '⌘⇧P' : 'Ctrl+Shift+P', 'ส่งออก PDF เฉพาะบางหน้า', 'ไฟล์', () => openPageExport(), e => (e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyP');
+})();
 
 /* ===================== ไฟล์ .npress: ดับเบิลคลิกในเครื่องแล้วเปิดใน Newton Press =====================
    ใช้ได้เมื่อติดตั้งแอปผ่าน Chrome / Edge (manifest มี file_handlers) · macOS ส่งไฟล์มาทาง launchQueue */
