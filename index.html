@@ -196,6 +196,9 @@ body.exam #flow,.fo.exam #flow,#npPrint.exam #flow{font-size:15.7px}
 .b-activity [contenteditable]:empty::before{color:#e8cdb8}
 .b-activity .aic{flex:0 0 auto}.b-activity>div{flex:1}
 .blk.inact{border-left:1.4px solid var(--brown);border-right:1.4px solid var(--brown);padding-left:10px;padding-right:10px}
+.blk.inact{border-radius:0}
+.blk.actbrk{border-bottom:1.4px solid var(--brown);border-radius:0 0 8px 8px;padding-bottom:6px}
+.blk.actcont::before{content:attr(data-actic) '  ' attr(data-acttl);position:absolute;left:-1.4px;right:-1.4px;top:-30px;height:27px;line-height:23px;background:var(--brown);color:#fff;font-weight:700;padding:2px 12px;border-radius:7px 7px 0 0;box-sizing:border-box;white-space:nowrap;overflow:hidden}
 .blk.actlast{border-bottom:1.4px solid var(--brown);border-radius:0 0 8px 8px;padding-bottom:6px;margin-bottom:8px}
 .b-actend{height:2px;position:relative}
 .b-actend span{position:absolute;right:0;top:-12px;font-size:11px;color:#c9b6a8;display:none}
@@ -1114,6 +1117,7 @@ function units() {
     const t = el.dataset.t, prevT = i ? els[i - 1].dataset.t : null;
     if (inSol && cur && !['solhead', 'part', 'pagebreak', 'soltitle', 'keytable'].includes(t)) { cur.els.push(el); if (t === 'answer') inSol = false; return; } // เฉลยหนึ่งข้อ (หัวแถบ → คำตอบ) อยู่หน้าเดียวกัน
     inSol = t === 'solhead';
+    if (cur && t === 'actend') { cur.els.push(el); return; }
     if (cur && t !== 'problem' && cur.kind === 'problem' && GROUP_MEMBERS.has(t)) cur.els.push(el);
     else if (cur && doc.settings.wdist && (((t === 'image' || t === 'table') && prevT === 'para') || (t === 'table' && prevT === 'image') || (t === 'question' && ['image', 'table'].includes(prevT)) || (['work', 'lines'].includes(t) && ['question', 'box', 'para'].includes(prevT)))) cur.els.push(el); // แบบฝึก: ข้อความนำ รูป ตาราง คำถาม และกรอบทด อยู่หน้าเดียวกัน
     else if (cur && HEADINGS.has(prevT) && t !== 'pagebreak') { cur.els.push(el); if (t === 'problem') cur.kind = 'problem'; }
@@ -1128,13 +1132,18 @@ function paginate() {
   if (typeof labelIndent === 'function') labelIndent();
   if (typeof tblUnsplit === 'function') tblUnsplit();
   $$('#flow .toc-r').forEach(r => { if (r.style.marginTop) r.style.marginTop = ''; });
-  $$('#flow > .blk').forEach(el => { el.style.marginTop = ''; { const bb = byId(el.dataset.id); if (typeof gapDraw === 'function') gapDraw(el, bb); else el.style.paddingTop = bb && bb.sp ? (+bb.sp * 3.7795) + 'px' : ''; } const w = $('.b-work', el); if (w) { const b = byId(el.dataset.id); w.style.height = (b.h || 40) * 3.7795 + 'px'; } });
+  $$('#flow > .blk').forEach(el => { el.style.marginTop = ''; el.classList.remove('actcont', 'actbrk'); { const bb = byId(el.dataset.id); if (typeof gapDraw === 'function') gapDraw(el, bb); else el.style.paddingTop = bb && bb.sp ? (+bb.sp * 3.7795) + 'px' : ''; } const w = $('.b-work', el); if (w) { const b = byId(el.dataset.id); w.style.height = (b.h || 40) * 3.7795 + 'px'; } });
   const P = PAGE_H + PAGE_G, ROOM = PAGE_H - TOP - BOT;
   // ข้อที่ยาวเกินหนึ่งหน้า: แยกเป็นบล็อกย่อยให้ขึ้นหน้าใหม่ทีละบล็อก
   const U = [];
   units().forEach(u => {
     const f = u.els[0], l = u.els[u.els.length - 1];
-    if (u.els.length > 1 && l.offsetTop + l.offsetHeight - f.offsetTop > ROOM) u.els.forEach((el, k) => U.push({ els: [el], kind: el.dataset.t, forced: k === 0 && u.forced }));
+    if (u.els.length > 1 && l.offsetTop + l.offsetHeight - f.offsetTop > ROOM) { // ยาวเกินหน้า: แยกเป็นกลุ่มย่อย แต่หัวข้อยังติดกับเนื้อหาถัดไป คำถามติดกับกรอบทด
+      const glue = (a, b) => HEADINGS.has(a) || b === 'actend' || (['work', 'lines', 'answer', 'choices'].includes(b) && ['question', 'given', 'box', 'choices'].includes(a)) || (['image', 'table'].includes(b) && a === 'para') || (b === 'question' && ['image', 'table', 'given'].includes(a));
+      let sub = null; const subs = [];
+      u.els.forEach((el, k) => { const t = el.dataset.t, pt = k ? u.els[k - 1].dataset.t : null; if (sub && glue(pt, t)) sub.push(el); else { sub = [el]; subs.push(sub); } });
+      subs.forEach((g, k) => { const gh = g[g.length - 1].offsetTop + g[g.length - 1].offsetHeight - g[0].offsetTop; if (g.length > 1 && gh > ROOM) g.forEach((el, j) => U.push({ els: [el], kind: el.dataset.t, forced: k === 0 && j === 0 && u.forced })); else U.push({ els: g, kind: g[0].dataset.t, forced: k === 0 && u.forced }); });
+    }
     else U.push(u);
   });
   // กรอบทดแบบ “N ข้อต่อหน้า”: ปรับความสูงกรอบให้ทั้งข้อสูง ROOM/N พอดี (ข้อที่โจทย์ยาว กรอบจะเล็กลงเอง)
@@ -1169,6 +1178,11 @@ function paginate() {
           ws.forEach((x, i) => { x.style.height = (base[i] + Math.min(base[i], add * base[i] / sum)) + 'px'; }); t = first.offsetTop;
         } else if (add > 6) { w.style.height = (w.offsetHeight + add) + 'px'; t = first.offsetTop; }
       }
+    }
+    if (target !== null && target > re && first.classList.contains('inact')) { // กรอบกิจกรรม/ฝึกทันทีต่อหน้าใหม่: ปิดกรอบหน้าเดิม และใส่หัวกรอบซ้ำ (ต่อ)
+      let h = first.previousElementSibling; while (h && !h.classList.contains('acthead')) h = h.previousElementSibling;
+      if (h) { first.dataset.acttl = (($('.b-activity', h) || h).querySelector('[data-f=html]') || h).textContent.replace(/\s+/g, ' ').trim() + ' (ต่อ)'; first.dataset.actic = ((($('.aic', h) || {}).textContent) || ''); first.classList.add('actcont'); target += 32; }
+      const pl = prev && prev.els[prev.els.length - 1]; if (pl && pl.classList.contains('inact')) pl.classList.add('actbrk');
     }
     if (target !== null) first.style.marginTop = Math.max(0, target - t) + 'px';
     if (typeof tblSplit === 'function') u.els.forEach(el => { if (el.dataset.t === 'table') tblSplit(el); });
@@ -8224,7 +8238,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794706865';
+const NP_BUILD = '1794708229';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -12766,7 +12780,7 @@ ${R}.b-box:is(.k-note,.k-remark,.k-tip,.k-hist,.k-obj,.k-prior,.k-exam,.k-app,.k
 ${R}.b-box.k-inst{background:${M(4)};border:1px dashed ${M(45)}}
 ${R}.b-box.k-inst .bt{color:var(--brown)}
 ${R}.b-box.k-recap{border-color:var(--brown)}
-${R}.mx:has(.mfrac,.mop.op-limits){display:inline-block;margin:3px 0}
+${R}.mx:not([data-disp]):has(.mfrac,.mop.op-limits){display:inline-block;margin:3px 0}
 `;
   document.head.appendChild(s);
 })();
@@ -12783,6 +12797,11 @@ ${R}.mx:has(.mfrac,.mop.op-limits){display:inline-block;margin:3px 0}
     return r;
   };
 })();
+
+// รูปโหลดเสร็จทีหลัง: จัดหน้าใหม่ (เดิมจัดหน้าก่อนรูปมีความสูง ทำให้ตัดหน้าผิด)
+document.addEventListener('load', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.closest && t.closest('#flow')) schedulePaginate(); }, true);
+// กล่องที่มีพื้นที่เขียนในกรอบ (b.minh มม.)
+(function () { const _fb = fillBlock; fillBlock = function (el, b) { _fb(el, b); if (b && b.t === 'box') { const bx = $('.b-box', el); if (bx) bx.style.minHeight = b.minh ? (b.minh + 'mm') : ''; } }; })();
 </script>
 </body>
 </html>
