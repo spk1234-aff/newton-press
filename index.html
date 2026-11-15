@@ -8257,7 +8257,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794748884';
+const NP_BUILD = '1794753127';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -13135,6 +13135,138 @@ td .skl,th .skl{color:var(--dark)}
     if (!w) { w = document.createElement('label'); w.id = 'sWbh'; w.style.cssText = 'display:flex;gap:6px;align-items:center;margin-top:6px'; w.innerHTML = '<input type="checkbox"> หัวข้อตัวใหญ่แบบแบบฝึกทักษะ (หัวข้อเป็นแถบสี หัวข้อย่อยมีเส้นใต้)'; const ref = $('#sBxth') || box; ref.parentNode.insertBefore(w, ref.nextSibling); $('input', w).onchange = e => { doc.settings.wbh = e.target.checked || undefined; applySettings(); changed(true); }; }
     $('input', w).checked = !!doc.settings.wbh; return r;
   };
+})();
+
+/* ===================== แบบฝึกทักษะ "แบบต้นฉบับ" (settings.wbo = true) =====================
+   เปิดด้วย doc.settings.wbo — เอกสารอื่นไม่ได้รับผลใด ๆ
+   กล่อง:  key = บทสรุป (ไล่สี + แถบซ้าย) · def/thmf = แถบซ้าย · caution2 = กรอบเหลือง · write = การ์ดเขียนด้วยคำพูดของตนเอง
+           verify = ✓ ภาพยืนยันทฤษฎีบท · tryp = ลองพิสูจน์ด้วยตนเอง (ใช้ในกรอบทฤษฎีบท)
+   กรอบ (บล็อก activity + var):  ex = ตัวอย่าง · thm = ทฤษฎีบท (แถบซ้ายยาวตลอด) · tf = จริงหรือไม่ · err = ตามหาที่ผิด · sumf = สรุปสูตรสำคัญ
+   บล็อกใหม่:  pill = ป้าย "ฝึกทันที" · tf = ข้อความจริง/ไม่จริง + เพราะ · frow = แถวสูตรมีเลขในวงกลม
+   ป้ายข้อ (problem + pk):  ft = (1) ต่อบรรทัดเดียวกับคำถาม · more = ฝึกเพิ่ม 14.1.1 */
+(function () {
+  const on = () => !!(doc && doc.settings && doc.settings.wbo);
+  const st = document.createElement('style');
+  const LP = '#a77aa9', LB = '#e2d3e3';
+  st.textContent = `
+:root body.wbo #flow .k-key{background:linear-gradient(180deg,#f3e2f3,#f9eff9 55%,#fdf8fd)!important;border:1px solid ${LP}!important;border-left:9px solid var(--brown)!important;border-radius:8px!important;padding:9px 14px 9px 18px!important;margin:8px 0}
+:root body.wbo #flow .k-key .bt{color:var(--dark);font-size:1.13em;margin-bottom:5px}
+:root body.wbo #flow .k-key .bt::before{content:'';display:inline-block;width:1em;height:1em;margin-right:7px;vertical-align:-.12em;background:var(--dark);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.2' d='M8 12a4 4 0 1 1 0 .01M12 12h9M17.5 12v4M21 12v3'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.2' d='M8 12a4 4 0 1 1 0 .01M12 12h9M17.5 12v4M21 12v3'/%3E%3C/svg%3E") center/contain no-repeat}
+:root body.wbo #flow .k-def{background:#faf5fb!important;border:1px solid ${LP}!important;border-left:6px solid var(--brown)!important;border-radius:6px!important;padding:5px 14px 7px 14px!important}
+:root body.wbo #flow .k-def .bt{background:none!important;color:var(--dark)!important;padding:0!important;margin:0 0 2px!important;border-radius:0!important}
+:root body.wbo #flow .k-thmf{background:#fdf8ea;border:1px solid ${LB};border-left:6px solid ${LP};border-radius:6px;padding:5px 14px 7px 12px}
+:root body.wbo #flow .k-thmf .bt{color:var(--brown)}
+:root body.wbo #flow .k-caution2{background:#fff8e1;border:1px solid #e6c65c;border-radius:7px;padding:6px 12px}
+:root body.wbo #flow .k-caution2 .bt{color:#a8760a}
+:root body.wbo #flow .k-write{border:1.2px solid ${LP};border-radius:8px;padding:7px 12px}
+:root body.wbo #flow .k-write .bt{color:var(--brown);font-weight:400}
+:root body.wbo #flow .k-verify,:root body.wbo #flow .k-tryp{background:none;border:0;border-radius:0;padding:3px 0 2px;margin:2px 0}
+:root body.wbo #flow .k-verify .bt,:root body.wbo #flow .k-tryp .bt{display:inline;margin-right:7px}
+:root body.wbo #flow .k-verify .bt{color:#2f4b7c;font-style:italic}:root body.wbo #flow .k-verify .bt::before{content:'✓ ';font-style:normal}
+:root body.wbo #flow .k-tryp .bt{color:var(--brown)}
+:root body.wbo #flow .k-verify [data-f=html],:root body.wbo #flow .k-tryp [data-f=html]{display:inline}
+/* กรอบแบบต่าง ๆ */
+body.wbo .blk[data-var=ex] .b-activity{background:#fff;color:var(--dark);border:1px solid ${LP};border-bottom:0;border-radius:8px 8px 0 0;padding:5px 12px 0}
+body.wbo .blk[data-var=ex] .b-activity .aic{display:none}
+body.wbo .blk.inact[data-av=ex]{border-left:1px solid ${LP};border-right:1px solid ${LP}}
+body.wbo .blk.actlast[data-av=ex],body.wbo .blk.actbrk[data-av=ex]{border-bottom:1px solid ${LP}}
+body.wbo .blk[data-var=thm] .b-activity{background:#fdf8ea;color:var(--brown);border:1px solid ${LB};border-left:6px solid ${LP};border-bottom:0;border-radius:6px 6px 0 0;padding:5px 12px 0}
+body.wbo .blk[data-var=thm] .b-activity .aic{display:none}
+body.wbo .blk.inact[data-av=thm]{border-left:6px solid ${LP};border-right:1px solid ${LB};padding-left:12px}
+body.wbo .blk.actlast[data-av=thm],body.wbo .blk.actbrk[data-av=thm]{border-bottom:1px solid ${LB};border-radius:0 0 6px 6px}
+body.wbo .blk.inact[data-av=thm].thmst{background:#fdf8ea;border-bottom:1px solid ${LB}}
+body.wbo .blk[data-var=tf] .b-activity,body.wbo .blk[data-var=err] .b-activity{background:#fff;color:var(--dark);border:1.2px solid var(--dark);border-bottom:0;padding-top:6px}
+body.wbo .blk.inact[data-av=tf]{border-color:var(--dark);border-width:0 1.2px}
+body.wbo .blk.actlast[data-av=tf],body.wbo .blk.actbrk[data-av=tf]{border-bottom:1.2px solid var(--dark)}
+body.wbo .blk[data-var=err] .b-activity{border-color:#c0392b;color:#c0392b}
+body.wbo .blk.inact[data-av=err]{border-color:#c0392b;border-width:0 1.2px}
+body.wbo .blk.actlast[data-av=err],body.wbo .blk.actbrk[data-av=err]{border-bottom:1.2px solid #c0392b}
+body.wbo .blk[data-var=sumf] .b-activity{background:var(--dark)}
+body.wbo .blk[data-var=sumf] .b-activity .aic{display:none}
+body.wbo .blk.inact[data-av=sumf]{border-color:${LP}}
+body.wbo .blk.actlast[data-av=sumf]{border-bottom-color:${LP}}
+body.wbo .blk.actcont[data-av=ex]::before,body.wbo .blk.actcont[data-av=wr]::before{background:#fff;color:var(--dark);border:1px solid ${LP};border-bottom:0}
+body.wbo .blk.actcont[data-av=thm]::before{display:none}
+body.wbo .blk[data-var=wr] .b-activity .aic{display:none}
+body.wbo .blk[data-var=wr] .b-activity{background:#fff;color:var(--brown);font-weight:400;border:1.2px solid ${LP};border-bottom:0;border-radius:8px 8px 0 0;padding:5px 12px 0}
+body.wbo .blk.inact[data-av=wr]{border-left:1.2px solid ${LP};border-right:1.2px solid ${LP}}
+body.wbo .blk.actlast[data-av=wr],body.wbo .blk.actbrk[data-av=wr]{border-bottom:1.2px solid ${LP}}
+/* ป้ายฝึกทันที */
+.b-pill{display:inline-flex;align-items:center;gap:6px;background:${LP};color:#fff;font-weight:700;border-radius:999px;padding:1px 14px 2px 10px;margin:8px 0 2px}
+.b-pill .pi{font-weight:400}
+/* แถวจริง/ไม่จริง */
+.b-tf{border-top:1px dashed var(--sep);padding:5px 0 4px}
+.b-tf .ts{display:flex;gap:7px}.b-tf .ts::before{content:counter(tfn) '.';counter-increment:tfn}
+.b-tf .tr{display:flex;align-items:center;gap:14px;margin:3px 0 0 18px;color:#555}
+.b-tf .tr b{color:var(--dark)}.b-tf .tr i{flex:1;height:2.1em;border:1px dashed #b9b0bd;border-radius:6px}
+.blk.acthead[data-var=tf]{counter-reset:tfn}
+/* แถวสูตร */
+.b-frow{display:flex;gap:10px;align-items:flex-start;border-top:1px dashed var(--sep);padding:5px 0 4px}
+.b-frow::before{content:counter(frn);counter-increment:frn;flex:0 0 1.35em;height:1.35em;border-radius:50%;background:${LP};color:#fff;font-size:.82em;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.25em}
+.b-frow .fn{color:#666;font-size:.94em}
+.blk.acthead[data-var=sumf]{counter-reset:frn}
+/* ป้ายข้อ */
+body.wbo .blk[data-pk=ft] .b-problem .pl{font-weight:400;color:#555}
+body.wbo .blk[data-pk=more] .b-problem .pl{font-weight:400;color:${LP}}
+body.wbo .blk[data-pk=ft] .b-problem,body.wbo .blk[data-pk=more] .b-problem{margin-bottom:-1.52em}
+body.wbo .blk[data-pk=more]+.blk .b-given{text-indent:var(--pkw,4.6em)}
+body.wbo .blk[data-pk=more]+.blk .b-question{text-indent:var(--pkq,2.7em)}
+/* รูปด้านขวาของพื้นที่ทด: figure ที่มี side = 'r' + บล็อกถัดไป */
+body.wbo .blk[data-side=r]{height:0!important;overflow:visible;position:relative;z-index:2}
+body.wbo .blk[data-side=r] .b-figure{position:absolute;right:2px;top:8px;width:var(--sw,34%);margin:0}
+body.wbo .blk[data-side=r] .figcap{display:none}
+body.wbo .blk.sidew .b-work{margin-right:calc(var(--sw,34%) + 14px)}
+/* ตารางคู่ในกิจกรรม */
+.wbo2{display:flex;justify-content:space-around;align-items:flex-start;margin:4px 0}
+.wbo2 table{border-collapse:collapse}.wbo2 td,.wbo2 th{border:1px solid ${LP};padding:2px 14px;text-align:center;min-width:2.4em;height:1.55em}
+.wbo2 th{background:#f6e7f6;font-weight:400}.wbo2 .cap{text-align:center;margin-bottom:3px}
+`;
+  document.head.appendChild(st);
+
+  Object.assign(BOXES, { verify: 'ภาพยืนยันทฤษฎีบท', tryp: 'ลองพิสูจน์ด้วยตนเอง' });
+  Object.assign(TYPES, { pill: 'ป้ายฝึกทันที', tf: 'จริงหรือไม่ เพราะอะไร', frow: 'แถวสูตร (เลขในวงกลม)' });
+  const _nb = extNewBlock; extNewBlock = function (b) { _nb(b); if (b.t === 'pill') b.html = 'ฝึกทันที'; if (b.t === 'tf') b.html = ''; if (b.t === 'frow') { b.html = ''; b.note = ''; } };
+  const _bh = extBlockHTML; extBlockHTML = function (b) {
+    const r = _bh(b); if (r) return r;
+    if (b.t === 'pill') return `<div class="b-pill"><span class="pi">◎</span><div contenteditable="true" data-f="html" data-ph="ฝึกทันที"></div></div>`;
+    if (b.t === 'tf') return `<div class="b-tf"><div class="ts"><div contenteditable="true" data-f="html" data-ph="ข้อความ..." style="flex:1"></div></div><div class="tr"><span>○ จริง</span><span>○ ไม่จริง</span><b>เพราะ</b><i></i></div></div>`;
+    if (b.t === 'frow') return `<div class="b-frow"><div style="flex:1"><div contenteditable="true" data-f="html" data-ph="สูตร..."></div><div class="fn" contenteditable="true" data-f="note" data-ph="คำอธิบาย"></div></div></div>`;
+    return '';
+  };
+  // ติดป้ายชนิดกรอบ/ป้ายข้อบนบล็อก (ใช้กับ CSS)
+  const _ma = markActivities;
+  markActivities = function () {
+    const r = _ma.apply(this, arguments);
+    if (!on()) return r;
+    let av = '';
+    $$('#flow > .blk').forEach(el => {
+      const b = byId(el.dataset.id); if (!b) return;
+      if (el.classList.contains('acthead')) { av = b.var || ''; if (av) el.dataset.var = av; else delete el.dataset.var; }
+      if (el.classList.contains('inact') && av) el.dataset.av = av; else delete el.dataset.av;
+      el.classList.toggle('thmst', !!b.thmst);
+      el.classList.remove('sidew');
+      if (b.t === 'figure' && b.side) { el.dataset.side = b.side; el.style.setProperty('--sw', b.sw || '34%'); const nx = el.nextElementSibling; if (nx) { nx._sw = b.sw || '34%'; } } else delete el.dataset.side;
+      const pv = el.previousElementSibling; if (pv && pv.dataset.side) { el.classList.add('sidew'); el.style.setProperty('--sw', pv.style.getPropertyValue('--sw')); }
+      if (b.t === 'problem' && b.pk) { el.dataset.pk = b.pk; if (b.pkw) el.style.setProperty('--pkw', b.pkw); } else delete el.dataset.pk;
+    });
+    return r;
+  };
+  // ป้ายฝึกทันทีอยู่หน้าเดียวกับข้อแรก · กรอบตัวอย่าง/เขียนด้วยคำพูดของตนเอง ไม่ถูกแบ่งข้ามหน้า
+  try { HEADINGS.add('pill'); } catch (e) { }
+  const _un = units;
+  units = function () {
+    const out = _un.apply(this, arguments); if (!on()) return out;
+    const res = []; let open = null;
+    out.forEach(u => {
+      if (open) { open.els.push(...u.els); if (u.els.some(el => el.dataset.t === 'actend')) open = null; return; }
+      res.push(u);
+      const h = u.els.find(el => el.dataset.t === 'activity'); const b = h && byId(h.dataset.id);
+      if (b && (b.var === 'ex' || b.var === 'wr') && !u.els.some(el => el.dataset.t === 'actend')) open = u;
+    });
+    return res;
+  };
+  const _as = applySettings;
+  applySettings = function () { const r = _as.apply(this, arguments); document.body.classList.toggle('wbo', on()); return r; };
 })();
 
 /* ===================== ตัวแก้รูปแบบคลิก (ไม่ต้องพิมพ์โค้ด) สำหรับรูปสไตล์แบบฝึก =====================
