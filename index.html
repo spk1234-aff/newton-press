@@ -8257,7 +8257,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794753127';
+const NP_BUILD = '1794755589';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -12948,7 +12948,7 @@ document.addEventListener('load', e => { const t = e.target; if (t && t.tagName 
           top += `<circle cx="${f1(q[0])}" cy="${f1(q[1])}" r="${r}" fill="${col(o.fill, '#fff')}" stroke="${cc}" stroke-width="2"/>`;
           OBD.push([q[0], q[1], r]); if (rest) top += txt(q[0], q[1], rest, { fs, c: col(o.tc, cc) });
         } else if (k === 'text' || k === 'ข้อความ') {
-          if (!P.length) return; const q = S(P[0]); LAB.push({ kind: 'text', q, str: rest, fs, c: c || WC.bk, a: o.anchor || 'middle', b: !!o.flags.bold, LI });
+          if (!P.length) return; const q = S(P[0]); LAB.push({ kind: 'text', q, str: rest, fs, c: c || WC.bk, a: o.anchor || 'middle', b: !!o.flags.bold, pin: !!o.flags.pin, LI });
         } else if (k === 'person' || k === 'คน') {
           if (!P.length) return; const q = S(P[0]); const z = (o.size ? num(o.size) : 30) / 24; OBB.push([q[0] - 12 * z, q[1] - 12 * z, q[0] + 12 * z, q[1] + 12 * z]);
           top += `<g transform="translate(${f1(q[0] - 12 * z)} ${f1(q[1] - 12 * z)}) scale(${z.toFixed(3)})"><circle cx="12" cy="6.5" r="4.6" fill="${c || WC.rd}"/><path d="M4 23v-5.5c0-3.6 3.4-6.3 8-6.3s8 2.7 8 6.3V23z" fill="${c || WC.rd}"/></g>`;
@@ -12968,10 +12968,11 @@ document.addEventListener('load', e => { const t = e.target; if (t && t.tagName 
       let cands = [];
       if (L.kind === 'pt') { const order = [L.pos, 'ne', 'nw', 'se', 'sw', 'n', 's', 'e', 'w'].filter((v, i, a) => a.indexOf(v) === i);
         [1, 1.7].forEach(m => order.forEach(ps => { const po = posOff[ps] || posOff.ne; const dd = (L.r + 7) * m; const a = po[0] > .1 ? 'start' : po[0] < -.1 ? 'end' : 'middle'; cands.push({ x: L.q[0] + po[0] * dd, y: L.q[1] + po[1] * dd * (po[0] ? 1 : 1.25), a }); })); }
+      else if (L.pin) cands.push({ x: L.q[0], y: L.q[1], a: L.a });   // pin = วางตรงพิกัดที่กำหนดเสมอ ไม่ขยับหลบ
       else { const k = L.fs * .55; [[0, 0], [0, -1], [0, 1], [1, 0], [-1, 0], [1, -1], [-1, -1], [1, 1], [-1, 1], [0, -2], [0, 2], [2, 0], [-2, 0]].forEach(([i, j]) => cands.push({ x: L.q[0] + i * k * 1.4, y: L.q[1] + j * k, a: L.a })); }
       let best = null, bn = 1e9;
       for (const c of cands) { const B = bx(c.x, c.y, L.str, L.fs, c.a); const n = hits(B); if (n < bn) { bn = n; best = { c, B }; } if (n === 0) break; }
-      if (bn > 0) ov.push(L.LI);
+      if (bn > 0 && !L.pin) ov.push(L.LI);
       OBB.push(best.B); top += txt(best.c.x, best.c.y, L.str, { fs: L.fs, c: L.c, a: best.c.a, b: L.b });
     });
     window.__wbOv = ov;
@@ -13205,7 +13206,10 @@ body.wbo .blk.actlast[data-av=wr],body.wbo .blk.actbrk[data-av=wr]{border-bottom
 .b-frow::before{content:counter(frn);counter-increment:frn;flex:0 0 1.35em;height:1.35em;border-radius:50%;background:${LP};color:#fff;font-size:.82em;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:.25em}
 .b-frow .fn{color:#666;font-size:.94em}
 .blk.acthead[data-var=sumf]{counter-reset:frn}
-/* ป้ายข้อ */
+/* ป้ายข้อ: ไม่มีเส้นประคั่นระหว่างข้อ */
+body.wbo .b-problem{border-top:0;padding-top:2px;margin-top:9px}
+body.wbo .b-tf{border-top:0}
+body.wbo .b-tf+.b-tf{margin-top:2px}
 body.wbo .blk[data-pk=ft] .b-problem .pl{font-weight:400;color:#555}
 body.wbo .blk[data-pk=more] .b-problem .pl{font-weight:400;color:${LP}}
 body.wbo .blk[data-pk=ft] .b-problem,body.wbo .blk[data-pk=more] .b-problem{margin-bottom:-1.52em}
@@ -13216,6 +13220,7 @@ body.wbo .blk[data-side=r]{height:0!important;overflow:visible;position:relative
 body.wbo .blk[data-side=r] .b-figure{position:absolute;right:2px;top:8px;width:var(--sw,34%);margin:0}
 body.wbo .blk[data-side=r] .figcap{display:none}
 body.wbo .blk.sidew .b-work{margin-right:calc(var(--sw,34%) + 14px)}
+body.wbo .blk.sidew .wbo2{margin-right:calc(var(--sw,34%) + 14px)}
 /* ตารางคู่ในกิจกรรม */
 .wbo2{display:flex;justify-content:space-around;align-items:flex-start;margin:4px 0}
 .wbo2 table{border-collapse:collapse}.wbo2 td,.wbo2 th{border:1px solid ${LP};padding:2px 14px;text-align:center;min-width:2.4em;height:1.55em}
@@ -13223,7 +13228,7 @@ body.wbo .blk.sidew .b-work{margin-right:calc(var(--sw,34%) + 14px)}
 `;
   document.head.appendChild(st);
 
-  Object.assign(BOXES, { verify: 'ภาพยืนยันทฤษฎีบท', tryp: 'ลองพิสูจน์ด้วยตนเอง' });
+  Object.assign(BOXES, { verify: 'ทำความเข้าใจ', tryp: 'ลองพิสูจน์ด้วยตนเอง' });
   Object.assign(TYPES, { pill: 'ป้ายฝึกทันที', tf: 'จริงหรือไม่ เพราะอะไร', frow: 'แถวสูตร (เลขในวงกลม)' });
   const _nb = extNewBlock; extNewBlock = function (b) { _nb(b); if (b.t === 'pill') b.html = 'ฝึกทันที'; if (b.t === 'tf') b.html = ''; if (b.t === 'frow') { b.html = ''; b.note = ''; } };
   const _bh = extBlockHTML; extBlockHTML = function (b) {
@@ -13256,14 +13261,51 @@ body.wbo .blk.sidew .b-work{margin-right:calc(var(--sw,34%) + 14px)}
   const _un = units;
   units = function () {
     const out = _un.apply(this, arguments); if (!on()) return out;
-    const res = []; let open = null;
-    out.forEach(u => {
-      if (open) { open.els.push(...u.els); if (u.els.some(el => el.dataset.t === 'actend')) open = null; return; }
-      res.push(u);
-      const h = u.els.find(el => el.dataset.t === 'activity'); const b = h && byId(h.dataset.id);
-      if (b && (b.var === 'ex' || b.var === 'wr') && !u.els.some(el => el.dataset.t === 'actend')) open = u;
-    });
-    return res;
+    // กรอบ (ตัวอย่าง ทฤษฎีบท จริงหรือไม่ ตามหาที่ผิด สรุปสูตร เขียนด้วยคำพูดของตนเอง) อยู่หน้าเดียวทั้งกรอบ · กิจกรรมอยู่หน้าเดียวถ้าสูงไม่เกินหนึ่งหน้า
+    const PH = PAGE_H - TOP - BOT, res = []; let i = 0;
+    while (i < out.length) {
+      const u = out[i]; const h = u.els.find(el => el.dataset.t === 'activity'); const b = h && byId(h.dataset.id);
+      if (b && !u.els.some(el => el.dataset.t === 'actend')) {
+        let j = i; const els = [...u.els];
+        while (j + 1 < out.length) { j++; els.push(...out[j].els); if (out[j].els.some(el => el.dataset.t === 'actend')) break; }
+        const tot = els.reduce((a, el) => a + el.offsetHeight, 0);
+        if (b.var || tot <= PH * 0.97) { if (tot <= PH) { u.els = els; res.push(u); i = j + 1; continue; } }
+      }
+      res.push(u); i++;
+    }
+    // รูปด้านขวา (สูง 0) ต้องอยู่หน่วยเดียวกับบล็อกก่อนหน้าและบล็อกถัดไป
+    const mg = [];
+    res.forEach(u => { const pv = mg[mg.length - 1]; if (pv && !u.forced && (u.els[0].dataset.side || pv.els[pv.els.length - 1].dataset.side)) pv.els.push(...u.els); else mg.push(u); });
+    return mg;
+  };
+  // ที่ว่างท้ายหน้าที่เหลือ (หน้าที่ไม่มีกล่องให้ขยาย): กระจายเป็นระยะห่างระหว่างกรอบในหน้านั้น
+  const _pgo = paginate;
+  paginate = function () {
+    if (on()) $$('#flow > .blk[data-side]').forEach(el => { const nx = el.nextElementSibling, f = $('.b-figure', el); if (nx) nx.style.minHeight = (f && !$('.b-work', nx)) ? (f.offsetHeight + 14) + 'px' : ''; });
+    const r = _pgo.apply(this, arguments);
+    if (!on() || document.getElementById('npPrint')) return r;
+    try {
+      const P = PAGE_H + PAGE_G, els = $$('#flow > .blk'), pages = {};
+      els.forEach(el => { if (!el.offsetHeight && !el.dataset.side) return; const p = Math.floor((el.offsetTop + 3) / P); (pages[p] = pages[p] || []).push(el); });
+      const keys = Object.keys(pages).map(Number).sort((a, b) => a - b);
+      keys.forEach((p, ki) => {
+        const L = pages[p], lastPg = ki === keys.length - 1, nx = lastPg ? L[0] : pages[keys[ki + 1]][0];
+        const bot = () => Math.max(...L.map(el => el.offsetTop + el.offsetHeight));
+        const O0 = nx.offsetTop, fix = () => { if (lastPg) return; for (let q = 0; q < 3; q++) { const d = nx.offsetTop - O0; if (Math.abs(d) < 0.5) break; nx.style.marginTop = Math.max(0, (parseFloat(getComputedStyle(nx).marginTop) || 0) - d) + 'px'; } };
+        let left = p * P + PAGE_H - BOT - bot() - 3; if (left < 10) return;
+        // 1) ขยายกรอบทดในหน้านั้นเพิ่ม (รวมแล้วไม่เกิน 3 เท่าของขนาดที่ตั้งไว้)
+        const ws = []; L.forEach(el => { const w = $('.b-work', el), bb = byId(el.dataset.id); if (w && bb) ws.push([w, (bb.h || 40) * 3.7795]); });
+        if (ws.length) { const room = ws.map(([w, h0]) => Math.max(0, h0 * 2.5 - w.offsetHeight)), tot = room.reduce((x, y) => x + y, 0);
+          if (tot > 0) { const o0 = nx.offsetTop, use = Math.min(left, tot); ws.forEach(([w], i) => { w.style.height = (w.offsetHeight + use * room[i] / tot) + 'px'; }); fix(); left = p * P + PAGE_H - BOT - bot() - 3; } }
+        if (left < 10 || lastPg) return;
+        // 2) ที่เหลือเฉลี่ยเป็นระยะห่างระหว่างกรอบ/ข้อ
+        const cand = L.filter((el, k) => { if (!k || el.classList.contains('inact')) return false; const t = el.dataset.t, pt = el.previousElementSibling ? el.previousElementSibling.dataset.t : ''; if (['pill', 'skull', 'wbban', 'section', 'subsection'].includes(pt)) return false; return ['activity', 'box', 'problem', 'pill', 'wbban', 'skull', 'reflect', 'para', 'image'].includes(t); });
+        if (!cand.length) return; const add = Math.min(left / cand.length, 34), o0 = nx.offsetTop;
+        cand.forEach(el => { el.style.marginTop = ((parseFloat(getComputedStyle(el).marginTop) || 0) + add) + 'px'; });
+        fix();
+      });
+    } catch (e) { console.error('wbo justify', e); }
+    return r;
   };
   const _as = applySettings;
   applySettings = function () { const r = _as.apply(this, arguments); document.body.classList.toggle('wbo', on()); return r; };
