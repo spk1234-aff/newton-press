@@ -8267,7 +8267,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794766323';
+const NP_BUILD = '1794783075';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -12878,7 +12878,7 @@ document.addEventListener('load', e => { const t = e.target; if (t && t.tagName 
     const cid = 'wbc' + Math.random().toString(36).slice(2, 8);
     let bg = '', s = '', top = '';
     // ---------- กันตัวอักษรทับ: เก็บสิ่งกีดขวาง (เส้น จุด ข้อความตายตัว) แล้ววางป้ายในที่ว่าง ----------
-    const OBP = [], OBB = [], OBD = [], LAB = [];
+    const OBP = [], OBB = [], OBD = [], LAB = [], TICKS = [], LBX = [];
     const tw = (str, fs) => { const t = String(str).replace(/[\^_{}$]/g, ''); let w = 0; for (const ch of t) { if (/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/.test(ch)) continue; w += /[\u0E00-\u0E7F]/.test(ch) ? .5 : /[A-Za-z]/.test(ch) ? .56 : /\s/.test(ch) ? .3 : .52; } return w * fs; };
     const bx = (x, y, str, fs, a) => { const w = tw(str, fs), h = fs * (/[\u0E00-\u0E7F]/.test(str) ? 1.3 : 1.1); const L = a === 'start' ? x : a === 'end' ? x - w : x - w / 2; return [L, y - h / 2, L + w, y + h / 2]; };
     const addSeg = (a, b) => { const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 4)); for (let i = 0; i <= n; i++) OBP.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); };
@@ -12898,9 +12898,14 @@ document.addEventListener('load', e => { const t = e.target; if (t && t.tagName 
       if (brk) { const yy = Y(ax.ya) - 22, xx = X(ox); bg += `<path d="M${f1(xx)} ${f1(yy + 12)}l-6 -3 12 -6 -12 -6 6 -3" fill="#fff" stroke="${AC}" stroke-width="1.5"/>`; }
       const tf = FS * 1.05;
       addSeg([X(ax.xa) - 4, Y(oy)], [X(ax.xb) + ex, Y(oy)]); addSeg([X(ox), Y(ax.ya)], [X(ox), Y(ax.yb) - ex]);
-      TK(p.tx, ax.xa, ax.xb).forEach(v => { if (Math.abs(v - ox) < 1e-9) return; bg += `<path d="M${f1(X(v))} ${f1(Y(oy) - 4)}V${f1(Y(oy) + 4)}" stroke="${AC}" stroke-width="1.3"/>` + svgMath(f1(X(v)), f1(Y(oy) + tf + 6), fmtN(v), { fs: tf, c: '#222' }); OBB.push(bx(X(v), Y(oy) + tf * .66 + 6, fmtN(v), tf, 'middle')); });
-      TK(p.ty, ax.ya, ax.yb).forEach(v => { if (Math.abs(v - oy) < 1e-9) return; bg += `<path d="M${f1(X(ox) - 4)} ${f1(Y(v))}H${f1(X(ox) + 4)}" stroke="${AC}" stroke-width="1.3"/>` + svgMath(f1(X(ox) - 8), f1(Y(v) + tf * .35), fmtN(v), { fs: tf, a: 'end', c: '#222' }); OBB.push(bx(X(ox) - 8, Y(v), fmtN(v), tf, 'end')); });
-      if (p.o !== 'no') { bg += svgMath(f1(X(ox) - 7), f1(Y(oy) + tf + 6), '0', { fs: tf, a: 'end', c: '#222' }); OBB.push(bx(X(ox) - 7, Y(oy) + tf * .66 + 6, '0', tf, 'end')); }
+      // ตัวเลขบนแกน: เก็บไว้ก่อน ยังไม่วาด — ตัวที่ชนกันเอง (เช่น −1 กับ 0 หรือเลขแกน y ที่ลงมาทับเลขแกน x) หรือถูกจุด/ป้ายทับ จะไม่วาด
+      const tkHit = (A, B) => A[0] < B[2] - .5 && A[2] > B[0] + .5 && A[1] < B[3] - .5 && A[3] > B[1] + .5;
+      const tkAdd = (svg, B) => { if (TICKS.some(t => tkHit(t.B, B))) return; TICKS.push({ svg, B }); OBB.push(B); };
+      if (p.o !== 'no') tkAdd(svgMath(f1(X(ox) - 7), f1(Y(oy) + tf + 6), '0', { fs: tf, a: 'end', c: '#222' }), bx(X(ox) - 7, Y(oy) + tf * .66 + 6, '0', tf, 'end'));
+      const byAbs = (u, w) => Math.abs(w) - Math.abs(u);   // เก็บตัวที่ไกลจุดกำเนิดก่อน ตัวที่ชิดจุดกำเนิดแล้วชนจึงถูกตัด
+      TK(p.tx, ax.xa, ax.xb).filter(v => Math.abs(v - ox) >= 1e-9).map(v => { bg += `<path d="M${f1(X(v))} ${f1(Y(oy) - 4)}V${f1(Y(oy) + 4)}" stroke="${AC}" stroke-width="1.3"/>`; return v; }).sort(byAbs).forEach(v => tkAdd(svgMath(f1(X(v)), f1(Y(oy) + tf + 6), fmtN(v), { fs: tf, c: '#222' }), bx(X(v), Y(oy) + tf * .66 + 6, fmtN(v), tf, 'middle')));
+      TK(p.ty, ax.ya, ax.yb).filter(v => Math.abs(v - oy) >= 1e-9).map(v => { bg += `<path d="M${f1(X(ox) - 4)} ${f1(Y(v))}H${f1(X(ox) + 4)}" stroke="${AC}" stroke-width="1.3"/>`; return v; }).sort(byAbs).forEach(v => tkAdd(svgMath(f1(X(ox) - 8), f1(Y(v) + tf * .35), fmtN(v), { fs: tf, a: 'end', c: '#222' }), bx(X(ox) - 8, Y(v), fmtN(v), tf, 'end')));
+      bg += '\u0001TK\u0001';
       if (p.xl) OBB.push(bx(X(ax.xb) + ex + 4, Y(oy) + tf * .7 + 8, p.xl, tf * 1.1, 'middle')); if (p.yl) OBB.push(bx(X(ox) + 10, Y(ax.yb) - ex + 2 - tf * .35, p.yl, tf * 1.1, 'start'));
       if (p.xl) bg += svgMath(f1(X(ax.xb) + ex + 4), f1(Y(oy) + tf + 8), p.xl, { fs: tf * 1.1, c: '#222' });
       if (p.yl) bg += svgMath(f1(X(ox) + 10), f1(Y(ax.yb) - ex + 2), p.yl, { fs: tf * 1.1, a: 'start', c: '#222' });
@@ -12988,9 +12993,14 @@ document.addEventListener('load', e => { const t = e.target; if (t && t.tagName 
       let best = null, bn = 1e9;
       for (const c of cands) { const B = bx(c.x, c.y, L.str, L.fs, c.a); const n = hits(B); if (n < bn) { bn = n; best = { c, B }; } if (n === 0) break; }
       if (bn > 0 && !L.pin) ov.push(L.LI);
-      OBB.push(best.B); top += txt(best.c.x, best.c.y, L.str, { fs: L.fs, c: L.c, a: best.c.a, b: L.b });
+      // ป้ายล้นขอบรูป (ถูกตัดขาด) → เลื่อนกลับเข้ามาในกรอบ
+      { const B = best.B; let dx = 0, dy = 0; if (B[2] > W - 2) dx = W - 2 - B[2]; if (B[0] + dx < 2) dx = 2 - B[0]; if (B[3] > H - 1) dy = H - 1 - B[3]; if (B[1] + dy < 1) dy = 1 - B[1]; if (dx || dy) { best = { c: { x: best.c.x + dx, y: best.c.y + dy, a: best.c.a }, B: [B[0] + dx, B[1] + dy, B[2] + dx, B[3] + dy] }; } }
+      OBB.push(best.B); LBX.push(best.B); top += txt(best.c.x, best.c.y, L.str, { fs: L.fs, c: L.c, a: best.c.a, b: L.b });
     });
     window.__wbOv = ov;
+    // ตัวเลขบนแกนที่ถูกจุดหรือป้ายข้อความทับ → ไม่วาด
+    const tkOK = t => !LBX.some(B => t.B[0] < B[2] + 4 && t.B[2] > B[0] - 4 && t.B[1] < B[3] + 1.5 && t.B[3] > B[1] - 1.5) && !OBD.some(d => { const cx = Math.max(t.B[0], Math.min(d[0], t.B[2])), cy = Math.max(t.B[1], Math.min(d[1], t.B[3])); return Math.hypot(cx - d[0], cy - d[1]) < d[2] + 1; });
+    bg = bg.replace('\u0001TK\u0001', TICKS.filter(tkOK).map(t => t.svg).join(''));
     return svgW(W, H, bg + s + top);
   }
 
@@ -13209,10 +13219,12 @@ body.wbo .blk.inact[data-av=wr]{border-left:1.2px solid ${LP};border-right:1.2px
 body.wbo .blk.actlast[data-av=wr],body.wbo .blk.actbrk[data-av=wr]{border-bottom:1.2px solid ${LP}}
 /* ข้อย่อย 1) 2) (ก) (ข): เลขข้อที่แท็บ 1 ข้อความที่แท็บ 2 บรรทัดต่อไปตรงกับข้อความ */
 .wli{display:flex;align-items:baseline;gap:.4em;margin-left:1.7em}
-.wli>.wn{flex:0 0 1.55em;white-space:nowrap}
+.wli>.wn{flex:0 0 auto;min-width:1.55em;white-space:nowrap}
 .wli>.wt{flex:1;min-width:0}
 .b-question .wli,.wrow .wli{margin-left:0}
-.b-question .qb>.wli:first-child,.b-question .qb>.wrow:first-child{margin-top:-1.7em;margin-top:-1lh}
+.b-question .qb>.w0{margin-top:-1.7em;margin-top:-1lh}
+/* ตัวเลือก 5 ข้อ: กระจายเต็มความกว้างบรรทัด */
+body.wbo .b-choices[style*="repeat(5"]{grid-template-columns:repeat(5,1fr)!important;justify-content:stretch!important;margin-right:16px}
 .wrow{display:flex;gap:1.2em;margin-left:0}.wrow>.wli{flex:1}
 .b-para .wli:first-child,.bb>.wli:first-child{margin-top:1px}
 /* ป้ายฝึกทันที */
