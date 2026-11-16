@@ -8267,7 +8267,7 @@ function clStatus(t, warn) {
 })();
 
 /* ---------- ปุ่มรีเฟรช / อัปเดตแอป ---------- */
-const NP_BUILD = '1794783898';
+const NP_BUILD = '1794838353';
 (function initUpdate() {
   const bSave = $('#bSave'); if (!bSave) return;
   const b = document.createElement('button'); b.className = 'tb'; b.id = 'bUpd'; b.title = 'รีเฟรชแอป (โหลดเวอร์ชันล่าสุด)'; b.textContent = '⟳'; bSave.after(b);
@@ -9546,6 +9546,7 @@ document.addEventListener('paste', e => { if (!PG.xs) return; pgXsDelete(); }, t
   #npPrint .npp{position:relative;width:210mm;height:296.8mm;overflow:hidden;contain:strict;break-after:page;page-break-after:always;background:#fff}
   #npPrint .npp:last-child{break-after:auto;page-break-after:auto}
   #npPrint .npp>div{position:absolute;left:0;width:794px}
+  #npPrint .sheet{box-shadow:none!important}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
 #lyBody .ly-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--ui-line);border-radius:9px;margin-bottom:6px;background:#fff}
@@ -9577,6 +9578,7 @@ async function exportPrintPDF() {
     $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
     $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
     $$('.tools,.wh,.grip,.band,.dropline,.vgrip,.gapph,.tz', st).forEach(e => e.remove()); $$('.msel,.isel,.csel', st).forEach(e => e.classList.remove('msel', 'isel', 'csel'));
+    $$('.katex-mathml', st).forEach(e => e.remove()); // สำเนา MathML ที่ซ่อนอยู่ ไม่แสดงผล → ตัดออกให้หน้าต่างพิมพ์เบาลง
     const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });
     const full = cl.map(e => e.innerHTML), sh = $$('#sheets > *', st), shFull = sh.map(e => e.innerHTML);
     root = document.createElement('div'); root.id = 'npPrint'; root.className = 'exporting';
@@ -9588,6 +9590,10 @@ async function exportPrintPDF() {
       sh.forEach((e, k) => { e.innerHTML = k === i ? shFull[k] : ''; });
       const pp = document.createElement('div'); pp.className = 'npp'; const w = document.createElement('div'); w.style.top = (-i * P) + 'px';
       const c = st.cloneNode(true); const fl = c.querySelector('#flow'); if (fl) fl.style.height = ((i + 1) * P) + 'px'; c.style.height = ((i + 1) * P) + 'px'; c.style.overflow = 'hidden';
+      // เร็วขึ้น: แต่ละหน้าพิมพ์เก็บเฉพาะแผ่นกระดาษของหน้านั้น และตัดบล็อกที่อยู่หลังหน้านั้นทิ้ง (เดิมทุกหน้าพก
+      // แผ่นกระดาษทุกแผ่นที่มีเงา → งานของหน้าต่างพิมพ์โตเป็นกำลังสองตามจำนวนหน้า)
+      $$('#sheets > *', c).forEach((e, k) => { if (k !== i) e.remove(); });
+      $$('#flow > .blk', c).forEach((e, k) => { if (rng[k] && rng[k][0] > i) e.remove(); });
       w.appendChild(c); pp.appendChild(w); root.appendChild(pp);
     }
     document.body.appendChild(root);
@@ -9606,8 +9612,8 @@ async function exportPrintPDF() {
   const bp = $('#bPdf'); if (!bp) return;
   bp.onclick = () => {
     $$('#pdfMenu').forEach(m => m.remove()); const m = document.createElement('div'); m.className = 'tmenu'; m.id = 'pdfMenu';
-    m.innerHTML = `<button data-k="img"><b>PDF ภาพความละเอียดสูง</b><small>หน้าตาตรงกับจอทุกจุด ไฟล์ใหญ่ ใช้เวลาสร้างนาน (แบบเดิม)</small></button>
-<button data-k="vec"><b>PDF แบบเวกเตอร์ (คมชัดทุกระดับซูม · เร็ว)</b><small>เปิดหน้าต่างพิมพ์ → เลือก “บันทึกเป็น PDF” (ระยะขอบ: ไม่มี) · ค้นหา/คัดลอกข้อความได้</small></button><hr>
+    m.innerHTML = `<button data-k="vec"><b>PDF คมชัด (เวกเตอร์) · แนะนำ</b><small>ขยายเท่าไรก็ไม่แตก · เปิดหน้าต่างพิมพ์ → “บันทึกเป็น PDF” (ระยะขอบ: ไม่มี)</small></button>
+<button data-k="img"><b>PDF แบบภาพ</b><small>สำรอง ใช้เมื่อแบบเวกเตอร์แสดงผลไม่ตรง · ไฟล์ใหญ่ สร้างนาน</small></button><hr>
 <button data-k="chk"><b>🔍 ตรวจการจัดหน้าก่อนส่งออก</b><small>หาตารางล้นขอบ คำถูกตัดกลางคำ รูปสูงเกินหน้า ฯลฯ พร้อมแก้ให้</small></button>`;
     document.body.appendChild(m); const r = bp.getBoundingClientRect(); m.style.left = Math.max(8, Math.min(r.left, innerWidth - 390)) + 'px'; m.style.top = (r.bottom + 4) + 'px';
     const off = ev => { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('mousedown', off, true); } }; setTimeout(() => document.addEventListener('mousedown', off, true), 0);
@@ -11331,7 +11337,7 @@ function uiMenu(anchor, items) {
   bSaveQ.addEventListener('mouseenter', where); setInterval(where, 1500);
   const bTbl = mk('bTbl', 'table', 'ตาราง', 'แทรกตาราง'); bTbl.onclick = () => insertAfterCur('table', { rows: [['', '', ''], ['', '', ''], ['', '', '']], rs: {}, tst: { k: 'soft', hr: 1, hc: 0, fr: 0 } });
   const bExp = mk('bExp', 'exp', 'ส่งออก', 'ส่งออก PDF / Word', 'cta');
-  bExp.onclick = () => uiMenu(bExp, [['PDF (ภาพความละเอียดสูง)', () => exportPDF()], ['PDF แบบเวกเตอร์ (พิมพ์)', () => exportPrintPDF(), K + 'P'], ['Word (.docx)', () => exportDOCX()], '-', ['📤 ส่งข้อสอบไป Sir’Earth Class…', () => sndOpen()], '-', ['ตรวจการจัดหน้า…', () => openLayoutCheck()]]);
+  bExp.onclick = () => uiMenu(bExp, [['PDF คมชัด (เวกเตอร์)', () => exportPrintPDF(), K + 'P'], ['PDF แบบภาพ (สำรอง)', () => exportPDF()], ['Word (.docx)', () => exportDOCX()], '-', ['📤 ส่งข้อสอบไป Sir’Earth Class…', () => sndOpen()], '-', ['ตรวจการจัดหน้า…', () => openLayoutCheck()]]);
   add(brand, bFileM, bSaveQ, take('#bUndo', 'undo', '', 'sm'), take('#bRedo', 'redo', '', 'sm'), $('#zoom'), 'grow',
     take('#bAddQ', 'q', 'ข้อใหม่'), take('#bMath', 'math', 'สมการ'), bTbl, take('#bImg', 'image', 'รูปภาพ'), take('#bFig', 'draw', 'วาดรูป'), take('#bSig', 'sig', 'ลายเซ็น'), take('#bQuick', 'quick', 'ชุดสำเร็จรูป'), take('#bInsert', 'plus', 'แทรก'),
     'grow', $('#status'), $('#clStat'), $('#bHist'), $('#bUpd'), take('#bSend', 'exp', 'ส่งตรวจ'), bExp, 'vs', take('#bNav', 'nav', 'สารบัญ', 'sm'), take('#bInsp', 'brush', 'รูปแบบ'), take('#bSet', 'doc', 'เอกสาร'));
@@ -13805,8 +13811,8 @@ ${R}.b-box:is(.k-pmis,.k-punit){background:#fff;border:1px solid ${MX(40)};borde
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label>หน้าที่ต้องการ</label><input id="pgrIn" type="text" value="${c}" style="flex:1;min-width:160px;font:inherit;font-size:18px;padding:4px 8px" placeholder="เช่น 3-5, 8">
 <button class="tb" data-p="cur">หน้านี้ (${c})</button><button class="tb" data-p="all">ทั้งหมด</button></div>
 <div class="hint" style="margin:6px 0 10px">เอกสารนี้มี ${n} หน้า · ใช้ - สำหรับช่วง และ , คั่นหลายช่วง เช่น <code>1, 4-6, 10-</code> (10- = หน้า 10 ถึงหน้าสุดท้าย)</div>
-<label style="display:block;margin:4px 0"><input type="radio" name="pgrK" value="img" checked> PDF ภาพความละเอียดสูง (หน้าตาตรงกับจอ)</label>
-<label style="display:block;margin:4px 0"><input type="radio" name="pgrK" value="vec"> PDF แบบเวกเตอร์ (เปิดหน้าต่างพิมพ์ → บันทึกเป็น PDF)</label>
+<label style="display:block;margin:4px 0"><input type="radio" name="pgrK" value="vec" checked> PDF คมชัด (เวกเตอร์) · เปิดหน้าต่างพิมพ์ → บันทึกเป็น PDF</label>
+<label style="display:block;margin:4px 0"><input type="radio" name="pgrK" value="img"> PDF แบบภาพ (สำรอง)</label>
 <div id="pgrErr" style="color:#b03a2e;min-height:1.2em;margin-top:6px"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="tb" data-p="x">ยกเลิก</button><button class="tb primary" data-p="go">ส่งออก</button></div></div>`;
     document.body.appendChild(d); d.classList.add('open');
@@ -13821,7 +13827,7 @@ ${R}.b-box:is(.k-pmis,.k-punit){background:#fff;border:1px solid ${MX(40)};borde
     const bx = $('#bExp');
     if (bx && !bx.dataset.pgr && typeof uiMenu === 'function') {
       bx.dataset.pgr = 1; const K = IS_MAC ? '⌘' : 'Ctrl+';
-      bx.onclick = () => uiMenu(bx, [['PDF (ภาพความละเอียดสูง)', () => exportPDF()], ['PDF แบบเวกเตอร์ (พิมพ์)', () => exportPrintPDF(), K + 'P'], ['PDF เฉพาะบางหน้า / ช่วงหน้า…', () => openPageExport()], ['Word (.docx)', () => exportDOCX()], '-', ['📤 ส่งข้อสอบไป Sir’Earth Class…', () => (typeof sndOpen === 'function' ? sndOpen() : 0)], '-', ['ตรวจการจัดหน้า…', () => openLayoutCheck()]]);
+      bx.onclick = () => uiMenu(bx, [['PDF คมชัด (เวกเตอร์)', () => exportPrintPDF(), K + 'P'], ['PDF แบบภาพ (สำรอง)', () => exportPDF()], ['PDF เฉพาะบางหน้า / ช่วงหน้า…', () => openPageExport()], ['Word (.docx)', () => exportDOCX()], '-', ['📤 ส่งข้อสอบไป Sir’Earth Class…', () => (typeof sndOpen === 'function' ? sndOpen() : 0)], '-', ['ตรวจการจัดหน้า…', () => openLayoutCheck()]]);
     }
     const bp = $('#bPdf');
     if (bp && !bp.dataset.pgr) {
