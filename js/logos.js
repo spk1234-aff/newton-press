@@ -1,0 +1,1 @@
+const LOGO=NP_ASSET['img/logo.png']; const LOGOS={"round": NP_ASSET['img/logo-round.webp'], "winged": NP_ASSET['img/logo-winged.webp'], "school": NP_ASSET['img/logo-school.webp']};
