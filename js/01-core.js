@@ -283,6 +283,35 @@ function syncFrom(edEl) {
 
 /* ---------------- จัดหน้าอัตโนมัติ ---------------- */
 let pagTimer = null;
+// การจัดหน้าแบบไฟล์เฉลย: เปิดด้วย settings.solpg = true (ถ้าไม่กำหนด ใช้กับเอกสารที่ชื่อขึ้นต้นด้วย "เฉลย")
+function solPaging() { const st = (doc && doc.settings) || {}; return st.solpg !== undefined ? !!st.solpg : /^\s*เฉลย/.test(st.name || ''); }
+// ข้อในไฟล์เฉลยที่ยาวเกินหนึ่งหน้า: เริ่มข้อในหน้าเดิมเมื่อเหลือที่อย่างน้อยครึ่งหน้าและลงโจทย์กับวิธีทำช่วงแรกได้ ไม่เช่นนั้นขึ้นหน้าใหม่
+// ตัดหน้าเฉพาะรอยต่อที่อนุญาต: ไม่แยกหัวข้อ/โจทย์/รูปโจทย์/คำถาม ไม่แยกรูปหรือตารางจากวิธีทำก่อนหน้า และไม่แยกคำตอบจากบล็อกก่อนหน้า
+function solLongPlace(u, prev, P, ROOM) {
+  const E = u.els, n = E.length, T = E.map(e => e.dataset.t);
+  const D = E.map((e, k) => k < n - 1 ? E[k + 1].offsetTop - e.offsetTop : e.offsetHeight);
+  const firstSol = T.indexOf('solution'); const glued = (a, b, j) => { const beforeSol = firstSol < 0 || j < firstSol; return a === 'problem' || a === 'skull' || HEADINGS.has(a) || b === 'answer' || (['figure', 'image', 'table'].includes(b) && ['solution', 'table', 'figure', 'image'].includes(a)) || (['given', 'question', 'choices', 'figure', 'image'].includes(b) && ['given', 'question', 'figure', 'image'].includes(a) && beforeSol); };
+  const top = e => e.offsetTop, pageOf = e => Math.floor(top(e) / P);
+  const toNext = e => { if (top(e) % P <= TOP + 2) return; const tgt = (pageOf(e) + 1) * P + TOP; e.style.marginTop = (parseFloat(e.style.marginTop) || 0) + (tgt - top(e)) + 'px'; };
+  let t = top(E[0]), p = pageOf(E[0]), rs = p * P + TOP, re = p * P + PAGE_H - BOT;
+  if (t < rs) { E[0].style.marginTop = (rs - t) + 'px'; t = rs; }
+  let fresh = t <= rs + 2;
+  if (!fresh && (u.forced || re - t < ROOM * 0.45)) { toNext(E[0]); fresh = true; }
+  let k = 0;
+  while (k < n) {
+    const s = top(E[k]), pp = pageOf(E[k]); const avail = pp * P + PAGE_H - BOT - s;
+    const scan = relax => { let acc = 0, j = k, bs = -1; while (j < n && acc + D[j] <= avail) { acc += D[j]; j++; if (j === n || !glued(T[j - 1], T[j], j) || (relax && T[j - 1] === 'solution' && ['figure', 'image', 'table'].includes(T[j]))) bs = j; } return bs; };
+    let best = scan(false);
+    if (k === 0 && !T.slice(0, Math.max(best, 0)).includes('solution')) { const b2 = scan(true); if (T.slice(0, Math.max(b2, 0)).includes('solution')) best = b2; } // โจทย์+วิธีทำ+รูปไม่พอหน้า: ให้รูปเฉลยไปหน้าถัดไปแทนการแยกโจทย์จากวิธีทำ
+    const hasSol = T.slice(k, best < 0 ? k : best).includes('solution');
+    if (best < 0 || (k === 0 && !fresh && !hasSol && best < n)) { // ลงไม่ได้ หรือได้แค่โจทย์: ขึ้นหน้าใหม่
+      if (!fresh) { toNext(E[k]); fresh = true; continue; }
+      best = k + 1; while (best < n && glued(T[best - 1], T[best], best) && D.slice(k, best + 1).reduce((x, y) => x + y, 0) <= ROOM) best++;
+    }
+    if (best < n) toNext(E[best]);
+    k = best; fresh = true;
+  }
+}
 function schedulePaginate() { clearTimeout(pagTimer); pagTimer = setTimeout(paginate, 60); }
 function units() {
   const els = $$('#flow > .blk');
@@ -309,9 +338,10 @@ function paginate() {
   $$('#flow > .blk').forEach(el => { el.style.marginTop = ''; el.classList.remove('actcont', 'actbrk'); { const bb = byId(el.dataset.id); if (typeof gapDraw === 'function') gapDraw(el, bb); else el.style.paddingTop = bb && bb.sp ? (+bb.sp * 3.7795) + 'px' : ''; } const w = $('.b-work', el); if (w) { const b = byId(el.dataset.id); w.style.height = (b.h || 40) * 3.7795 + 'px'; } });
   const P = PAGE_H + PAGE_G, ROOM = PAGE_H - TOP - BOT;
   // ข้อที่ยาวเกินหนึ่งหน้า: แยกเป็นบล็อกย่อยให้ขึ้นหน้าใหม่ทีละบล็อก
-  const U = [];
+  const U = []; const SOLPG = solPaging();
   units().forEach(u => {
     const f = u.els[0], l = u.els[u.els.length - 1];
+    if (SOLPG && u.els.some(e => e.dataset.t === 'problem') && u.els.length > 1 && l.offsetTop + l.offsetHeight - f.offsetTop > ROOM) { U.push({ els: u.els, kind: 'problem', forced: u.forced, long: true }); return; } // ไฟล์เฉลย: ข้อยาวเกินหน้า จัดแยกในลูปด้านล่าง
     if (u.els.length > 1 && l.offsetTop + l.offsetHeight - f.offsetTop > ROOM) { // ยาวเกินหน้า: แยกเป็นกลุ่มย่อย แต่หัวข้อยังติดกับเนื้อหาถัดไป คำถามติดกับกรอบทด
       const glue = (a, b) => HEADINGS.has(a) || b === 'actend' || (['work', 'lines', 'answer', 'choices'].includes(b) && ['question', 'given', 'box', 'choices'].includes(a)) || (['image', 'table'].includes(b) && a === 'para') || (b === 'question' && ['image', 'table', 'given'].includes(a));
       let sub = null; const subs = [];
@@ -331,6 +361,7 @@ function paginate() {
   });
   let prev = null;
   for (const u of U) {
+    if (u.long) { solLongPlace(u, prev, P, ROOM); prev = u; continue; }
     const first = u.els[0], last = u.els[u.els.length - 1];
     let t = first.offsetTop, bt = last.offsetTop + last.offsetHeight;
     let p = Math.floor(t / P);
