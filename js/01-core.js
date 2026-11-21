@@ -75,7 +75,7 @@ function texPlain(t) {
   const ITAL = c => { const k = c.charCodeAt(0); if (c === 'h') return 'ℎ'; if (k >= 97 && k <= 122) return String.fromCodePoint(0x1D44E + k - 97); if (k >= 65 && k <= 90) return String.fromCodePoint(0x1D434 + k - 65); return c; };
   let s = String(t || '').replace(/\\(displaystyle|textstyle|left|right|qquad|quad)(?![a-zA-Z])/g, ' ').replace(/\\[,;!]/g, ' ').replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2')
     .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)').replace(/\\(text|mathrm|mathbf|operatorname)\s*\{([^{}]*)\}/g, '\u0001$2\u0002')
-    .replace(/\\int/g, '∫').replace(/\\lim/g, '\u0001lim\u0002').replace(/\\to/g, '→').replace(/\\infty/g, '∞').replace(/\\pi/g, 'π').replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\le(q)?\b/g, '≤').replace(/\\ge(q)?\b/g, '≥').replace(/\\neq?\b/g, '≠').replace(/\\prime/g, '′').replace(/\\Delta/g, 'Δ').replace(/\\[lr]?vert/g, '|');
+    .replace(/\\(alpha|beta|gamma|delta|theta|lambda|mu|phi|varphi|omega|sigma|rho|varepsilon|epsilon)(?![a-zA-Z])/g, (m, g) => ({ alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', theta: 'θ', lambda: 'λ', mu: 'μ', phi: 'φ', varphi: 'φ', omega: 'ω', sigma: 'σ', rho: 'ρ', varepsilon: 'ε', epsilon: 'ϵ' })[g]).replace(/\\pm/g, '±').replace(/\\mp/g, '∓').replace(/\\int/g, '∫').replace(/\\lim/g, '\u0001lim\u0002').replace(/\\to/g, '→').replace(/\\infty/g, '∞').replace(/\\pi/g, 'π').replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\le(q)?\b/g, '≤').replace(/\\ge(q)?\b/g, '≥').replace(/\\neq?\b/g, '≠').replace(/\\prime/g, '′').replace(/\\Delta/g, 'Δ').replace(/\\[lr]?vert/g, '|');
   s = s.replace(/\^\s*\{([^{}]*)\}|\^\s*(\\?[A-Za-z0-9+\-])/g, (m, a, b) => { const v = a !== undefined ? a : b; return [...v].every(c => SUP[c]) ? [...v].map(c => SUP[c]).join('') : '^' + (v.length > 1 ? '(' + v + ')' : v); })
     .replace(/_\s*\{([^{}]*)\}|_\s*([A-Za-z0-9])/g, (m, a, b) => { const v = a !== undefined ? a : b; return [...v].every(c => SUB[c]) ? [...v].map(c => SUB[c]).join('') : '_' + v; })
     .replace(/'/g, '′').replace(/\\[a-zA-Z]+/g, '').replace(/[{}]/g, '');
@@ -315,9 +315,11 @@ function solLongPlace(u, prev, P, ROOM) {
 function schedulePaginate() { clearTimeout(pagTimer); pagTimer = setTimeout(paginate, 60); }
 function units() {
   const els = $$('#flow > .blk');
-  const out = []; let cur = null, inSol = false;
+  const out = []; let cur = null, inSol = false, actU = null;
   els.forEach((el, i) => {
     const t = el.dataset.t, prevT = i ? els[i - 1].dataset.t : null;
+    if (actU && ['activity', 'chapter', 'section', 'subsection', 'pagebreak', 'cover'].includes(t)) actU = null;
+    if (actU && cur === actU) { cur.els.push(el); if (t === 'actend') actU = null; return; } // แบบฝึก: กรอบ (กิจกรรม ตัวอย่าง ทฤษฎีบท ฝึกทันที) อยู่หน้าเดียวทั้งกรอบ ถ้ายาวเกินหน้าจึงแยก
     if (inSol && cur && !['solhead', 'part', 'pagebreak', 'soltitle', 'keytable'].includes(t)) { cur.els.push(el); if (t === 'answer') inSol = false; return; } // เฉลยหนึ่งข้อ (หัวแถบ → คำตอบ) อยู่หน้าเดียวกัน
     inSol = t === 'solhead';
     if (cur && t === 'actend') { cur.els.push(el); return; }
@@ -325,6 +327,7 @@ function units() {
     else if (cur && doc.settings.wdist && (((t === 'image' || t === 'table') && prevT === 'para') || (t === 'table' && prevT === 'image') || (t === 'question' && ['image', 'table'].includes(prevT)) || (['work', 'lines'].includes(t) && ['question', 'box', 'para'].includes(prevT)))) cur.els.push(el); // แบบฝึก: ข้อความนำ รูป ตาราง คำถาม และกรอบทด อยู่หน้าเดียวกัน
     else if (cur && HEADINGS.has(prevT) && t !== 'pagebreak') { cur.els.push(el); if (t === 'problem') cur.kind = 'problem'; }
     else { const pb = i ? byId(els[i - 1].dataset.id) : null; cur = { els: [el], kind: t, forced: !!(byId(el.dataset.id) || {}).npg || prevT === 'pagebreak' || FULLPAGE.has(prevT) || (prevT === 'work' && pb && pb.full && t !== 'anstab') || (prevT === 'anstab' && i > 1 && !!(byId(els[i - 2].dataset.id) || {}).full) || ((t === 'chapter' || (t === 'pjch' && prevT !== 'pjinfo') || t === 'memohead' || FULLPAGE.has(t) || (t === 'solhead' && !(byId(el.dataset.id) || {}).inl) || t === 'asheet') && i > 0 && prevT !== 'pagebreak') }; out.push(cur); }
+    if (t === 'activity' && doc.settings.wdist && !(byId(el.dataset.id) || {}).split) actU = cur;
   });
   return out;
 }
