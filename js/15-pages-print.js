@@ -815,6 +815,7 @@ async function exportPrintPDF() {
     $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
     $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
     $$('.tools,.wh,.grip,.band,.dropline,.vgrip,.gapph,.tz', st).forEach(e => e.remove()); $$('.msel,.isel,.csel', st).forEach(e => e.classList.remove('msel', 'isel', 'csel'));
+    npFitLocked(st, cl); const XZ = typeof npExportZoom === 'function' ? npExportZoom() : 1; // จัดหน้าพิมพ์ที่ zoom เท่าจอ (ดู 13-export.js)
     $$('.katex-mathml', st).forEach(e => e.remove()); // สำเนา MathML ที่ซ่อนอยู่ ไม่แสดงผล → ตัดออกให้หน้าต่างพิมพ์เบาลง
     const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });
     const full = cl.map(e => e.innerHTML), sh = $$('#sheets > *', st), shFull = sh.map(e => e.innerHTML);
@@ -825,13 +826,14 @@ async function exportPrintPDF() {
       if (i % 8 === 0) { busy(true, `กำลังเตรียมหน้า ${i + 1}/${n}`); await npYield(); }
       cl.forEach((e, k) => { const on = !!(rng[k] && rng[k][1] >= i && rng[k][0] <= i); e.innerHTML = on ? full[k] : ''; });
       sh.forEach((e, k) => { e.innerHTML = k === i ? shFull[k] : ''; });
-      const pp = document.createElement('div'); pp.className = 'npp'; const w = document.createElement('div'); w.style.top = (-i * P) + 'px';
+      const pp = document.createElement('div'); pp.className = 'npp'; const w = document.createElement('div'); if (XZ === 1) w.style.top = (-i * P) + 'px'; else w.style.cssText = `top:0;transform:scale(${1 / XZ});transform-origin:0 0`;
       const c = st.cloneNode(true); const fl = c.querySelector('#flow'); if (fl) fl.style.height = ((i + 1) * P) + 'px'; c.style.height = ((i + 1) * P) + 'px'; c.style.overflow = 'hidden';
       // เร็วขึ้น: แต่ละหน้าพิมพ์เก็บเฉพาะแผ่นกระดาษของหน้านั้น และตัดบล็อกที่อยู่หลังหน้านั้นทิ้ง (เดิมทุกหน้าพก
       // แผ่นกระดาษทุกแผ่นที่มีเงา → งานของหน้าต่างพิมพ์โตเป็นกำลังสองตามจำนวนหน้า)
       $$('#sheets > *', c).forEach((e, k) => { if (k !== i) e.remove(); });
       $$('#flow > .blk', c).forEach((e, k) => { if (rng[k] && rng[k][0] > i) e.remove(); });
-      w.appendChild(c); pp.appendChild(w); root.appendChild(pp);
+      if (XZ === 1) w.appendChild(c); else { const v = document.createElement('div'); v.style.cssText = `position:absolute;left:0;top:${-i * P}px;width:794px;zoom:${XZ}`; v.appendChild(c); w.appendChild(v); }
+      pp.appendChild(w); root.appendChild(pp);
     }
     document.body.appendChild(root);
     await new Promise(r => setTimeout(r, 120)); await Promise.all($$('#npPrint img').map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; })));

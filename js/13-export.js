@@ -87,6 +87,57 @@ async function foMode(s) {
   for (const m of ['vb', 'tf']) { try { if (await foProbe(m, s)) return (FO_MODE[s] = m); } catch (e) { } }
   return (FO_MODE[s] = 'one'); // วาดขนาดจริงแล้วให้ canvas ขยาย (คมน้อยลงแต่เต็มหน้า)
 }
+/* ---------- ส่งออกให้ตรงกับบนจอ (จอ Retina / จอที่ขยายสัดส่วน) ----------
+   บนจอที่ devicePixelRatio > 1 เบราว์เซอร์ปัดความหนาเส้นขอบและขนาดฟอนต์ตามพิกเซลจริงของจอ (เช่น เส้น 0.67px → 0.5px)
+   แต่หน้าพิมพ์และภาพ SVG จัดหน้าที่อัตรา 1 เท่า (0.67px → 1px) ช่องตารางจึงแคบลง ข้อความตกบรรทัด แถวสูงขึ้นแล้วล้นทับบล็อกถัดไป
+   แก้: จัดหน้าสำหรับส่งออกที่ zoom = devicePixelRatio แล้วย่อกลับด้วย transform → ได้ผลการจัดหน้าเท่ากับบนจอทุกจุด */
+const NP_BLINK = /(Chrome|Chromium|Edg)\//.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+function npExportZoom() { const z = +window.devicePixelRatio || 1; return NP_BLINK && z > 1.01 && z <= 4 ? z : 1; }
+/* ตรวจจริงว่าภาพ SVG จัดหน้าต่างจากบนจอหรือไม่ (เส้น 0.67px ซ้อน 40 ชั้น) แล้วเลือกค่า zoom ที่ทำให้ตรงกับบนจอ */
+let NP_SVGZ = 0;
+async function npSvgZoom() {
+  if (NP_SVGZ) return NP_SVGZ;
+  const Z = npExportZoom(); if (Z === 1) return (NP_SVGZ = 1);
+  const rows = '<div style="border-top:0.67px solid #fff;height:2px"></div>'.repeat(40);
+  try {
+    const h = document.createElement('div'); h.style.cssText = 'position:absolute;left:-999px;top:0;width:100px;visibility:hidden'; h.innerHTML = rows + '<i style="display:block;height:1px"></i>';
+    document.body.appendChild(h); const live = h.lastChild.getBoundingClientRect().top - h.getBoundingClientRect().top; h.remove();
+    const probe = async z => {
+      const inner = `<div style="width:100px">${rows}<div style="height:10px;background:#f00"></div></div>`;
+      const body = z === 1 ? inner : `<div style="width:${100 * z}px;transform:scale(${1 / z});transform-origin:0 0"><div style="zoom:${z};width:100px">${inner}</div></div>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="200"><foreignObject x="0" y="0" width="100" height="200"><div xmlns="http://www.w3.org/1999/xhtml" style="width:100px;height:200px;background:#fff;margin:0">${body}</div></foreignObject></svg>`;
+      const img = new Image(); await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+      const cv = document.createElement('canvas'); cv.width = 100; cv.height = 200; const g = cv.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(50, 0, 1, 200).data;
+      for (let y = 0; y < 200; y++) if (d[y * 4] > 200 && d[y * 4 + 1] < 80) return y; return -1;
+    };
+    const a = await probe(1); if (a < 0 || Math.abs(a - live) <= 1) return (NP_SVGZ = 1);
+    const b = await probe(Z); return (NP_SVGZ = (b >= 0 && Math.abs(b - live) <= 1) ? Z : 1);
+  } catch (e) { console.warn('svg zoom probe', e); return (NP_SVGZ = 1); }
+}
+/* กันพลาด: วัดความสูงจริงของทุกบล็อกในสำเนาหน้าส่งออก (วางนอกจอชั่วคราว) ถ้าสูงเกินค่าที่ล็อกไว้ → ย่อเนื้อหาบล็อกนั้นด้วย zoom ให้พอดี
+   st = สำเนา #stage ที่ล็อกความสูงแล้ว, cl = รายการ #flow > .blk ในสำเนา · คืนจำนวนบล็อกที่ต้องย่อ */
+function npFitLocked(st, cl) {
+  const host = document.createElement('div'); host.className = 'exporting'; host.style.cssText = 'position:absolute;left:-20000px;top:0;width:794px;visibility:hidden;pointer-events:none';
+  let done = 0;
+  try {
+    host.appendChild(st); document.body.appendChild(host);
+    const lock = cl.map(e => parseFloat(e.style.height) || 0);
+    const nat = () => { cl.forEach(e => { e.style.height = ''; }); const r = cl.map(e => e.getBoundingClientRect().height); cl.forEach((e, k) => { if (lock[k]) e.style.height = lock[k] + 'px'; }); return r; };
+    let h = nat(); const over = k => lock[k] > 0 && h[k] > lock[k] + 0.75;
+    let idx = cl.map((_, k) => k).filter(over); done = idx.length;
+    const cur = {}, base = new Map();
+    for (let pass = 0; pass < 3 && idx.length; pass++) {
+      idx.forEach(k => {
+        const f = Math.max(0.8, (cur[k] || 1) * lock[k] / h[k] - 0.003); cur[k] = f;
+        [...cl[k].children].forEach(c => { if (!base.has(c)) base.set(c, parseFloat(c.style.zoom) || 1); c.style.zoom = base.get(c) * f; });
+      });
+      h = nat(); idx = idx.filter(k => over(k) && cur[k] > 0.8);
+    }
+    if (done) console.warn('ส่งออก: ย่อบล็อกที่สูงเกินค่าที่จัดหน้าไว้', done, 'บล็อก');
+  } catch (e) { console.warn('fit locked', e); }
+  finally { if (st.parentNode === host) host.removeChild(st); host.remove(); }
+  return done;
+}
 /* วาดหน้ากระดาษด้วยเอนจินของเบราว์เซอร์เอง (SVG foreignObject) — สมการ KaTeX ตรงกับบนจอทุกจุด */
 const WEBKIT_FO = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|Electron|FxiOS/.test(navigator.userAgent);
 async function pageRenderer(scale = 2.5) {
@@ -103,6 +154,7 @@ async function pageRenderer(scale = 2.5) {
   $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
   $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
   $$('.tools,.wh,.grip,.band,.dropline', st).forEach(e => e.remove()); $$('.msel', st).forEach(e => e.classList.remove('msel'));
+  npFitLocked(st, cl); let XZ = 1; // XZ: zoom ของหน้าส่งออกให้จัดหน้าตรงกับบนจอ (กำหนดหลังตรวจภาพ SVG ด้านล่าง)
   const P = PAGE_H + PAGE_G;
   // ใส่เฉพาะเนื้อหาของหน้าที่กำลังวาด (กล่องอื่นเว้นว่างแต่คงความสูงไว้) — ไฟล์ภาพเล็กลงมาก และ Safari ไม่ทิ้งรูปภาพ
   const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });
@@ -123,7 +175,7 @@ async function pageRenderer(scale = 2.5) {
   const loadBatch = async (i0, k, mode) => {
     const i1 = i0 + k - 1, H = k * P;
     const body = xmlFor(i0, i1), hasMath = /class="katex/.test(body);
-    const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.documentElement.className} ${document.body.className} fo" style="${vars};width:794px;height:${H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${hasMath ? cssK : ''}${css}</style><div style="position:absolute;left:0;top:${-i0 * P}px">${body}</div></div>`;
+    const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="${document.documentElement.className} ${document.body.className} fo" style="${vars};width:794px;height:${H}px;overflow:hidden;position:relative;background:#fff;margin:0"><style>${hasMath ? cssK : ''}${css}</style>${XZ === 1 ? `<div style="position:absolute;left:0;top:${-i0 * P}px">${body}</div>` : `<div style="position:absolute;left:0;top:0;width:${794 * XZ}px;transform:scale(${1 / XZ});transform-origin:0 0"><div style="position:absolute;left:0;top:${-i0 * P}px;width:794px;zoom:${XZ}">${body}</div></div>`}</div>`;
     const svgStr = foSVG(html, 794, H, scale, mode);
     // base64 ผ่าน FileReader (เร็วและเล็กกว่า encodeURIComponent มากสำหรับข้อความภาษาไทย)
     const url = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(new Blob([svgStr], { type: 'image/svg+xml' })); });
@@ -149,6 +201,7 @@ async function pageRenderer(scale = 2.5) {
   const inkBox = cv => { const W = 80, H = 113, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(cv, 0, 0, W, H); const d = g.getImageData(0, 0, W, H).data; let r = 0, b = 0, l = W, t = H;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const k = (y * W + x) * 4; if (d[k] + d[k + 1] + d[k + 2] < 690) { if (x > r) r = x; if (y > b) b = y; if (x < l) l = x; if (y < t) t = y; } }
     return r ? { r: r / W, b: b / H, l: l / W, t: t / H } : null; };
+  XZ = await npSvgZoom();
   let MODE = FO_MODE.page; try { if (!MODE) MODE = FO_MODE.page = localStorage.getItem('np-fomode') || ''; } catch (e) { }
   if (!MODE) {
     const ref = inkBox(await draw(0, 'one')); MODE = 'one';
