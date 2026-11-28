@@ -33,8 +33,9 @@ const SIDE = { sel: {}, col: { 'พื้นและกรอบ': 1, 'ระ�
 #tbr .tb.cta{background:var(--ui-accent);color:#fff;flex-direction:row;height:34px;gap:6px;padding:0 12px;border-radius:9px}#tbr .tb.cta:hover{filter:brightness(1.12);background:var(--ui-accent)}#tbr .tb.cta span{font-size:15px}
 #tbr #zoom{height:30px;border:1px solid var(--ui-line);border-radius:8px;background:#fff;font-size:14px;padding:0 4px}
 #tbr #status{font-size:13px;color:var(--ui-mute);white-space:nowrap;margin:0 6px;max-width:150px;overflow:hidden;text-overflow:ellipsis}#tbr #clStat{font-size:13px}
+#tbr>*{flex-shrink:0}#tbr>.grow{flex-shrink:1}#tbr #lfStat,#tbr #clStat,#tbr #status{flex:0 1 auto;min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#tbr #lfStat{min-width:64px}@media (max-width:1180px){#tbr #lfStat,#tbr #clStat{max-width:150px}}@media (max-width:980px){#tbr #lfStat,#tbr #clStat,#tbr #status{max-width:90px}}
 #tbr #bUpd,#tbr #bHist{min-width:30px;width:30px;height:30px;padding:0;font-size:16px;flex-direction:row}
-@media (max-width:1180px){#tbr .tb:not(.sm):not(.cta){min-width:40px;padding:3px 4px}#tbr .brand b{display:none}}@media (max-width:980px){#tbr .tb:not(.cta) span{display:none}}
+@media (max-width:1366px){#tbr .tb:not(.sm):not(.cta){min-width:40px;padding:3px 4px}#tbr .brand b{display:none}}@media (max-width:980px){#tbr .tb:not(.cta) span{display:none}}
 #docTabs{background:var(--ui-bg)!important}
 #side{flex:0 0 292px;width:292px;display:flex;flex-direction:column;min-height:0;background:var(--ui-panel);border-left:1px solid var(--ui-line);font-size:15px}
 body.noinsp #side{display:none}
