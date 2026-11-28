@@ -815,6 +815,7 @@ async function exportPrintPDF() {
     $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
     $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
     $$('.tools,.wh,.grip,.band,.dropline,.vgrip,.gapph,.tz', st).forEach(e => e.remove()); $$('.msel,.isel,.csel', st).forEach(e => e.classList.remove('msel', 'isel', 'csel'));
+    if (typeof npGradFix === 'function') npGradFix(st);
     npFitLocked(st, cl); const XZ = typeof npExportZoom === 'function' ? npExportZoom() : 1; // จัดหน้าพิมพ์ที่ zoom เท่าจอ (ดู 13-export.js)
     $$('.katex-mathml', st).forEach(e => e.remove()); // สำเนา MathML ที่ซ่อนอยู่ ไม่แสดงผล → ตัดออกให้หน้าต่างพิมพ์เบาลง
     const rng = orig.map(el => { const t = el.offsetTop, b = t + Math.max(1, el.offsetHeight); return [Math.floor(t / P), Math.floor((b - 1) / P)]; });

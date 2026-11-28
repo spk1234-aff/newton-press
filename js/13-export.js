@@ -140,6 +140,36 @@ function npFitLocked(st, cl) {
 }
 /* วาดหน้ากระดาษด้วยเอนจินของเบราว์เซอร์เอง (SVG foreignObject) — สมการ KaTeX ตรงกับบนจอทุกจุด */
 const WEBKIT_FO = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|Electron|FxiOS/.test(navigator.userAgent);
+/* แถบไล่สี (หัวข้อ/หัวบทแบบฝึกทักษะ/หัวบท): ตัวสร้าง PDF บางตัววาดการไล่สีของ CSS เพี้ยน (สีเลื่อนตำแหน่ง มีเส้นขาวคั่น)
+   → ตอนส่งออกเปลี่ยนพื้นหลังเป็นรูปไล่สีที่วาดเตรียมไว้ (สีและตำแหน่งเดิมทุกประการ) บนจอไม่เปลี่ยน */
+const NP_GRAD = {};
+function npGradPNG(bg) {
+  if (bg in NP_GRAD) return NP_GRAD[bg];
+  let url = '';
+  try {
+    const m = /^linear-gradient\((.*)\)$/.exec(bg.trim());
+    const parts = []; let d = 0, cur = '';
+    for (const ch of (m ? m[1] : '')) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { parts.push(cur.trim()); cur = ''; } else cur += ch; }
+    if (cur.trim()) parts.push(cur.trim());
+    if (m && /^(90deg|to right)$/.test(parts[0]) && parts.length >= 3) {
+      const stops = parts.slice(1).map(t => { const q = /^(.*?)\s+(-?[\d.]+)%$/.exec(t); return q ? { c: q[1], p: +q[2] / 100 } : { c: t, p: null }; });
+      if (stops[0].p == null) stops[0].p = 0; if (stops[stops.length - 1].p == null) stops[stops.length - 1].p = 1;
+      for (let i = 1; i < stops.length - 1; i++) if (stops[i].p == null) { let j = i; while (stops[j].p == null) j++; const a = stops[i - 1].p, n = j - i + 1; for (let k = i; k < j; k++) stops[k].p = a + (stops[j].p - a) * (k - i + 1) / n; }
+      const cv = document.createElement('canvas'); cv.width = 2048; cv.height = 4;
+      const g = cv.getContext('2d'), lg = g.createLinearGradient(0, 0, cv.width, 0);
+      stops.forEach(s => lg.addColorStop(Math.min(1, Math.max(0, s.p)), s.c));
+      g.fillStyle = lg; g.fillRect(0, 0, cv.width, cv.height); url = cv.toDataURL('image/png');
+    }
+  } catch (e) { url = ''; }
+  return (NP_GRAD[bg] = url);
+}
+function npGradFix(st) {
+  try {
+    const SEL = '.b-section,.b-wbban,.b-chapter', o = $$(SEL, $('#stage')), c = $$(SEL, st);
+    if (o.length !== c.length) return;
+    o.forEach((el, i) => { const bg = getComputedStyle(el).backgroundImage; if (!/^linear-gradient/.test(bg)) return; const u = npGradPNG(bg); if (!u) return; const y = c[i].style; y.backgroundImage = `url(${u})`; y.backgroundSize = '100% 100%'; y.backgroundRepeat = 'no-repeat'; y.backgroundPosition = '0 0'; });
+  } catch (e) { console.warn('gradfix', e); }
+}
 async function pageRenderer(scale = 2.5) {
   let css = '';
   let cssK = ''; // ฟอนต์ KaTeX แยกไว้ ใส่เฉพาะหน้าที่มีสมการ (ไฟล์เล็กลงครึ่งหนึ่ง วาดเร็วขึ้นมากบน Safari)
@@ -154,6 +184,7 @@ async function pageRenderer(scale = 2.5) {
   $$('#flow', st).forEach(f => { f.style.height = $('#flow').getBoundingClientRect().height + 'px'; });
   $$('[contenteditable]', st).forEach(e => e.removeAttribute('contenteditable'));
   $$('.tools,.wh,.grip,.band,.dropline', st).forEach(e => e.remove()); $$('.msel', st).forEach(e => e.classList.remove('msel'));
+  npGradFix(st);
   npFitLocked(st, cl); let XZ = 1; // XZ: zoom ของหน้าส่งออกให้จัดหน้าตรงกับบนจอ (กำหนดหลังตรวจภาพ SVG ด้านล่าง)
   const P = PAGE_H + PAGE_G;
   // ใส่เฉพาะเนื้อหาของหน้าที่กำลังวาด (กล่องอื่นเว้นว่างแต่คงความสูงไว้) — ไฟล์ภาพเล็กลงมาก และ Safari ไม่ทิ้งรูปภาพ
